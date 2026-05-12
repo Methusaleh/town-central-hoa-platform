@@ -1,11 +1,20 @@
 const express = require("express");
 const cors = require("cors");
+const { Pool } = require("pg"); // Import the Postgres tool
 require("dotenv").config();
 
 const app = express();
-const PORT = process.env.PORT || 8080;
-const cors = require("cors");
+const port = process.env.PORT || 8080;
 
+// 1. Database Connection
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false, // Required for Neon/Cloud connections
+  },
+});
+
+// 2. CORS Logic (The one that worked!)
 const allowedOrigins = [
   "http://localhost:5173",
   "https://town-central-hoa-platform.vercel.app",
@@ -14,9 +23,7 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: function (origin, callback) {
-      // Allow requests with no origin (like mobile apps or curl)
       if (!origin) return callback(null, true);
-
       if (allowedOrigins.indexOf(origin) !== -1) {
         callback(null, true);
       } else {
@@ -24,16 +31,29 @@ app.use(
       }
     },
     credentials: true,
-    optionsSuccessStatus: 200,
   }),
 );
 
 app.use(express.json());
 
+// 3. Test Route (Keep this to verify the API is alive)
 app.get("/", (req, res) => {
   res.send("HOA API is running successfully!");
 });
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+// 4. NEW: Database Test Route (Fetches the user you just added)
+app.get("/api/users", async (req, res) => {
+  try {
+    const result = await pool.query(
+      "SELECT id, first_name, last_name, role FROM users",
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Database error:", err);
+    res.status(500).json({ error: "Failed to fetch users from database" });
+  }
+});
+
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
 });
