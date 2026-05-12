@@ -54,6 +54,30 @@ app.get("/api/users", async (req, res) => {
   }
 });
 
+// Add a new resident
+app.post("/api/users", async (req, res) => {
+  const { first_name, last_name, email, address, lot_number } = req.body;
+
+  try {
+    const result = await pool.query(
+      "INSERT INTO users (first_name, last_name, email, address, lot_number, role, status) VALUES ($1, $2, $3, $4, $5, $1, $2) RETURNING *",
+      [
+        first_name,
+        last_name,
+        email,
+        address,
+        lot_number,
+        "resident",
+        "pending",
+      ],
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to add resident" });
+  }
+});
+
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
