@@ -11,6 +11,8 @@ export default function App() {
     address: "",
     lot_number: "",
   });
+  const [tickets, setTickets] = useState([]);
+  const [ticketData, setTicketData] = useState({ title: "", description: "" });
 
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
@@ -30,6 +32,12 @@ export default function App() {
         setError(err.message);
         setLoading(false);
       });
+  }, [API_URL]);
+
+  useEffect(() => {
+    fetch(`${API_URL}/api/maintenance`)
+      .then((res) => res.json())
+      .then((data) => setTickets(data));
   }, [API_URL]);
 
   // 2. Handle the form submission
@@ -60,6 +68,23 @@ export default function App() {
       alert("Resident registered successfully!");
     } catch (err) {
       alert(err.message);
+    }
+  };
+
+  const handleTicketSubmit = async (e) => {
+    e.preventDefault();
+    const res = await fetch(`${API_URL}/api/maintenance`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      // For now, we hardcode resident_id: 1 (your ID)
+      body: JSON.stringify({ ...ticketData, resident_id: 1 }),
+    });
+
+    if (res.ok) {
+      const newTicket = await res.json();
+      setTickets([newTicket, ...tickets]);
+      setTicketData({ title: "", description: "" });
+      alert("Ticket Submitted!");
     }
   };
 

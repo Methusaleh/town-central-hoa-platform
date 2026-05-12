@@ -78,6 +78,38 @@ app.post("/api/users", async (req, res) => {
   }
 });
 
+// Submit a maintenance request
+app.post("/api/maintenance", async (req, res) => {
+  const { resident_id, title, description, priority } = req.body;
+
+  try {
+    const result = await pool.query(
+      "INSERT INTO maintenance_requests (resident_id, title, description, priority) VALUES ($1, $2, $3, $4) RETURNING *",
+      [resident_id, title, description, priority || "normal"],
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error("Maintenance Error:", err);
+    res.status(500).json({ error: "Failed to submit request" });
+  }
+});
+
+// Get all requests (for the Admin view)
+app.get("/api/maintenance", async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT m.*, u.first_name, u.last_name 
+      FROM maintenance_requests m 
+      JOIN users u ON m.resident_id = u.id 
+      ORDER BY m.created_at DESC
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Server Error");
+  }
+});
+
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
