@@ -54,13 +54,13 @@ app.get("/api/users", async (req, res) => {
   }
 });
 
-// Add a new resident
 app.post("/api/users", async (req, res) => {
   const { first_name, last_name, email, address, lot_number } = req.body;
 
   try {
     const result = await pool.query(
-      "INSERT INTO users (first_name, last_name, email, address, lot_number, role, status) VALUES ($1, $2, $3, $4, $5, $1, $2) RETURNING *",
+      // Ensure we have 7 columns and 7 values ($1 through $7)
+      "INSERT INTO users (first_name, last_name, email, address, lot_number, role, status) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *",
       [
         first_name,
         last_name,
@@ -73,7 +73,7 @@ app.post("/api/users", async (req, res) => {
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
-    console.error(err);
+    console.error("Database Error:", err); // This will show up in Google Cloud Logs
     res.status(500).json({ error: "Failed to add resident" });
   }
 });
