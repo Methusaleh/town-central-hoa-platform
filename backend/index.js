@@ -7,7 +7,8 @@ const PORT = process.env.PORT || 8080;
 
 const allowedOrigins = [
   "http://localhost:5173", // Your local Vite dev server
-  "https://your-vercel-project-name.vercel.app", // Your future live site
+  "http://localhost:8080",
+  "https://town-central-hoa-platform.vercel.app", // Your future live site
   "https://your-custom-domain.com",
 ];
 
