@@ -43,6 +43,8 @@
   max-width: 900px;
   margin: -50px auto 40px; /* Pulls the card up over the dark header */
   padding: 0 20px;
+  position: relative;
+  z-index: 10; /* Keeps it above the header background */
 }
 
 .contactCard {

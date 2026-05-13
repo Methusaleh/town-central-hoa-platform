@@ -19,8 +19,8 @@ export default function ContactPage({ onBack }) {
         </p>
       </header>
 
-      <section className={styles.emailSection}>
-        <div className={styles.emailCard}>
+      <section className={styles.contactSection}>
+        <div className={styles.contactCard}>
           <h3>Email the Board</h3>
           <p>
             For official HOA business, architectural requests, or dues
