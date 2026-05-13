@@ -4,26 +4,24 @@ FILE: ./frontend/src\App.jsx
 ==================================================
 import { useState } from "react";
 import Landing from "./pages/Landing/Landing";
-// We will import Dashboard here later
+import Dashboard from "./pages/Dashboard/Dashboard";
 
 export default function App() {
-  // This state will track if a resident is "logged in"
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  const handleLogin = () => {
-    // For now, this just toggles the view.
-    // Later, this will be triggered by Google/Facebook success.
-    setIsLoggedIn(true);
-  };
+  // Hardcoded test user with 'super_admin' role to test the Board Portal access
+  const [user, setUser] = useState({
+    first_name: "Aaron",
+    role: "super_admin",
+  });
+
+  const handleLogin = () => setIsLoggedIn(true);
+  const handleLogout = () => setIsLoggedIn(false);
 
   return (
     <div className="app-container">
       {isLoggedIn ? (
-        <div>
-          <h1>Resident Portal Dashboard</h1>
-          <button onClick={() => setIsLoggedIn(false)}>Logout</button>
-          {/* We will build the Dashboard component next */}
-        </div>
+        <Dashboard user={user} onLogout={handleLogout} />
       ) : (
         <Landing onLogin={handleLogin} />
       )}
@@ -50,9 +48,294 @@ createRoot(document.getElementById('root')).render(
 )
 
 ==================================================
+FILE: ./frontend/src\components\CivicGuide\CivicGuide.jsx
+==================================================
+import styles from "./CivicGuide.module.css";
+
+export default function CivicGuide() {
+  const cityContacts = [
+    {
+      service: "Code Enforcement",
+      contact: "Piedmont City Hall",
+      items: ["Tall Grass", "Noise", "Illegal Parking"],
+    },
+    {
+      service: "Utilities",
+      contact: "Public Works",
+      items: ["Water Leaks", "Trash Pickup", "Street Lights"],
+    },
+  ];
+
+  const hoaContacts = [
+    {
+      service: "Architectural",
+      contact: "Board Review",
+      items: ["Fences", "Paint Colors", "Pools"],
+    },
+    {
+      service: "Community",
+      contact: "HOA Manager",
+      items: ["Dues", "Common Areas", "Violations"],
+    },
+  ];
+
+  return (
+    <section className={styles.section}>
+      <h2>Who to Contact?</h2>
+      <div className={styles.container}>
+        <div className={styles.column}>
+          <h3>City of Piedmont</h3>
+          {cityContacts.map((c, i) => (
+            <div key={i} className={styles.card}>
+              <h4>{c.service}</h4>
+              <p className={styles.subText}>{c.contact}</p>
+              <ul>
+                {c.items.map((item, j) => (
+                  <li key={j}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+        <div className={styles.column}>
+          <h3>Town Central HOA</h3>
+          {hoaContacts.map((c, i) => (
+            <div key={i} className={styles.card}>
+              <h4>{c.service}</h4>
+              <p className={styles.subText}>{c.contact}</p>
+              <ul>
+                {c.items.map((item, j) => (
+                  <li key={j}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+==================================================
+FILE: ./frontend/src\components\CivicGuide\CivicGuide.module.css
+==================================================
+.section {
+  padding: 40px 20px; /* Slimmer vertical padding */
+  background-color: #fcfcfc;
+  color: #333;
+}
+
+.section h2 {
+  text-align: center;
+  font-size: 1.8rem; /* Smaller, cleaner heading */
+  margin-bottom: 30px;
+  color: #2c3e50;
+}
+
+.container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.column h3 {
+  font-size: 1.4rem;
+  margin-bottom: 15px;
+  padding-bottom: 8px;
+  border-bottom: 3px solid #2ecc71;
+  color: #2c3e50;
+}
+
+.card {
+  background: white;
+  padding: 15px 20px; /* Tighter internal spacing */
+  border-radius: 8px;
+  margin-bottom: 15px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-3px);
+}
+
+.card h4 {
+  margin: 0 0 5px 0;
+  font-size: 1.05rem;
+  color: #2ecc71;
+}
+
+.subText {
+  font-weight: 600;
+  color: #7f8c8d;
+  margin-bottom: 10px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+.card ul {
+  padding-left: 18px;
+  margin: 0;
+  color: #555;
+  font-size: 0.85rem; /* Smaller list text */
+}
+
+.card li {
+  margin-bottom: 4px;
+}
+
+==================================================
+FILE: ./frontend/src\pages\Dashboard\Dashboard.jsx
+==================================================
+import styles from "./Dashboard.module.css";
+
+export default function Dashboard({ user, onLogout }) {
+  return (
+    <div className={styles.layout}>
+      {/* Sidebar Navigation */}
+      <aside className={styles.sidebar}>
+        <div className={styles.brand}>Town Central</div>
+        <nav className={styles.nav}>
+          <button className={styles.navItem}>Announcement Feed</button>
+          <button className={styles.navItem}>Interactive Calendar</button>
+          <button className={styles.navItem}>Maintenance & ARC</button>
+          <button className={styles.navItem}>My Dues</button>
+
+          {/* Executive Board View Toggle */}
+          {(user?.role === "board_member" || user?.role === "super_admin") && (
+            <button className={styles.boardItem}>Board Executive Portal</button>
+          )}
+        </nav>
+        <button className={styles.logoutBtn} onClick={onLogout}>
+          Logout
+        </button>
+      </aside>
+
+      {/* Main Content Area */}
+      <main className={styles.main}>
+        <header className={styles.header}>
+          <h2>Welcome back, {user?.first_name || "Resident"}</h2>
+        </header>
+
+        <div className={styles.contentGrid}>
+          {/* We will build these as separate components next */}
+          <div className={styles.feedCard}>
+            <h3>Latest Announcements</h3>
+            <p>Meeting scheduled for next Tuesday at 7:00 PM.</p>
+          </div>
+
+          <div className={styles.statusCard}>
+            <h3>My Property Status</h3>
+            <p>
+              Dues: <strong>Paid</strong>
+            </p>
+            <p>
+              Open Requests: <strong>0</strong>
+            </p>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+==================================================
+FILE: ./frontend/src\pages\Dashboard\Dashboard.module.css
+==================================================
+.layout {
+  display: flex;
+  height: 100vh;
+  background-color: #f0f2f5;
+}
+
+.sidebar {
+  width: 260px;
+  background-color: #2c3e50;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+}
+
+.brand {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 40px;
+  text-align: center;
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+
+.navItem,
+.boardItem {
+  background: transparent;
+  border: none;
+  color: #bdc3c7;
+  text-align: left;
+  padding: 12px 15px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.navItem:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.boardItem {
+  margin-top: 20px;
+  color: #f1c40f; /* Gold color for board status */
+  border: 1px solid #f1c40f;
+}
+
+.boardItem:hover {
+  background: #f1c40f;
+  color: #2c3e50;
+}
+
+.logoutBtn {
+  margin-top: auto;
+  background: #e74c3c;
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.main {
+  flex: 1;
+  padding: 40px;
+  overflow-y: auto;
+}
+
+.contentGrid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+}
+
+.feedCard,
+.statusCard {
+  background: white;
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+==================================================
 FILE: ./frontend/src\pages\Landing\Landing.jsx
 ==================================================
 import styles from "./Landing.module.css";
+import CivicGuide from "../../components/CivicGuide/CivicGuide";
 
 export default function Landing({ onLogin }) {
   return (
@@ -77,6 +360,7 @@ export default function Landing({ onLogin }) {
           <button className={styles.secondaryAction}>Public Documents</button>
         </div>
       </main>
+      <CivicGuide />
     </div>
   );
 }

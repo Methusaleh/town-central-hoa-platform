@@ -1,5 +1,5 @@
 .heroWrapper {
-  min-height: 100vh;
+  min-height: 90vh; /* Better balance for a showcase look */
   display: flex;
   flex-direction: column;
   background:
@@ -8,6 +8,12 @@
   background-size: cover;
   background-position: center;
   color: white;
+}
+
+.pageContainer {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
 
 .topNav {
