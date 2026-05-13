@@ -1,51 +1,56 @@
 .feedContainer {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
 }
 
 .feedTitle {
-  font-size: 1.4rem;
-  color: #2c3e50;
-  margin-bottom: 10px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 20px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .announcementCard {
   background: white;
-  padding: 20px;
-  border-radius: 10px;
-  border-left: 5px solid #bdc3c7; /* Default gray */
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  padding: 24px;
+  border-radius: 16px;
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s;
 }
 
-.cardHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
+.announcementCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.urgent {
+  border-left: 6px solid #ef4444;
+}
+.event {
+  border-left: 6px solid #3b82f6;
+}
+.normal {
+  border-left: 6px solid #10b981;
 }
 
 .cardHeader h4 {
+  font-size: 1.1rem;
   margin: 0;
-  color: #2c3e50;
+  color: #0f172a;
 }
 
 .date {
   font-size: 0.8rem;
-  color: #95a5a6;
+  color: #94a3b8;
+  font-weight: 500;
 }
 
-/* Priority Styles */
-.urgent {
-  border-left-color: #e74c3c;
-}
-.event {
-  border-left-color: #3498db;
-}
-.normal {
-  border-left-color: #2ecc71;
-}
-
-.urgent h4 {
-  color: #c0392b;
+.announcementCard p {
+  color: #475569;
+  line-height: 1.6;
+  margin-top: 12px;
 }
