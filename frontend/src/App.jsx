@@ -1,25 +1,23 @@
 import { useState } from "react";
 import Landing from "./pages/Landing/Landing";
-// We will import Dashboard here later
+import Dashboard from "./pages/Dashboard/Dashboard";
 
 export default function App() {
-  // This state will track if a resident is "logged in"
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  const handleLogin = () => {
-    // For now, this just toggles the view.
-    // Later, this will be triggered by Google/Facebook success.
-    setIsLoggedIn(true);
-  };
+  // Hardcoded test user with 'super_admin' role to test the Board Portal access
+  const [user, setUser] = useState({
+    first_name: "Aaron",
+    role: "super_admin",
+  });
+
+  const handleLogin = () => setIsLoggedIn(true);
+  const handleLogout = () => setIsLoggedIn(false);
 
   return (
     <div className="app-container">
       {isLoggedIn ? (
-        <div>
-          <h1>Resident Portal Dashboard</h1>
-          <button onClick={() => setIsLoggedIn(false)}>Logout</button>
-          {/* We will build the Dashboard component next */}
-        </div>
+        <Dashboard user={user} onLogout={handleLogout} />
       ) : (
         <Landing onLogin={handleLogin} />
       )}
