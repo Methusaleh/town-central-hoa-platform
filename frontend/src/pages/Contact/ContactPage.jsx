@@ -35,8 +35,9 @@ export default function ContactPage({ onBack }) {
         </div>
       </section>
 
-      {/* Re-using the CivicGuide component here! */}
-      <CivicGuide />
+      <div classname={styles.guideWrapper}>
+        <CivicGuide />
+      </div>
     </div>
   );
 }
