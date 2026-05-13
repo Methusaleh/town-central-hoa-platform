@@ -53,6 +53,104 @@ createRoot(document.getElementById('root')).render(
 )
 
 ==================================================
+FILE: ./frontend/src\components\AnnouncementFeed\AnnouncementFeed.jsx
+==================================================
+import { useEffect, useState } from "react";
+import styles from "./AnnouncementFeed.module.css";
+
+export default function AnnouncementFeed() {
+  const [news, setNews] = useState([]);
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+
+  useEffect(() => {
+    fetch(`${API_URL}/api/announcements`)
+      .then((res) => res.json())
+      .then((data) => setNews(data))
+      .catch((err) => console.error("Error fetching news:", err));
+  }, []);
+
+  return (
+    <div className={styles.feedContainer}>
+      <h3 className={styles.feedTitle}>Community Feed</h3>
+      {news.map((item) => (
+        <div
+          key={item.id}
+          className={`${styles.announcementCard} ${styles[item.priority]}`}
+        >
+          <div className={styles.cardHeader}>
+            <h4>{item.title}</h4>
+            <span className={styles.date}>
+              {new Date(item.created_at).toLocaleDateString()}
+            </span>
+          </div>
+          <p>{item.content}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+==================================================
+FILE: ./frontend/src\components\AnnouncementFeed\AnnouncementFeed.module.css
+==================================================
+.feedContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.feedTitle {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 20px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.announcementCard {
+  background: white;
+  padding: 24px;
+  border-radius: 16px;
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s;
+}
+
+.announcementCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.urgent {
+  border-left: 6px solid #ef4444;
+}
+.event {
+  border-left: 6px solid #3b82f6;
+}
+.normal {
+  border-left: 6px solid #10b981;
+}
+
+.cardHeader h4 {
+  font-size: 1.1rem;
+  margin: 0;
+  color: #0f172a;
+}
+
+.date {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.announcementCard p {
+  color: #475569;
+  line-height: 1.6;
+  margin-top: 12px;
+}
+
+==================================================
 FILE: ./frontend/src\components\CivicGuide\CivicGuide.jsx
 ==================================================
 import styles from "./CivicGuide.module.css";
@@ -274,8 +372,8 @@ export default function ContactPage({ onBack }) {
         </p>
       </header>
 
-      <section className={styles.emailSection}>
-        <div className={styles.emailCard}>
+      <section className={styles.contactSection}>
+        <div className={styles.contactCard}>
           <h3>Email the Board</h3>
           <p>
             For official HOA business, architectural requests, or dues
@@ -345,6 +443,8 @@ FILE: ./frontend/src\pages\Contact\ContactPage.module.css
   max-width: 900px;
   margin: -50px auto 40px; /* Pulls the card up over the dark header */
   padding: 0 20px;
+  position: relative;
+  z-index: 10; /* Keeps it above the header background */
 }
 
 .contactCard {
@@ -371,11 +471,15 @@ FILE: ./frontend/src\pages\Contact\ContactPage.module.css
 ==================================================
 FILE: ./frontend/src\pages\Dashboard\Dashboard.jsx
 ==================================================
+import AnnouncementFeed from "../../components/AnnouncementFeed/AnnouncementFeed";
 import styles from "./Dashboard.module.css";
 
 export default function Dashboard({ user, onLogout }) {
   return (
     <div className={styles.layout}>
+      {/* Decorative Background Orbs */}
+      <div className={styles.orb1}></div>
+      <div className={styles.orb2}></div>
       {/* Sidebar Navigation */}
       <aside className={styles.sidebar}>
         <div className={styles.brand}>Town Central</div>
@@ -404,8 +508,7 @@ export default function Dashboard({ user, onLogout }) {
         <div className={styles.contentGrid}>
           {/* We will build these as separate components next */}
           <div className={styles.feedCard}>
-            <h3>Latest Announcements</h3>
-            <p>Meeting scheduled for next Tuesday at 7:00 PM.</p>
+            <AnnouncementFeed />
           </div>
 
           <div className={styles.statusCard}>
@@ -429,88 +532,133 @@ FILE: ./frontend/src\pages\Dashboard\Dashboard.module.css
 .layout {
   display: flex;
   height: 100vh;
-  background-color: #f0f2f5;
+  /* Modern Mesh Gradient Background */
+  background-color: #f5f7fa;
+  background-image:
+    radial-gradient(at 0% 0%, rgba(46, 204, 113, 0.15) 0px, transparent 50%),
+    radial-gradient(at 50% 0%, rgba(52, 152, 219, 0.1) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(155, 89, 182, 0.1) 0px, transparent 50%);
+  font-family:
+    "Inter",
+    -apple-system,
+    sans-serif;
+  overflow: hidden;
 }
 
 .sidebar {
-  width: 260px;
-  background-color: #2c3e50;
-  color: white;
+  width: 280px;
+  /* Increased transparency to let the background graphic peak through */
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(20px);
+  border-right: 1px solid rgba(255, 255, 255, 0.4);
   display: flex;
   flex-direction: column;
-  padding: 20px;
+  padding: 30px 20px;
+  box-shadow: 10px 0 30px rgba(0, 0, 0, 0.02);
+  z-index: 10;
 }
 
 .brand {
-  font-size: 1.5rem;
-  font-weight: bold;
-  margin-bottom: 40px;
-  text-align: center;
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #1e293b;
+  margin-bottom: 50px;
+  letter-spacing: -1px;
 }
 
 .nav {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   flex: 1;
 }
 
-.navItem,
-.boardItem {
+.navItem {
   background: transparent;
   border: none;
-  color: #bdc3c7;
+  color: #64748b;
   text-align: left;
-  padding: 12px 15px;
-  border-radius: 8px;
+  padding: 14px 20px;
+  border-radius: 12px;
   cursor: pointer;
-  transition: 0.3s;
+  transition: all 0.3s ease;
+  font-weight: 600;
 }
 
 .navItem:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
+  background: rgba(255, 255, 255, 0.8);
+  color: #2ecc71;
+  transform: translateX(5px);
 }
 
 .boardItem {
-  margin-top: 20px;
-  color: #f1c40f; /* Gold color for board status */
-  border: 1px solid #f1c40f;
-}
-
-.boardItem:hover {
-  background: #f1c40f;
-  color: #2c3e50;
-}
-
-.logoutBtn {
-  margin-top: auto;
-  background: #e74c3c;
+  margin-top: 30px;
+  background: linear-gradient(135deg, #f1c40f, #f39c12);
   color: white;
   border: none;
-  padding: 10px;
-  border-radius: 5px;
+  padding: 14px;
+  border-radius: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  letter-spacing: 1px;
+  box-shadow: 0 10px 20px rgba(243, 156, 18, 0.2);
   cursor: pointer;
 }
 
 .main {
   flex: 1;
-  padding: 40px;
+  padding: 40px 60px;
   overflow-y: auto;
+  position: relative;
+}
+
+.header h2 {
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 40px;
 }
 
 .contentGrid {
   display: grid;
   grid-template-columns: 2fr 1fr;
-  gap: 20px;
+  gap: 30px;
 }
 
 .feedCard,
 .statusCard {
-  background: white;
-  padding: 25px;
-  border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  /* Ultra-glass effect */
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(10px);
+  padding: 30px;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.03);
+}
+
+.orb1 {
+  position: absolute;
+  top: -100px;
+  right: -100px;
+  width: 400px;
+  height: 400px;
+  background: rgba(46, 204, 113, 0.1);
+  border-radius: 50%;
+  filter: blur(80px);
+  z-index: 0;
+}
+
+.orb2 {
+  position: absolute;
+  bottom: -50px;
+  left: 200px;
+  width: 300px;
+  height: 300px;
+  background: rgba(52, 152, 219, 0.1);
+  border-radius: 50%;
+  filter: blur(60px);
+  z-index: 0;
 }
 
 ==================================================
