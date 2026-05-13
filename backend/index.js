@@ -1,13 +1,14 @@
 const express = require("express");
 const cors = require("cors");
 const db = require("./db"); // Import our new connection file
+const announcementRoutes = require("./routes/announcementRoutes"); // 1. ADD THIS
 const app = express();
 
-// Use your proven CORS logic [cite: 5]
 const allowedOrigins = [
   "http://localhost:5173",
   "https://town-central-hoa-platform.vercel.app",
 ];
+
 app.use(
   cors({
     origin: (origin, cb) =>
@@ -20,6 +21,7 @@ app.use(
 
 app.use(express.json());
 
+// 2. ADD THIS: Plug in the announcements route
 app.use("/api/announcements", announcementRoutes);
 
 // We will plug in separate route files here as we build them
