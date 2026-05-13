@@ -1,4 +1,5 @@
 import styles from "./Landing.module.css";
+import CivicGuide from "../../components/CivicGuide/CivicGuide";
 
 export default function Landing({ onLogin }) {
   return (
@@ -23,6 +24,7 @@ export default function Landing({ onLogin }) {
           <button className={styles.secondaryAction}>Public Documents</button>
         </div>
       </main>
+      <CivicGuide />
     </div>
   );
 }
