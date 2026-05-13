@@ -4,6 +4,9 @@ import styles from "./Dashboard.module.css";
 export default function Dashboard({ user, onLogout }) {
   return (
     <div className={styles.layout}>
+      {/* Decorative Background Orbs */}
+      <div className={styles.orb1}></div>
+      <div className={styles.orb2}></div>
       {/* Sidebar Navigation */}
       <aside className={styles.sidebar}>
         <div className={styles.brand}>Town Central</div>
