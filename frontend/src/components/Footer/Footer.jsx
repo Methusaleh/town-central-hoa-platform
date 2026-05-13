@@ -7,7 +7,7 @@ export default function Footer({ onContactClick }) {
         <p>&copy; 2026 Town Central HOA. All rights reserved.</p>
         <nav className={styles.footerNav}>
           <button onClick={onContactClick} className={styles.linkBtn}>
-            Contact & Civic Guide
+            Contact Us
           </button>
           <a href="/public-docs" className={styles.link}>
             Public Documents

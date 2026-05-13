@@ -1,0 +1,55 @@
+.container {
+  min-height: 100vh;
+  background: #f8f9fa;
+  color: #2c3e50;
+}
+
+.nav {
+  display: flex;
+  justify-content: space-between;
+  padding: 20px 50px;
+  background: white;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.backBtn {
+  background: none;
+  border: none;
+  color: #2ecc71;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.logo {
+  font-weight: bold;
+}
+
+.header {
+  text-align: center;
+  padding: 60px 20px;
+  background: #2c3e50;
+  color: white;
+}
+
+.emailSection {
+  max-width: 1000px;
+  margin: -40px auto 40px; /* Overlaps the header slightly for a modern look */
+  padding: 0 20px;
+}
+
+.emailCard {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.emailLink {
+  display: inline-block;
+  margin-top: 15px;
+  font-size: 1.5rem;
+  color: #2ecc71;
+  text-decoration: none;
+  font-weight: bold;
+}
