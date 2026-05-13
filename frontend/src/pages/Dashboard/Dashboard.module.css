@@ -1,23 +1,25 @@
 .layout {
   display: flex;
   height: 100vh;
-  width: 100vw; /* Ensure it stays within viewport width */
-  /* Modern Mesh Gradient Background */
+  width: 100vw;
+  /* Prevent horizontal and vertical overflow on the outer container */
+  overflow: hidden;
+  position: relative;
+  font-family:
+    "Inter",
+    -apple-system,
+    sans-serif;
+  /* Modern Mesh Gradient Background [cite: 140] */
   background-color: #f5f7fa;
   background-image:
     radial-gradient(at 0% 0%, rgba(46, 204, 113, 0.15) 0px, transparent 50%),
     radial-gradient(at 50% 0%, rgba(52, 152, 219, 0.1) 0px, transparent 50%),
     radial-gradient(at 100% 0%, rgba(155, 89, 182, 0.1) 0px, transparent 50%);
-  font-family:
-    "Inter",
-    -apple-system,
-    sans-serif;
-  overflow: hidden; /* Fixes horizontal scroll and removes primary scrollbar */
-  position: relative;
 }
 
 .sidebar {
   width: 280px;
+  flex-shrink: 0; /* Ensures the sidebar doesn't squish horizontally */
   background: rgba(255, 255, 255, 0.6);
   backdrop-filter: blur(20px);
   border-right: 1px solid rgba(255, 255, 255, 0.4);
@@ -25,8 +27,7 @@
   flex-direction: column;
   padding: 30px 20px;
   box-shadow: 10px 0 30px rgba(0, 0, 0, 0.02);
-  z-index: 10; /* Above orbs */
-  flex-shrink: 0; /* Prevents sidebar from squishing */
+  z-index: 20; /* Above the orbs [cite: 142, 143] */
 }
 
 .brand {
@@ -79,7 +80,7 @@
 
 .logoutBtn {
   margin-top: auto;
-  background: white; /* Ensure visibility */
+  background: #fff;
   color: #ef4444;
   border: 1px solid #fee2e2;
   padding: 12px;
@@ -98,10 +99,11 @@
 .main {
   flex: 1;
   padding: 40px 60px;
-  overflow-y: auto; /* This is the ONLY scrollbar we want */
-  overflow-x: hidden; /* Prevent horizontal shifting */
+  /* This is the ONLY area that should ever have a vertical scrollbar  */
+  overflow-y: auto;
+  overflow-x: hidden;
   position: relative;
-  z-index: 5;
+  z-index: 10;
 }
 
 .header h2 {
@@ -115,7 +117,7 @@
   display: grid;
   grid-template-columns: 2fr 1fr;
   gap: 30px;
-  width: 100%;
+  max-width: 100%;
 }
 
 .feedCard,
@@ -128,35 +130,29 @@
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.03);
 }
 
-/* Updated Orbs to ensure they stay in the background */
+/* Orbs configured as fixed background elements  */
 .orb1 {
-  position: absolute;
+  position: fixed; /* Keeps it locked to the viewport */
   top: -100px;
-  right: 5%; /* Use percentage to stay visible on wider screens */
+  right: -50px;
   width: 500px;
   height: 500px;
-  background: radial-gradient(
-    circle,
-    rgba(46, 204, 113, 0.2) 0%,
-    transparent 70%
-  );
-  filter: blur(60px);
+  background: rgba(46, 204, 113, 0.12);
+  border-radius: 50%;
+  filter: blur(80px);
   z-index: 1;
-  pointer-events: none;
+  pointer-events: none; /* Allows you to click through them */
 }
 
 .orb2 {
-  position: absolute;
-  bottom: 10%;
-  left: 300px;
+  position: fixed;
+  bottom: -50px;
+  left: 350px;
   width: 400px;
   height: 400px;
-  background: radial-gradient(
-    circle,
-    rgba(52, 152, 219, 0.15) 0%,
-    transparent 70%
-  );
-  filter: blur(50px);
+  background: rgba(52, 152, 219, 0.1);
+  border-radius: 50%;
+  filter: blur(70px);
   z-index: 1;
   pointer-events: none;
 }
