@@ -20,6 +20,8 @@ app.use(
 
 app.use(express.json());
 
+app.use("/api/announcements", announcementRoutes);
+
 // We will plug in separate route files here as we build them
 // app.use('/api/residents', residentRoutes);
 // app.use('/api/board', boardRoutes);

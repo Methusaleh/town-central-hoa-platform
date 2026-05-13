@@ -1,3 +1,4 @@
+import AnnouncementFeed from "../../components/AnnouncementFeed/AnnouncementFeed";
 import styles from "./Dashboard.module.css";
 
 export default function Dashboard({ user, onLogout }) {
@@ -31,8 +32,7 @@ export default function Dashboard({ user, onLogout }) {
         <div className={styles.contentGrid}>
           {/* We will build these as separate components next */}
           <div className={styles.feedCard}>
-            <h3>Latest Announcements</h3>
-            <p>Meeting scheduled for next Tuesday at 7:00 PM.</p>
+            <AnnouncementFeed />
           </div>
 
           <div className={styles.statusCard}>
