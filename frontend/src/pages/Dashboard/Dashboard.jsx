@@ -1,5 +1,6 @@
 import AnnouncementFeed from "../../components/AnnouncementFeed/AnnouncementFeed";
 import DuesCard from "../../components/DuesCard/DuesCard";
+import NeighborhoodCalendar from "../../components/NeighborhoodCalendar/NeighborhoodCalendar";
 import styles from "./Dashboard.module.css";
 
 export default function Dashboard({ user, onLogout }) {
