@@ -113,12 +113,13 @@
 
 .main {
   flex: 1;
-  height: 100%;
-  padding: 40px 60px;
+  padding: 40px 60px 80px; /* Added 80px to the bottom to prevent cutoff */
   overflow-y: auto;
   overflow-x: hidden;
-  z-index: 10;
   position: relative;
+  z-index: 10;
+  height: 100vh; /* Explicitly constrain height to the viewport */
+  box-sizing: border-box; /* Ensures padding doesn't add to total height */
 }
 
 .header h2 {
@@ -132,7 +133,8 @@
   display: grid;
   grid-template-columns: 2fr 1fr;
   gap: 30px;
-  width: 100%;
+  max-width: 100%;
+  align-items: start; /* Keeps cards from stretching to match heights */
 }
 
 .feedCard,
