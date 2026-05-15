@@ -49,3 +49,88 @@
   color: #94a3b8;
   font-style: italic;
 }
+
+/* 1. Neutralize Weekend Colors */
+.customCalendar :global(.react-calendar__month-view__days__day--weekend) {
+  color: #1e293b !important; /* Standard slate black */
+}
+
+/* 2. Highlight Event Days */
+.eventDay {
+  position: relative;
+  font-weight: 700 !important;
+}
+
+.eventDay::after {
+  content: "";
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 6px;
+  height: 6px;
+  background: #2ecc71; /* Green dot for events */
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(46, 204, 113, 0.6);
+}
+
+/* 3. Professional Buttons */
+.syncContainer {
+  display: flex;
+  gap: 12px;
+  margin-top: 25px;
+}
+
+.googleBtn,
+.appleBtn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  border: 1px solid #e2e8f0;
+}
+
+.googleBtn {
+  background: #ffffff;
+  color: #4285f4;
+}
+
+.googleBtn:hover {
+  background: #f8faff;
+  border-color: #4285f4;
+  transform: translateY(-2px);
+}
+
+.appleBtn {
+  background: #ffffff;
+  color: #000000;
+}
+
+.appleBtn:hover {
+  background: #fafafa;
+  border-color: #000000;
+  transform: translateY(-2px);
+}
+
+/* 4. Interactive Map Link */
+.mapLink {
+  color: #64748b;
+  text-decoration: none;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  transition: color 0.2s;
+}
+
+.mapLink:hover {
+  color: #2ecc71;
+}

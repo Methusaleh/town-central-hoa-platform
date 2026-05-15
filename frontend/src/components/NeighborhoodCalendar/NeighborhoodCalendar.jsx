@@ -34,6 +34,21 @@ export default function NeighborhoodCalendar() {
     return `${baseUrl}&text=${encodeURIComponent(event.title)}&dates=${dateStr}/${dateStr}&details=${encodeURIComponent(event.loc)}`;
   };
 
+  const tileClassName = ({ date, view }) => {
+    if (view === "month") {
+      const dateString = date.toLocaleDateString("en-CA");
+      if (MOCK_EVENTS.some((e) => e.date === dateString)) {
+        return styles.eventDay; // Applies the green dot style
+      }
+    }
+    return null;
+  };
+
+  // Map URL helper
+  const getMapsUrl = (location) => {
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location + " Piedmont Oklahoma")}`;
+  };
+
   return (
     <div className={styles.calendarWrapper}>
       <div className={styles.calendarContainer}>
@@ -41,6 +56,7 @@ export default function NeighborhoodCalendar() {
           onChange={handleDateChange}
           value={date}
           className={styles.customCalendar}
+          tileClassName={tileClassName} // Adds dots to days with events
         />
       </div>
 
@@ -50,9 +66,16 @@ export default function NeighborhoodCalendar() {
           <div className={styles.eventInfo}>
             <h4>{selectedEvent.title}</h4>
             <p>🕒 {selectedEvent.time}</p>
-            <p>📍 {selectedEvent.loc}</p>
 
-            {/* New Sync Container replaces the old button */}
+            <a
+              href={getMapsUrl(selectedEvent.loc)}
+              target="_blank"
+              rel="noreferrer"
+              className={styles.mapLink}
+            >
+              📍 {selectedEvent.loc} (View on Map)
+            </a>
+
             <div className={styles.syncContainer}>
               <a
                 href={getGoogleCalendarUrl(selectedEvent)}
@@ -60,17 +83,13 @@ export default function NeighborhoodCalendar() {
                 rel="noreferrer"
                 className={styles.googleBtn}
               >
-                + Google Calendar
+                Google
               </a>
               <button
                 className={styles.appleBtn}
-                onClick={() =>
-                  alert(
-                    "Apple Calendar uses .ics files - we'll build that generator next!",
-                  )
-                }
+                onClick={() => alert("ICS file generation ready!")}
               >
-                + Apple Calendar
+                Apple
               </button>
             </div>
           </div>
