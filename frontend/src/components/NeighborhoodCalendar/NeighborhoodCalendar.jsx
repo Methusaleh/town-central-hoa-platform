@@ -26,6 +26,14 @@ export default function NeighborhoodCalendar() {
     setSelectedEvent(found || null);
   };
 
+  const getGoogleCalendarUrl = (event) => {
+    const baseUrl =
+      "https://calendar.google.com/calendar/render?action=TEMPLATE";
+    // Format: YYYYMMDDTHHmmSSZ (Simplified for mock)
+    const dateStr = event.date.replace(/-/g, "");
+    return `${baseUrl}&text=${encodeURIComponent(event.title)}&dates=${dateStr}/${dateStr}&details=${encodeURIComponent(event.loc)}`;
+  };
+
   return (
     <div className={styles.calendarWrapper}>
       <div className={styles.calendarContainer}>
@@ -43,7 +51,28 @@ export default function NeighborhoodCalendar() {
             <h4>{selectedEvent.title}</h4>
             <p>🕒 {selectedEvent.time}</p>
             <p>📍 {selectedEvent.loc}</p>
-            <button className={styles.syncBtn}>Add to Google Calendar</button>
+
+            {/* New Sync Container replaces the old button */}
+            <div className={styles.syncContainer}>
+              <a
+                href={getGoogleCalendarUrl(selectedEvent)}
+                target="_blank"
+                rel="noreferrer"
+                className={styles.googleBtn}
+              >
+                + Google Calendar
+              </a>
+              <button
+                className={styles.appleBtn}
+                onClick={() =>
+                  alert(
+                    "Apple Calendar uses .ics files - we'll build that generator next!",
+                  )
+                }
+              >
+                + Apple Calendar
+              </button>
+            </div>
           </div>
         ) : (
           <p className={styles.noEvent}>No events scheduled for this day.</p>
