@@ -532,22 +532,25 @@ FILE: ./frontend/src\pages\Dashboard\Dashboard.module.css
 .layout {
   display: flex;
   height: 100vh;
-  /* Modern Mesh Gradient Background */
+  width: 100vw;
+  /* Prevent horizontal and vertical overflow on the outer container */
+  overflow: hidden;
+  position: relative;
+  font-family:
+    "Inter",
+    -apple-system,
+    sans-serif;
+  /* Modern Mesh Gradient Background [cite: 140] */
   background-color: #f5f7fa;
   background-image:
     radial-gradient(at 0% 0%, rgba(46, 204, 113, 0.15) 0px, transparent 50%),
     radial-gradient(at 50% 0%, rgba(52, 152, 219, 0.1) 0px, transparent 50%),
     radial-gradient(at 100% 0%, rgba(155, 89, 182, 0.1) 0px, transparent 50%);
-  font-family:
-    "Inter",
-    -apple-system,
-    sans-serif;
-  overflow: hidden;
 }
 
 .sidebar {
   width: 280px;
-  /* Increased transparency to let the background graphic peak through */
+  flex-shrink: 0; /* Ensures the sidebar doesn't squish horizontally */
   background: rgba(255, 255, 255, 0.6);
   backdrop-filter: blur(20px);
   border-right: 1px solid rgba(255, 255, 255, 0.4);
@@ -555,7 +558,7 @@ FILE: ./frontend/src\pages\Dashboard\Dashboard.module.css
   flex-direction: column;
   padding: 30px 20px;
   box-shadow: 10px 0 30px rgba(0, 0, 0, 0.02);
-  z-index: 10;
+  z-index: 20; /* Above the orbs [cite: 142, 143] */
 }
 
 .brand {
@@ -606,11 +609,32 @@ FILE: ./frontend/src\pages\Dashboard\Dashboard.module.css
   cursor: pointer;
 }
 
+.logoutBtn {
+  margin-top: auto;
+  background: #fff;
+  color: #ef4444;
+  border: 1px solid #fee2e2;
+  padding: 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: 0.2s;
+  width: 100%;
+}
+
+.logoutBtn:hover {
+  background: #ef4444;
+  color: white;
+}
+
 .main {
   flex: 1;
   padding: 40px 60px;
+  /* This is the ONLY area that should ever have a vertical scrollbar  */
   overflow-y: auto;
+  overflow-x: hidden;
   position: relative;
+  z-index: 10;
 }
 
 .header h2 {
@@ -624,11 +648,11 @@ FILE: ./frontend/src\pages\Dashboard\Dashboard.module.css
   display: grid;
   grid-template-columns: 2fr 1fr;
   gap: 30px;
+  max-width: 100%;
 }
 
 .feedCard,
 .statusCard {
-  /* Ultra-glass effect */
   background: rgba(255, 255, 255, 0.5);
   backdrop-filter: blur(10px);
   padding: 30px;
@@ -637,28 +661,31 @@ FILE: ./frontend/src\pages\Dashboard\Dashboard.module.css
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.03);
 }
 
+/* Orbs configured as fixed background elements  */
 .orb1 {
-  position: absolute;
+  position: fixed; /* Keeps it locked to the viewport */
   top: -100px;
-  right: -100px;
-  width: 400px;
-  height: 400px;
-  background: rgba(46, 204, 113, 0.1);
+  right: -50px;
+  width: 500px;
+  height: 500px;
+  background: rgba(46, 204, 113, 0.12);
   border-radius: 50%;
   filter: blur(80px);
-  z-index: 0;
+  z-index: 1;
+  pointer-events: none; /* Allows you to click through them */
 }
 
 .orb2 {
-  position: absolute;
+  position: fixed;
   bottom: -50px;
-  left: 200px;
-  width: 300px;
-  height: 300px;
+  left: 350px;
+  width: 400px;
+  height: 400px;
   background: rgba(52, 152, 219, 0.1);
   border-radius: 50%;
-  filter: blur(60px);
-  z-index: 0;
+  filter: blur(70px);
+  z-index: 1;
+  pointer-events: none;
 }
 
 ==================================================
