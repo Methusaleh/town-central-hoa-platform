@@ -17,6 +17,16 @@ export default function Dashboard({ user, onLogout }) {
       <aside className={styles.sidebar}>
         <div className={styles.brand}>Town Central</div>
         <nav className={styles.nav}>
+          <button onClick={onLogout} className={styles.navItem}>
+            ← Public Home
+          </button>
+          <div
+            style={{
+              margin: "10px 0",
+              borderBottom: "1px solid rgba(0,0,0,0.05)",
+            }}
+          ></div>
+
           <button
             className={`${styles.navItem} ${activeTab === "feed" ? styles.activeNav : ""}`}
             onClick={() => setActiveTab("feed")}
@@ -36,6 +46,15 @@ export default function Dashboard({ user, onLogout }) {
             onClick={() => setActiveTab("dues")}
           >
             My Dues
+          </button>
+
+          <button
+            onClick={() =>
+              (window.location.href = "mailto:board@towncentral.com")
+            }
+            className={styles.navItem}
+          >
+            Contact the Board
           </button>
 
           {(user?.role === "board_member" || user?.role === "super_admin") && (
