@@ -1,4 +1,5 @@
 import AnnouncementFeed from "../../components/AnnouncementFeed/AnnouncementFeed";
+import DuesCard from "../../components/DuesCard/DuesCard";
 import styles from "./Dashboard.module.css";
 
 export default function Dashboard({ user, onLogout }) {
@@ -39,13 +40,7 @@ export default function Dashboard({ user, onLogout }) {
           </div>
 
           <div className={styles.statusCard}>
-            <h3>My Property Status</h3>
-            <p>
-              Dues: <strong>Paid</strong>
-            </p>
-            <p>
-              Open Requests: <strong>0</strong>
-            </p>
+            <DuesCard residentName={user?.first_name} />
           </div>
         </div>
       </main>

@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const db = require("./db"); // Import our new connection file
 const announcementRoutes = require("./routes/announcementRoutes"); // 1. ADD THIS
+const duesRoutes = require("./routes/duesRoutes");
 const app = express();
 
 const allowedOrigins = [
@@ -23,6 +24,7 @@ app.use(express.json());
 
 // 2. ADD THIS: Plug in the announcements route
 app.use("/api/announcements", announcementRoutes);
+app.use("/api/dues", duesRoutes);
 
 // We will plug in separate route files here as we build them
 // app.use('/api/residents', residentRoutes);
