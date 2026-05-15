@@ -168,3 +168,18 @@
     transform: translateY(0);
   }
 }
+
+.duesPageWrapper {
+  max-width: 600px; /* Centers the card and keeps it readable */
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(12px);
+  padding: 40px;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+}
+
+/* Adjust the Home Feed to full width now that Dues is gone */
+.feedCard {
+  width: 100%;
+}
