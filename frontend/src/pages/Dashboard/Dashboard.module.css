@@ -154,13 +154,14 @@
 }
 
 .fadeContent {
-  animation: fadeIn 0.4s ease-in;
+  animation: fadeIn 0.5s ease-out;
+  max-width: 1000px; /* Keeps the form from getting too wide on large screens */
 }
 
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(15px);
   }
   to {
     opacity: 1;
