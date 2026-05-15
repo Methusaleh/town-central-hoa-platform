@@ -2,21 +2,22 @@
   display: flex;
   height: 100vh;
   width: 100vw;
-  overflow: hidden; /* Kill horizontal and outer vertical scroll [cite: 139] */
+  overflow: hidden;
   position: relative;
-  background-color: #f8fafc; /* Lighter, cleaner base */
+  background-color: #f8fafc;
+  /* This creates the soft background lighting base */
   background-image:
     radial-gradient(at 0% 0%, rgba(46, 204, 113, 0.1) 0px, transparent 50%),
     radial-gradient(at 100% 0%, rgba(52, 152, 219, 0.08) 0px, transparent 50%);
 }
 
-/* The Orbs: We use absolute to keep them in the flow but behind the glass */
+/* THE ORBS: Forced to stay visible but behind the sidebar/cards */
 .orb1,
 .orb2 {
   position: absolute;
   border-radius: 50%;
-  filter: blur(100px); /* Heavier blur for a smoother look */
-  z-index: 0; /* Absolute bottom [cite: 146, 161] */
+  filter: blur(100px);
+  z-index: 1; /* Sit just above the base background */
   pointer-events: none;
 }
 
@@ -25,7 +26,7 @@
   right: -100px;
   width: 600px;
   height: 600px;
-  background: rgba(46, 204, 113, 0.15);
+  background: rgba(46, 204, 113, 0.2); /* Increased opacity */
 }
 
 .orb2 {
@@ -33,37 +34,76 @@
   left: 20%;
   width: 500px;
   height: 500px;
-  background: rgba(52, 152, 219, 0.12);
+  background: rgba(52, 152, 219, 0.15); /* Increased opacity */
 }
 
 .sidebar {
   width: 280px;
   height: 100%;
-  background: rgba(255, 255, 255, 0.4); /* Thinner glass to see orbs  */
-  backdrop-filter: blur(25px);
-  border-right: 1px solid rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.8); /* More solid to define the sidebar */
+  backdrop-filter: blur(20px);
+  border-right: 1px solid rgba(0, 0, 0, 0.05);
   display: flex;
   flex-direction: column;
   padding: 30px 20px;
-  z-index: 10;
+  z-index: 10; /* Above orbs */
   flex-shrink: 0;
 }
 
-.main {
+.brand {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #1e293b;
+  margin-bottom: 50px;
+  letter-spacing: -1px;
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   flex: 1;
-  height: 100%;
-  padding: 40px 60px;
-  overflow-y: auto; /* The ONLY allowed scrollbar [cite: 154] */
-  overflow-x: hidden;
-  z-index: 5;
-  position: relative;
+}
+
+/* RESTORED: These styles bring back your sidebar structure */
+.navItem {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  text-align: left;
+  padding: 14px 20px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 600;
+  width: 100%;
+}
+
+.navItem:hover {
+  background: white;
+  color: #2ecc71;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.boardItem {
+  margin-top: 30px;
+  background: linear-gradient(135deg, #f1c40f, #f39c12);
+  color: white;
+  border: none;
+  padding: 14px;
+  border-radius: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  letter-spacing: 1px;
+  cursor: pointer;
 }
 
 .logoutBtn {
   margin-top: auto;
-  background: rgba(255, 255, 255, 0.8);
+  background: #fff;
   color: #ef4444;
-  border: 1px solid rgba(239, 68, 68, 0.2);
+  border: 1px solid #fee2e2;
   padding: 12px;
   border-radius: 10px;
   cursor: pointer;
@@ -71,22 +111,36 @@
   width: 100%;
 }
 
-/* Ensure the grid fits horizontally [cite: 157, 158] */
+.main {
+  flex: 1;
+  height: 100%;
+  padding: 40px 60px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  z-index: 10;
+  position: relative;
+}
+
+.header h2 {
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 40px;
+}
+
 .contentGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: 2fr 1fr;
   gap: 30px;
   width: 100%;
 }
 
 .feedCard,
 .statusCard {
-  background: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(10px);
   padding: 30px;
   border-radius: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.03);
 }
-
-/* ... keep other utility styles like .brand, .navItem ... */
