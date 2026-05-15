@@ -52,7 +52,7 @@ export default function Dashboard({ user, onLogout }) {
         {activeTab === "feed" && (
           <div className={styles.fadeContent}>
             <header className={styles.header}>
-              <h2>Welcome back, {user?.first_name || "Resident"}</h2>
+              <h2>Welcome Back, {user?.first_name || "Resident"}</h2>
             </header>
             <section style={{ marginBottom: "30px" }}>
               <NeighborhoodCalendar />
