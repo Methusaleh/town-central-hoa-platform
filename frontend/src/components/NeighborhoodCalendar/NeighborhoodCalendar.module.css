@@ -1,0 +1,51 @@
+.calendarWrapper {
+  display: flex;
+  gap: 20px;
+  background: rgba(255, 255, 255, 0.4);
+  padding: 20px;
+  border-radius: 20px;
+  backdrop-filter: blur(10px);
+}
+
+.customCalendar {
+  border: none !important;
+  font-family: "Inter", sans-serif !important;
+  border-radius: 12px;
+  padding: 10px;
+  background: white !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.eventDetail {
+  flex: 1;
+  padding: 20px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.eventInfo h4 {
+  color: #2ecc71;
+  margin-bottom: 10px;
+}
+
+.syncBtn {
+  margin-top: 20px;
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  background: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.syncBtn:hover {
+  background: #f8fafc;
+}
+
+.noEvent {
+  color: #94a3b8;
+  font-style: italic;
+}

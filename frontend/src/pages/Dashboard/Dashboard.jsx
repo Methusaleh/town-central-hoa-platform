@@ -33,6 +33,10 @@ export default function Dashboard({ user, onLogout }) {
           <h2>Welcome back, {user?.first_name || "Resident"}</h2>
         </header>
 
+        <section style={{ marginBottom: "30px" }}>
+          <NeighborhoodCalendar />
+        </section>
+
         <div className={styles.contentGrid}>
           {/* We will build these as separate components next */}
           <div className={styles.feedCard}>
