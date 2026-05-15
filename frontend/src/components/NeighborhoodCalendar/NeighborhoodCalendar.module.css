@@ -1,3 +1,4 @@
+/* --- CONTAINER LAYOUT --- */
 .calendarWrapper {
   display: flex;
   gap: 20px;
@@ -7,6 +8,7 @@
   backdrop-filter: blur(10px);
 }
 
+/* --- CALENDAR COMPONENT OVERRIDES --- */
 .customCalendar {
   border: none !important;
   font-family: "Inter", sans-serif !important;
@@ -16,46 +18,21 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
-.eventDetail {
-  flex: 1;
-  padding: 20px;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-}
-
-.eventInfo h4 {
-  color: #2ecc71;
-  margin-bottom: 10px;
-}
-
-.syncBtn {
-  margin-top: 20px;
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #ddd;
-  background: white;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 0.8rem;
-  font-weight: 600;
-}
-
-.syncBtn:hover {
-  background: #f8fafc;
-}
-
-.noEvent {
-  color: #94a3b8;
-  font-style: italic;
-}
-
 /* 1. Neutralize Weekend Colors */
 .customCalendar :global(.react-calendar__month-view__days__day--weekend) {
   color: #1e293b !important; /* Standard slate black */
 }
 
-/* 2. Highlight Event Days */
+/* 2. Today's Date Highlight (Step 3) */
+.customCalendar :global(.react-calendar__tile--now) {
+  background: rgba(46, 204, 113, 0.1) !important;
+  color: #2ecc71 !important;
+  font-weight: 800;
+  border-radius: 8px;
+  border: 1px solid rgba(46, 204, 113, 0.3) !important;
+}
+
+/* 3. Event Day Visualization (Green Glow Dots) */
 .eventDay {
   position: relative;
   font-weight: 700 !important;
@@ -69,16 +46,55 @@
   transform: translateX(-50%);
   width: 6px;
   height: 6px;
-  background: #2ecc71; /* Green dot for events */
+  background: #2ecc71;
   border-radius: 50%;
   box-shadow: 0 0 8px rgba(46, 204, 113, 0.6);
 }
 
-/* 3. Professional Buttons */
+/* --- EVENT DETAILS PANEL (RIGHT SIDE) --- */
+.eventDetail {
+  flex: 1;
+  padding: 20px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+}
+
+.eventInfo h4 {
+  color: #2ecc71;
+  margin-bottom: 10px;
+  font-size: 1.2rem;
+}
+
+.mapLink {
+  color: #64748b;
+  text-decoration: none;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  transition: color 0.2s;
+}
+
+.mapLink:hover {
+  color: #2ecc71;
+}
+
+.noEvent {
+  color: #94a3b8;
+  font-style: italic;
+  margin-top: 10px;
+}
+
+/* --- SYNC BUTTONS --- */
 .syncContainer {
   display: flex;
   gap: 12px;
-  margin-top: 25px;
+  margin-top: auto; /* Pushes buttons to the bottom of the detail card */
+  padding-top: 20px;
 }
 
 .googleBtn,
@@ -117,20 +133,4 @@
   background: #fafafa;
   border-color: #000000;
   transform: translateY(-2px);
-}
-
-/* 4. Interactive Map Link */
-.mapLink {
-  color: #64748b;
-  text-decoration: none;
-  font-size: 0.9rem;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 0;
-  transition: color 0.2s;
-}
-
-.mapLink:hover {
-  color: #2ecc71;
 }

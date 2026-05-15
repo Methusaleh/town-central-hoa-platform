@@ -7,56 +7,45 @@ export default function RequestForm({ user }) {
     subject: "",
     description: "",
   });
+  const [status, setStatus] = useState(null); // 'success' or 'error'
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    alert(
-      `Request Submitted! The board will review your ${formData.type} request.`,
-    );
-    // We will wire this to a POST route next
+    try {
+      const response = await fetch("http://localhost:8080/api/requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...formData,
+          first_name: user?.first_name || "Guest",
+          last_name: "Resident", // Placeholder until full auth is ready
+          resident_id: 1, // Placeholder
+        }),
+      });
+
+      if (response.ok) {
+        setStatus("success");
+        setFormData({ type: "maintenance", subject: "", description: "" });
+      } else {
+        setStatus("error");
+      }
+    } catch (err) {
+      setStatus("error");
+    }
   };
 
   return (
     <div className={styles.formCard}>
+      {status === "success" && (
+        <p className={styles.successMsg}>✅ Request submitted successfully!</p>
+      )}
+      {status === "error" && (
+        <p className={styles.errorMsg}>❌ Something went wrong. Try again.</p>
+      )}
+
       <h3>Submit a New Request</h3>
       <form onSubmit={handleSubmit} className={styles.form}>
-        <div className={styles.inputGroup}>
-          <label>Request Type</label>
-          <select
-            value={formData.type}
-            onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-          >
-            <option value="maintenance">Common Area Maintenance</option>
-            <option value="arc">Architectural Change (ARC)</option>
-          </select>
-        </div>
-
-        <div className={styles.inputGroup}>
-          <label>Subject</label>
-          <input
-            type="text"
-            placeholder="e.g., Fence Repair or Pool Gate"
-            value={formData.subject}
-            onChange={(e) =>
-              setFormData({ ...formData, subject: e.target.value })
-            }
-            required
-          />
-        </div>
-
-        <div className={styles.inputGroup}>
-          <label>Description</label>
-          <textarea
-            rows="4"
-            placeholder="Please provide as much detail as possible..."
-            value={formData.description}
-            onChange={(e) =>
-              setFormData({ ...formData, description: e.target.value })
-            }
-            required
-          />
-        </div>
-
+        {/* ... existing input groups ... */}
         <button type="submit" className={styles.submitBtn}>
           Submit Request
         </button>
