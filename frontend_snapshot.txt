@@ -164,6 +164,148 @@ FILE: ./frontend/src\components\AnnouncementFeed\AnnouncementFeed.module.css
 }
 
 ==================================================
+FILE: ./frontend/src\components\BoardPortal\BoardPortal.jsx
+==================================================
+import { useState, useEffect } from "react";
+import styles from "./BoardPortal.module.css";
+
+export default function BoardPortal() {
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("http://localhost:8080/api/requests/admin/all")
+      .then((res) => res.json())
+      .then((data) => {
+        setRequests(data);
+        setLoading(false);
+      });
+  }, []);
+
+  return (
+    <div className={styles.container}>
+      <header className={styles.header}>
+        <h2>Executive Management</h2>
+        <button className={styles.postBtn}>+ New Announcement</button>
+      </header>
+
+      <div className={styles.tableCard}>
+        <h3>Incoming Resident Requests</h3>
+        {loading ? (
+          <p>Loading requests...</p>
+        ) : (
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>Resident</th>
+                <th>Type</th>
+                <th>Subject</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {requests.map((req) => (
+                <tr key={req.id}>
+                  <td>
+                    {req.first_name} {req.last_name}
+                  </td>
+                  <td>
+                    <span className={styles.typeTag}>{req.request_type}</span>
+                  </td>
+                  <td>{req.subject}</td>
+                  <td>
+                    <span className={styles.status}>{req.status}</span>
+                  </td>
+                  <td>
+                    <button className={styles.viewBtn}>View</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}
+
+==================================================
+FILE: ./frontend/src\components\BoardPortal\BoardPortal.module.css
+==================================================
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.postBtn {
+  background: #2ecc71;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.tableCard {
+  background: white;
+  padding: 30px;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+.table th {
+  text-align: left;
+  padding: 12px;
+  border-bottom: 2px solid #f1f5f9;
+  color: #64748b;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+}
+
+.table td {
+  padding: 16px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 0.95rem;
+}
+
+.typeTag {
+  background: #f1f5f9;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.status {
+  color: #2ecc71;
+  font-weight: 600;
+}
+
+.viewBtn {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+==================================================
 FILE: ./frontend/src\components\CivicGuide\CivicGuide.jsx
 ==================================================
 import styles from "./CivicGuide.module.css";
@@ -1034,23 +1176,27 @@ import AnnouncementFeed from "../../components/AnnouncementFeed/AnnouncementFeed
 import DuesCard from "../../components/DuesCard/DuesCard";
 import NeighborhoodCalendar from "../../components/NeighborhoodCalendar/NeighborhoodCalendar";
 import RequestForm from "../../components/RequestForm/RequestForm";
+import BoardPortal from "../../components/BoardPortal/BoardPortal";
 import styles from "./Dashboard.module.css";
 
 export default function Dashboard({ user, onLogout }) {
-  // 'feed' is the home view, 'maintenance' is the form view
+  // Tabs: 'feed', 'maintenance', 'dues', 'board'
   const [activeTab, setActiveTab] = useState("feed");
 
   return (
     <div className={styles.layout}>
+      {/* Decorative Background Orbs */}
       <div className={styles.orb1}></div>
       <div className={styles.orb2}></div>
 
+      {/* Sidebar Navigation */}
       <aside className={styles.sidebar}>
         <div className={styles.brand}>Town Central</div>
         <nav className={styles.nav}>
           <button onClick={onLogout} className={styles.navItem}>
             ← Public Home
           </button>
+
           <div
             style={{
               margin: "10px 0",
@@ -1088,15 +1234,23 @@ export default function Dashboard({ user, onLogout }) {
             Contact the Board
           </button>
 
+          {/* Executive Board View Toggle */}
           {(user?.role === "board_member" || user?.role === "super_admin") && (
-            <button className={styles.boardItem}>Board Executive Portal</button>
+            <button
+              className={`${styles.boardItem} ${activeTab === "board" ? styles.activeBoard : ""}`}
+              onClick={() => setActiveTab("board")}
+            >
+              Board Executive Portal
+            </button>
           )}
         </nav>
+
         <button className={styles.logoutBtn} onClick={onLogout}>
           Logout
         </button>
       </aside>
 
+      {/* Main Content Area */}
       <main className={styles.main}>
         {/* VIEW 1: HOME FEED */}
         {activeTab === "feed" && (
@@ -1133,10 +1287,16 @@ export default function Dashboard({ user, onLogout }) {
                 View your balance, payment history, and pay annual assessments.
               </p>
             </header>
-            {/* We wrap the DuesCard in a larger container for the dedicated page */}
             <div className={styles.duesPageWrapper}>
               <DuesCard residentName={user?.first_name} />
             </div>
+          </div>
+        )}
+
+        {/* VIEW 4: BOARD EXECUTIVE PORTAL (Step 3) */}
+        {activeTab === "board" && (
+          <div className={styles.fadeContent}>
+            <BoardPortal />
           </div>
         )}
       </main>
@@ -1331,6 +1491,8 @@ FILE: ./frontend/src\pages\Dashboard\Dashboard.module.css
 
 .feedCard {
   width: 100%; /* Spans full width when Dues card is removed from home */
+  max-width: 900px;
+  margin: 0 auto;
   background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(10px);
   padding: 30px;

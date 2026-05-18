@@ -7,7 +7,7 @@ export default function RequestForm({ user }) {
     subject: "",
     description: "",
   });
-  const [status, setStatus] = useState(null); // 'success' or 'error'
+  const [status, setStatus] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -18,8 +18,8 @@ export default function RequestForm({ user }) {
         body: JSON.stringify({
           ...formData,
           first_name: user?.first_name || "Guest",
-          last_name: "Resident", // Placeholder until full auth is ready
-          resident_id: 1, // Placeholder
+          last_name: "Resident",
+          resident_id: 1,
         }),
       });
 
@@ -37,15 +37,49 @@ export default function RequestForm({ user }) {
   return (
     <div className={styles.formCard}>
       {status === "success" && (
-        <p className={styles.successMsg}>✅ Request submitted successfully!</p>
+        <p className={styles.successMsg}>✅ Submitted!</p>
       )}
       {status === "error" && (
-        <p className={styles.errorMsg}>❌ Something went wrong. Try again.</p>
+        <p className={styles.errorMsg}>❌ Something went wrong.</p>
       )}
 
       <h3>Submit a New Request</h3>
       <form onSubmit={handleSubmit} className={styles.form}>
-        {/* ... existing input groups ... */}
+        {/* ADD THESE FIELDS BACK IN */}
+        <div className={styles.inputGroup}>
+          <label>Request Type</label>
+          <select
+            value={formData.type}
+            onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+          >
+            <option value="maintenance">Maintenance</option>
+            <option value="arc">ARC Change</option>
+          </select>
+        </div>
+
+        <div className={styles.inputGroup}>
+          <label>Subject</label>
+          <input
+            type="text"
+            value={formData.subject}
+            onChange={(e) =>
+              setFormData({ ...formData, subject: e.target.value })
+            }
+            required
+          />
+        </div>
+
+        <div className={styles.inputGroup}>
+          <label>Description</label>
+          <textarea
+            value={formData.description}
+            onChange={(e) =>
+              setFormData({ ...formData, description: e.target.value })
+            }
+            required
+          />
+        </div>
+
         <button type="submit" className={styles.submitBtn}>
           Submit Request
         </button>
