@@ -13,6 +13,7 @@ const app = express();
 const allowedOrigins = [
   "http://localhost:5173",
   "https://town-central-hoa-platform.vercel.app",
+  "https://town-central-hoa-platform-469564564131.us-central1.run.app",
 ];
 
 app.use(
@@ -1129,6 +1130,23 @@ router.get("/", async (req, res) => {
       "SELECT * FROM announcements ORDER BY created_at DESC",
     );
     res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST a new announcement
+router.post("/", async (req, res) => {
+  try {
+    const { title, content, priority } = req.body;
+    const query = `
+      INSERT INTO announcements (title, content, priority)
+      VALUES ($1, $2, $3)
+      RETURNING *;
+    `;
+    const values = [title, content, priority || "normal"];
+    const { rows } = await db.query(query, values);
+    res.status(201).json(rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

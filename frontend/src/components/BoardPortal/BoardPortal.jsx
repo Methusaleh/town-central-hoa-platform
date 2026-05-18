@@ -5,7 +5,11 @@ export default function BoardPortal() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [announcement, setAnnouncement] = useState({ title: "", content: "" });
+  const [announcement, setAnnouncement] = useState({
+    title: "",
+    content: "",
+    priority: "normal",
+  });
 
   useEffect(() => {
     fetch(
@@ -30,15 +34,16 @@ export default function BoardPortal() {
           body: JSON.stringify({
             title: announcement.title,
             content: announcement.content,
-            priority: "normal", // You can add a priority selector to the form later
+            priority: announcement.priority, // Now sends the dynamic value from state
           }),
         },
       );
 
       if (response.ok) {
         alert("Announcement posted successfully!");
-        setAnnouncement({ title: "", content: "" });
+        setAnnouncement({ title: "", content: "", priority: "normal" });
         setShowForm(false);
+        // Reload to show the new announcement at the top of the feed
         window.location.reload();
       } else {
         alert("Failed to post announcement to server.");
@@ -76,6 +81,20 @@ export default function BoardPortal() {
               }
               required
             />
+
+            {/* Added Priority Selector */}
+            <select
+              value={announcement.priority}
+              onChange={(e) =>
+                setAnnouncement({ ...announcement, priority: e.target.value })
+              }
+              className={styles.prioritySelect}
+            >
+              <option value="normal">Normal Priority</option>
+              <option value="important">Important (Yellow)</option>
+              <option value="urgent">Urgent (Red)</option>
+            </select>
+
             <textarea
               placeholder="Details for the residents..."
               value={announcement.content}
@@ -120,7 +139,11 @@ export default function BoardPortal() {
                     <td>{req.subject}</td>
                     <td>
                       <span
-                        className={`${styles.statusBadge} ${req.status === "Open" ? styles.statusOpen : styles.statusResolved}`}
+                        className={`${styles.statusBadge} ${
+                          req.status === "Open"
+                            ? styles.statusOpen
+                            : styles.statusResolved
+                        }`}
                       >
                         {req.status}
                       </span>
