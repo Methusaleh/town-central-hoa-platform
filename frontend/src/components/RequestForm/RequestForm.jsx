@@ -11,6 +11,8 @@ export default function RequestForm({ user }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setStatus(null); // Clear previous status before a new attempt
+
     try {
       const response = await fetch(
         "https://town-central-hoa-platform-469564564131.us-central1.run.app/api/requests",
@@ -30,9 +32,14 @@ export default function RequestForm({ user }) {
         setStatus("success");
         setFormData({ type: "maintenance", subject: "", description: "" });
       } else {
+        // If the server responds with an error code (like 404 or 500)
+        const errorData = await response.json();
+        console.error("Server Error Details:", errorData);
         setStatus("error");
       }
     } catch (err) {
+      // If the fetch itself fails (like a network timeout or ERR_CONNECTION_REFUSED)
+      console.error("Network or Fetch Error:", err);
       setStatus("error");
     }
   };

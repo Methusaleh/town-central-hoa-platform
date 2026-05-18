@@ -1,3 +1,4 @@
+/* --- CONTAINER & HEADER --- */
 .container {
   display: flex;
   flex-direction: column;
@@ -18,8 +19,14 @@
   border-radius: 8px;
   font-weight: 700;
   cursor: pointer;
+  transition: background 0.2s ease;
 }
 
+.postBtn:hover {
+  background: #27ae60;
+}
+
+/* --- TABLE CARD --- */
 .tableCard {
   background: white;
   padding: 30px;
@@ -40,12 +47,21 @@
   color: #64748b;
   font-size: 0.85rem;
   text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .table td {
   padding: 16px 12px;
   border-bottom: 1px solid #f1f5f9;
   font-size: 0.95rem;
+  color: #1e293b;
+}
+
+/* --- COLUMN SPECIFIC STYLES --- */
+.dateCol {
+  color: #64748b;
+  font-size: 0.85rem;
+  font-weight: 500;
 }
 
 .typeTag {
@@ -55,17 +71,45 @@
   font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
+  color: #475569;
 }
 
-.status {
-  color: #2ecc71;
-  font-weight: 600;
+/* --- DYNAMIC STATUS BADGES --- */
+.statusBadge {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  display: inline-block;
 }
 
+.statusOpen {
+  background: #fff7ed;
+  color: #ea580c;
+  border: 1px solid #ffedd5;
+}
+
+.statusResolved {
+  background: #f0fdf4;
+  color: #16a34a;
+  border: 1px solid #dcfce7;
+}
+
+/* --- ACTIONS --- */
 .viewBtn {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  padding: 6px 12px;
-  border-radius: 6px;
+  padding: 6px 14px;
+  border-radius: 8px;
   cursor: pointer;
+  font-weight: 600;
+  color: #64748b;
+  transition: all 0.2s ease;
+}
+
+.viewBtn:hover {
+  background: #edf2f7;
+  border-color: #cbd5e1;
+  color: #1e293b;
 }

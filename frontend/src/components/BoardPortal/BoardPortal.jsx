@@ -14,14 +14,27 @@ export default function BoardPortal() {
         setRequests(data);
         setLoading(false);
       })
-      .catch((err) => console.error("Admin fetch error:", err));
+      .catch((err) => {
+        console.error("Admin fetch error:", err);
+        setLoading(false);
+      });
   }, []);
+
+  const handleNewAnnouncement = () => {
+    const msg = prompt("Enter the neighborhood announcement:");
+    if (msg) {
+      alert("Announcement queued: " + msg);
+      // Logic for POST to /api/announcements will go here
+    }
+  };
 
   return (
     <div className={styles.container}>
       <header className={styles.header}>
         <h2>Executive Management</h2>
-        <button className={styles.postBtn}>+ New Announcement</button>
+        <button className={styles.postBtn} onClick={handleNewAnnouncement}>
+          + New Announcement
+        </button>
       </header>
 
       <div className={styles.tableCard}>
@@ -32,6 +45,7 @@ export default function BoardPortal() {
           <table className={styles.table}>
             <thead>
               <tr>
+                <th>Date</th>
                 <th>Resident</th>
                 <th>Type</th>
                 <th>Subject</th>
@@ -42,6 +56,9 @@ export default function BoardPortal() {
             <tbody>
               {requests.map((req) => (
                 <tr key={req.id}>
+                  <td className={styles.dateCol}>
+                    {new Date(req.created_at).toLocaleDateString()}
+                  </td>
                   <td>
                     {req.first_name} {req.last_name}
                   </td>
@@ -50,10 +67,18 @@ export default function BoardPortal() {
                   </td>
                   <td>{req.subject}</td>
                   <td>
-                    <span className={styles.status}>{req.status}</span>
+                    <span
+                      className={`${styles.statusBadge} ${
+                        req.status === "Open"
+                          ? styles.statusOpen
+                          : styles.statusResolved
+                      }`}
+                    >
+                      {req.status}
+                    </span>
                   </td>
                   <td>
-                    <button className={styles.viewBtn}>View</button>
+                    <button className={styles.viewBtn}>View Details</button>
                   </td>
                 </tr>
               ))}
