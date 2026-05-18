@@ -56,6 +56,26 @@ export default function BoardPortal() {
     }
   };
 
+  const handleResolve = async (requestId) => {
+    try {
+      const response = await fetch(
+        `https://town-central-hoa-platform-469564564131.us-central1.run.app/api/requests/${requestId}/resolve`,
+        { method: "PATCH" },
+      );
+
+      if (response.ok) {
+        // Update local state so the UI changes instantly
+        setRequests(
+          requests.map((req) =>
+            req.id === requestId ? { ...req, status: "Resolved" } : req,
+          ),
+        );
+      }
+    } catch (err) {
+      console.error("Resolve error:", err);
+    }
+  };
+
   return (
     <div className={styles.container}>
       <header className={styles.header}>
@@ -125,6 +145,7 @@ export default function BoardPortal() {
                   <th>Type</th>
                   <th>Subject</th>
                   <th>Status</th>
+                  <th>Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -150,6 +171,18 @@ export default function BoardPortal() {
                       >
                         {req.status}
                       </span>
+                    </td>
+                    <td>
+                      {req.status === "Open" ? (
+                        <button
+                          className={styles.viewBtn}
+                          onClick={() => handleResolve(req.id)}
+                        >
+                          Mark Resolved
+                        </button>
+                      ) : (
+                        <span className={styles.completedCheck}>✅ Done</span>
+                      )}
                     </td>
                   </tr>
                 ))}
