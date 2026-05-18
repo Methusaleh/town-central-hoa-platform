@@ -23,26 +23,28 @@ export default function NeighborhoodCalendar() {
   // Helper to normalize dates for comparison (Database dates can be tricky)
   const formatDate = (dateObj) => {
     if (!dateObj) return null;
-    // This ensures we get the date part regardless of timezone shifts
     const d = new Date(dateObj);
-    return d.toISOString().split("T")[0];
+    return d.toISOString().split("T")[0]; // Essential for matching PG dates [cite: 265, 266]
   };
 
   const handleDateChange = (newDate) => {
     setDate(newDate);
     const dateString = formatDate(newDate);
 
-    // Search the live events state instead of MOCK_EVENTS
-    const found = events.find((e) => formatDate(e.event_date) === dateString);
-    setSelectedEvent(found || null);
+    // Use .filter instead of .find to get every event on this date
+    const foundEvents = events.filter(
+      (e) => formatDate(e.event_date) === dateString,
+    );
+
+    // Set the state to the first one found, or null if none
+    setSelectedEvent(foundEvents.length > 0 ? foundEvents[0] : null);
   };
 
   const tileClassName = ({ date, view }) => {
     if (view === "month") {
       const dateString = formatDate(date);
-      // Check live events to apply the green dot style
       if (events.some((e) => formatDate(e.event_date) === dateString)) {
-        return styles.eventDay;
+        return styles.eventDay; // This should now correctly flag the 20th and 23rd
       }
     }
     return null;

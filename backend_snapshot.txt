@@ -8,6 +8,7 @@ const db = require("./db"); // Import our new connection file
 const announcementRoutes = require("./routes/announcementRoutes"); // 1. ADD THIS
 const duesRoutes = require("./routes/duesRoutes");
 const requestRoutes = require("./routes/requestRoutes");
+const eventRoutes = require("./routes/eventRoutes");
 const app = express();
 
 const allowedOrigins = [
@@ -32,6 +33,7 @@ app.use(express.json());
 app.use("/api/announcements", announcementRoutes);
 app.use("/api/dues", duesRoutes);
 app.use("/api/requests", requestRoutes);
+app.use("/api/events", eventRoutes);
 
 // We will plug in separate route files here as we build them
 // app.use('/api/residents', residentRoutes);
@@ -1178,6 +1180,49 @@ router.get("/:firstName", async (req, res) => {
 module.exports = router;
 
 ==================================================
+FILE: ./backend\routes\eventRoutes.js
+==================================================
+const express = require("express");
+const router = express.Router();
+const db = require("../db");
+
+// GET all events (Sorted by upcoming date)
+router.get("/", async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      "SELECT * FROM neighborhood_events WHERE event_date >= CURRENT_DATE ORDER BY event_date ASC",
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST a new event
+router.post("/", async (req, res) => {
+  const { title, event_date, event_time, location, description } = req.body;
+  try {
+    const query = `
+      INSERT INTO neighborhood_events (title, event_date, event_time, location, description)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *;
+    `;
+    const { rows } = await db.query(query, [
+      title,
+      event_date,
+      event_time,
+      location,
+      description,
+    ]);
+    res.status(201).json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+module.exports = router;
+
+==================================================
 FILE: ./backend\routes\requestRoutes.js
 ==================================================
 const express = require("express");
@@ -1222,6 +1267,27 @@ router.get("/admin/all", async (req, res) => {
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch admin requests" });
+  }
+});
+
+// PATCH to update request status (Resolve)
+router.patch("/:id/resolve", async (req, res) => {
+  const { id } = req.params;
+  const { adminName } = req.body; // Capture who is resolving it
+
+  try {
+    const query = `
+      UPDATE community_requests 
+      SET status = 'Resolved', 
+          resolved_at = CURRENT_TIMESTAMP,
+          resolved_by = $1
+      WHERE id = $2 
+      RETURNING *;
+    `;
+    const { rows } = await db.query(query, [adminName, id]);
+    res.json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to archive request" });
   }
 });
 
