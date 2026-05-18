@@ -9,6 +9,7 @@ const app = express();
 const allowedOrigins = [
   "http://localhost:5173",
   "https://town-central-hoa-platform.vercel.app",
+  "https://town-central-hoa-platform-469564564131.us-central1.run.app",
 ];
 
 app.use(

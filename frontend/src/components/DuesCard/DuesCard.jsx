@@ -9,7 +9,7 @@ export default function DuesCard({ residentName }) {
     const fetchDues = async () => {
       try {
         const response = await fetch(
-          `http://localhost:8080/api/dues/${residentName}`,
+          `https://town-central-hoa-platform-469564564131.us-central1.run.app/api/dues/${residentName}`,
         );
         const data = await response.json();
         setDuesInfo(data);

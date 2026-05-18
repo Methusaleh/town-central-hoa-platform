@@ -13,7 +13,8 @@ export default function BoardPortal() {
       .then((data) => {
         setRequests(data);
         setLoading(false);
-      });
+      })
+      .catch((err) => console.error("Admin fetch error:", err));
   }, []);
 
   return (
