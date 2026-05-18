@@ -5,7 +5,7 @@ import styles from "./NeighborhoodCalendar.module.css";
 
 export default function NeighborhoodCalendar() {
   const [date, setDate] = useState(new Date());
-  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [selectedEvents, setSelectedEvents] = useState([]);
   const [events, setEvents] = useState([]); // Fixed: Added events state
 
   // Fetch live events from your Cloud Run API
@@ -35,17 +35,21 @@ export default function NeighborhoodCalendar() {
   const handleDateChange = (newDate) => {
     setDate(newDate);
 
-    // Build a manual string for the clicked local date
+    // 1. Build a manual YYYY-MM-DD string for the clicked local date
+    // This ensures we match the "Strict" formatting of the database dates
     const year = newDate.getFullYear();
     const month = String(newDate.getMonth() + 1).padStart(2, "0");
     const day = String(newDate.getDate()).padStart(2, "0");
     const clickedDate = `${year}-${month}-${day}`;
 
-    // Filter all events to find matches for the clicked date
+    // 2. Filter all events to find EVERY match for the clicked date
     const foundEvents = events.filter(
       (e) => formatDate(e.event_date) === clickedDate,
     );
-    setSelectedEvent(foundEvents.length > 0 ? foundEvents[0] : null);
+
+    // 3. Pass the entire array to state (plural)
+    // This ensures your .map() function has a list to work with
+    setSelectedEvents(foundEvents);
   };
 
   const tileClassName = ({ date, view }) => {
@@ -88,39 +92,44 @@ export default function NeighborhoodCalendar() {
       </div>
 
       <div className={styles.eventDetail}>
-        <h3>Event Details</h3>
-        {selectedEvent ? (
-          <div className={styles.eventInfo}>
-            <h4>{selectedEvent.title}</h4>
-            <p>🕒 {selectedEvent.event_time || "TBA"}</p>
+        <h3>Events for {date.toLocaleDateString()}</h3>
 
-            <a
-              href={getMapsUrl(selectedEvent.location)}
-              target="_blank"
-              rel="noreferrer"
-              className={styles.mapLink}
-            >
-              📍 {selectedEvent.location} (View on Map)
-            </a>
+        {selectedEvents.length > 0 ? (
+          <div className={styles.eventList}>
+            {selectedEvents.map((event, index) => (
+              <div key={event.id || index} className={styles.eventInfo}>
+                <h4>{event.title}</h4>
+                <p>🕒 {event.event_time || "All Day"}</p>
 
-            <p className={styles.description}>{selectedEvent.description}</p>
+                <a
+                  href={getMapsUrl(event.location)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={styles.mapLink}
+                >
+                  📍 {event.location || "No location set"}
+                </a>
 
-            <div className={styles.syncContainer}>
-              <a
-                href={getGoogleCalendarUrl(selectedEvent)}
-                target="_blank"
-                rel="noreferrer"
-                className={styles.googleBtn}
-              >
-                Sync to Google
-              </a>
-              <button
-                className={styles.appleBtn}
-                onClick={() => alert("ICS file generation ready!")}
-              >
-                Sync to Apple
-              </button>
-            </div>
+                {event.description && (
+                  <p className={styles.description}>{event.description}</p>
+                )}
+
+                <div className={styles.syncContainer}>
+                  <a
+                    href={getGoogleCalendarUrl(event)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={styles.googleBtn}
+                  >
+                    Add to Google
+                  </a>
+                </div>
+                {/* Add a divider if there's more than one event */}
+                {index < selectedEvents.length - 1 && (
+                  <hr className={styles.divider} />
+                )}
+              </div>
+            ))}
           </div>
         ) : (
           <p className={styles.noEvent}>No events scheduled for this day.</p>

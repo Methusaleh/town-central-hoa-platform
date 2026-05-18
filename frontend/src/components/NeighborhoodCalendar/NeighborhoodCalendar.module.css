@@ -134,3 +134,22 @@
   border-color: #000000;
   transform: translateY(-2px);
 }
+
+.eventList {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.divider {
+  border: 0;
+  border-top: 1px solid #e2e8f0;
+  margin-top: 10px;
+}
+
+.description {
+  font-size: 0.9rem;
+  color: #475569;
+  margin-top: 8px;
+  line-height: 1.4;
+}
