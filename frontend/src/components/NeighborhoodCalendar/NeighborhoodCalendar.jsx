@@ -21,30 +21,42 @@ export default function NeighborhoodCalendar() {
   }, []);
 
   // Helper to normalize dates for comparison (Database dates can be tricky)
-  const formatDate = (dateObj) => {
-    if (!dateObj) return null;
-    const d = new Date(dateObj);
-    return d.toISOString().split("T")[0]; // Essential for matching PG dates [cite: 265, 266]
+  const formatDate = (dateInput) => {
+    if (!dateInput) return null;
+
+    const d = new Date(dateInput);
+    const year = d.getUTCFullYear();
+    const month = String(d.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(d.getUTCDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
   };
 
   const handleDateChange = (newDate) => {
     setDate(newDate);
-    const dateString = formatDate(newDate);
 
-    // Use .filter instead of .find to get every event on this date
+    // Build a manual string for the clicked local date
+    const year = newDate.getFullYear();
+    const month = String(newDate.getMonth() + 1).padStart(2, "0");
+    const day = String(newDate.getDate()).padStart(2, "0");
+    const clickedDate = `${year}-${month}-${day}`;
+
+    // Filter all events to find matches for the clicked date
     const foundEvents = events.filter(
-      (e) => formatDate(e.event_date) === dateString,
+      (e) => formatDate(e.event_date) === clickedDate,
     );
-
-    // Set the state to the first one found, or null if none
     setSelectedEvent(foundEvents.length > 0 ? foundEvents[0] : null);
   };
 
   const tileClassName = ({ date, view }) => {
     if (view === "month") {
-      const dateString = formatDate(date);
-      if (events.some((e) => formatDate(e.event_date) === dateString)) {
-        return styles.eventDay; // This should now correctly flag the 20th and 23rd
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      const calendarDate = `${year}-${month}-${day}`;
+
+      if (events.some((e) => formatDate(e.event_date) === calendarDate)) {
+        return styles.eventDay;
       }
     }
     return null;
