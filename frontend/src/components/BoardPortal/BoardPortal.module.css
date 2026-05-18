@@ -219,3 +219,56 @@
   background: #eff6ff;
   border-color: #3b82f6;
 }
+
+/* --- TABLE HEADER & TOGGLE --- */
+.tableHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.tableHeader h3 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 1.2rem;
+}
+
+.toggleBtn {
+  background: #f8fafc;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  padding: 8px 16px;
+  border-radius: 20px; /* Rounded pill shape */
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toggleBtn:hover {
+  background: #ffffff;
+  color: #3b82f6; /* Blue accent on hover */
+  border-color: #3b82f6;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+  transform: translateY(-1px);
+}
+
+.toggleBtn:active {
+  transform: translateY(0);
+}
+
+/* Optional: Style for the resolved info text in the Archive */
+.resolvedInfo {
+  font-style: italic;
+  color: #94a3b8;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
