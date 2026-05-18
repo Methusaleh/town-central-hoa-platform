@@ -54,3 +54,21 @@
   line-height: 1.6;
   margin-top: 12px;
 }
+
+.expandBtn {
+  margin-top: 10px;
+  background: transparent;
+  border: 1px solid #2ecc71;
+  color: #2ecc71;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 700;
+  transition: all 0.2s ease;
+  align-self: center;
+}
+
+.expandBtn:hover {
+  background: #2ecc71;
+  color: white;
+}
