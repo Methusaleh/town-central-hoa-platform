@@ -123,7 +123,7 @@ export default function Dashboard({ user, onLogout }) {
         {/* VIEW 4: BOARD EXECUTIVE PORTAL (Step 3) */}
         {activeTab === "board" && (
           <div className={styles.fadeContent}>
-            <BoardPortal />
+            <BoardPortal user={user} />
           </div>
         )}
       </main>

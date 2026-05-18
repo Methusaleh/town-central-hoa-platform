@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import styles from "./BoardPortal.module.css";
 
-export default function BoardPortal() {
+export default function BoardPortal({ user }) {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -10,6 +10,11 @@ export default function BoardPortal() {
     content: "",
     priority: "normal",
   });
+  const [viewMode, setViewMode] = useState("active"); // "active" or "archived"
+
+  const filteredRequests = requests.filter((req) =>
+    viewMode === "active" ? req.status === "Open" : req.status === "Resolved",
+  );
 
   useEffect(() => {
     fetch(
@@ -60,7 +65,11 @@ export default function BoardPortal() {
     try {
       const response = await fetch(
         `https://town-central-hoa-platform-469564564131.us-central1.run.app/api/requests/${requestId}/resolve`,
-        { method: "PATCH" },
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ adminName: user?.first_name || "Admin" }),
+        },
       );
 
       if (response.ok) {
@@ -72,7 +81,7 @@ export default function BoardPortal() {
         );
       }
     } catch (err) {
-      console.error("Resolve error:", err);
+      console.error(err);
     }
   };
 
@@ -105,7 +114,6 @@ export default function BoardPortal() {
               required
             />
 
-            {/* Added Priority Selector */}
             <select
               value={announcement.priority}
               onChange={(e) =>
@@ -133,23 +141,44 @@ export default function BoardPortal() {
         </div>
       ) : (
         <div className={styles.tableCard}>
-          <h3>Incoming Resident Requests</h3>
+          <div className={styles.tableHeader}>
+            <h3>
+              {viewMode === "active"
+                ? "Active Resident Requests"
+                : "Resolved Archive"}
+            </h3>
+            <button
+              className={styles.toggleBtn}
+              onClick={() =>
+                setViewMode(viewMode === "active" ? "archived" : "active")
+              }
+            >
+              {viewMode === "active" ? "View Archive" : "Back to Active"}
+            </button>
+          </div>
+
           {loading ? (
             <p>Loading requests...</p>
           ) : (
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th>Date</th>
+                  <th>Date Submitted</th>
                   <th>Resident</th>
-                  <th>Type</th>
                   <th>Subject</th>
-                  <th>Status</th>
-                  <th>Action</th>
+                  {viewMode === "active" ? (
+                    <>
+                      <th>Type</th>
+                      <th>Status</th>
+                      <th>Action</th>
+                    </>
+                  ) : (
+                    <th>Resolved Details</th>
+                  )}
                 </tr>
               </thead>
               <tbody>
-                {requests.map((req) => (
+                {filteredRequests.map((req) => (
                   <tr key={req.id}>
                     <td className={styles.dateCol}>
                       {new Date(req.created_at).toLocaleDateString()}
@@ -157,33 +186,39 @@ export default function BoardPortal() {
                     <td>
                       {req.first_name} {req.last_name}
                     </td>
-                    <td>
-                      <span className={styles.typeTag}>{req.request_type}</span>
-                    </td>
                     <td>{req.subject}</td>
-                    <td>
-                      <span
-                        className={`${styles.statusBadge} ${
-                          req.status === "Open"
-                            ? styles.statusOpen
-                            : styles.statusResolved
-                        }`}
-                      >
-                        {req.status}
-                      </span>
-                    </td>
-                    <td>
-                      {req.status === "Open" ? (
-                        <button
-                          className={styles.viewBtn}
-                          onClick={() => handleResolve(req.id)}
-                        >
-                          Mark Resolved
-                        </button>
-                      ) : (
-                        <span className={styles.completedCheck}>✅ Done</span>
-                      )}
-                    </td>
+
+                    {viewMode === "active" ? (
+                      <>
+                        <td>
+                          <span className={styles.typeTag}>
+                            {req.request_type}
+                          </span>
+                        </td>
+                        <td>
+                          <span
+                            className={`${styles.statusBadge} ${styles.statusOpen}`}
+                          >
+                            {req.status}
+                          </span>
+                        </td>
+                        <td>
+                          <button
+                            className={styles.viewBtn}
+                            onClick={() => handleResolve(req.id)}
+                          >
+                            Resolve & Archive
+                          </button>
+                        </td>
+                      </>
+                    ) : (
+                      <td className={styles.resolvedInfo}>
+                        By {req.resolved_by || "Admin"} on{" "}
+                        {req.resolved_at
+                          ? new Date(req.resolved_at).toLocaleDateString()
+                          : "N/A"}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

@@ -46,22 +46,21 @@ router.get("/admin/all", async (req, res) => {
 // PATCH to update request status (Resolve)
 router.patch("/:id/resolve", async (req, res) => {
   const { id } = req.params;
+  const { adminName } = req.body; // Capture who is resolving it
+
   try {
     const query = `
       UPDATE community_requests 
-      SET status = 'Resolved' 
-      WHERE id = $1 
+      SET status = 'Resolved', 
+          resolved_at = CURRENT_TIMESTAMP,
+          resolved_by = $1
+      WHERE id = $2 
       RETURNING *;
     `;
-    const { rows } = await db.query(query, [id]);
-
-    if (rows.length === 0) {
-      return res.status(404).json({ error: "Request not found" });
-    }
-
+    const { rows } = await db.query(query, [adminName, id]);
     res.json(rows[0]);
   } catch (err) {
-    res.status(500).json({ error: "Failed to resolve request" });
+    res.status(500).json({ error: "Failed to archive request" });
   }
 });
 
