@@ -22,7 +22,10 @@ export default function NeighborhoodCalendar() {
 
   // Helper to normalize dates for comparison (Database dates can be tricky)
   const formatDate = (dateObj) => {
-    return new Date(dateObj).toLocaleDateString("en-CA"); // Returns YYYY-MM-DD
+    if (!dateObj) return null;
+    // This ensures we get the date part regardless of timezone shifts
+    const d = new Date(dateObj);
+    return d.toISOString().split("T")[0];
   };
 
   const handleDateChange = (newDate) => {
@@ -55,7 +58,8 @@ export default function NeighborhoodCalendar() {
 
   // Map URL helper
   const getMapsUrl = (location) => {
-    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location + " Piedmont Oklahoma")}`;
+    // Uses the official Google Maps search query format
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`;
   };
 
   return (

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import styles from "./BoardPortal.module.css";
 
 export default function BoardPortal({ user }) {
@@ -23,6 +23,7 @@ export default function BoardPortal({ user }) {
   const filteredRequests = requests.filter((req) =>
     viewMode === "active" ? req.status === "Open" : req.status === "Resolved",
   );
+  const locationInputRef = useRef(null);
 
   useEffect(() => {
     fetch(
@@ -35,6 +36,27 @@ export default function BoardPortal({ user }) {
       })
       .catch((err) => console.error("Admin fetch error:", err));
   }, []);
+
+  useEffect(() => {
+    // Initialize Autocomplete when the Event Form is shown
+    if (showEventForm && locationInputRef.current) {
+      const autocomplete = new window.google.maps.places.Autocomplete(
+        locationInputRef.current,
+        {
+          componentRestrictions: { country: "us" },
+          fields: ["formatted_address", "name"],
+        },
+      );
+
+      autocomplete.addListener("place_changed", () => {
+        const place = autocomplete.getPlace();
+        setNewEvent((prev) => ({
+          ...prev,
+          location: place.formatted_address || place.name,
+        }));
+      });
+    }
+  }, [showEventForm]);
 
   const handlePostAnnouncement = async (e) => {
     e.preventDefault();
@@ -228,8 +250,9 @@ export default function BoardPortal({ user }) {
               </div>
             </div>
             <input
+              ref={locationInputRef} // Attach the ref here
               type="text"
-              placeholder="Location (e.g., Clubhouse, South Park)"
+              placeholder="Search for a location (e.g. Piedmont Baptist Church)"
               value={newEvent.location}
               onChange={(e) =>
                 setNewEvent({ ...newEvent, location: e.target.value })
