@@ -272,3 +272,43 @@
   font-size: 0.85rem;
   line-height: 1.4;
 }
+
+/* --- BUTTON GROUP & NEW BUTTONS --- */
+.buttonGroup {
+  display: flex;
+  gap: 12px;
+}
+
+.eventBtn {
+  background: #3498db; /* Blue for events */
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.eventBtn:hover {
+  background: #2980b9;
+}
+
+/* --- EVENT FORM EXTRAS --- */
+.inlineGroup {
+  display: flex;
+  gap: 15px;
+}
+
+.inlineGroup > div {
+  flex: 1;
+}
+
+.announcementForm label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #64748b;
+  margin-bottom: 5px;
+  display: block;
+  text-transform: uppercase;
+}

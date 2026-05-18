@@ -11,6 +11,14 @@ export default function BoardPortal({ user }) {
     priority: "normal",
   });
   const [viewMode, setViewMode] = useState("active"); // "active" or "archived"
+  const [showEventForm, setShowEventForm] = useState(false);
+  const [newEvent, setNewEvent] = useState({
+    title: "",
+    event_date: "",
+    event_time: "",
+    location: "",
+    description: "",
+  });
 
   const filteredRequests = requests.filter((req) =>
     viewMode === "active" ? req.status === "Open" : req.status === "Resolved",
@@ -85,19 +93,62 @@ export default function BoardPortal({ user }) {
     }
   };
 
+  const handlePostEvent = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await fetch(
+        "https://town-central-hoa-platform-469564564131.us-central1.run.app/api/events",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(newEvent),
+        },
+      );
+
+      if (response.ok) {
+        alert("Event added to calendar!");
+        setNewEvent({
+          title: "",
+          event_date: "",
+          event_time: "",
+          location: "",
+          description: "",
+        });
+        setShowEventForm(false);
+      }
+    } catch (err) {
+      console.error("Event post error:", err);
+    }
+  };
+
   return (
     <div className={styles.container}>
       <header className={styles.header}>
         <h2>Executive Management</h2>
-        <button
-          className={showForm ? styles.cancelBtn : styles.postBtn}
-          onClick={() => setShowForm(!showForm)}
-        >
-          {showForm ? "Cancel" : "+ New Announcement"}
-        </button>
+        <div className={styles.buttonGroup}>
+          <button
+            className={showForm ? styles.cancelBtn : styles.postBtn}
+            onClick={() => {
+              setShowForm(!showForm);
+              setShowEventForm(false);
+            }}
+          >
+            {showForm ? "Cancel" : "+ Announcement"}
+          </button>
+          <button
+            className={showEventForm ? styles.cancelBtn : styles.eventBtn}
+            onClick={() => {
+              setShowEventForm(!showEventForm);
+              setShowForm(false);
+            }}
+          >
+            {showEventForm ? "Cancel" : "+ Calendar Event"}
+          </button>
+        </div>
       </header>
 
-      {showForm ? (
+      {/* --- ANNOUNCEMENT FORM --- */}
+      {showForm && (
         <div className={styles.formCard}>
           <h3>Post Neighborhood Update</h3>
           <form
@@ -113,7 +164,6 @@ export default function BoardPortal({ user }) {
               }
               required
             />
-
             <select
               value={announcement.priority}
               onChange={(e) =>
@@ -125,7 +175,6 @@ export default function BoardPortal({ user }) {
               <option value="important">Important (Yellow)</option>
               <option value="urgent">Urgent (Red)</option>
             </select>
-
             <textarea
               placeholder="Details for the residents..."
               value={announcement.content}
@@ -139,7 +188,70 @@ export default function BoardPortal({ user }) {
             </button>
           </form>
         </div>
-      ) : (
+      )}
+
+      {/* --- CALENDAR EVENT FORM --- */}
+      {showEventForm && (
+        <div className={styles.formCard}>
+          <h3>Create Neighborhood Event</h3>
+          <form onSubmit={handlePostEvent} className={styles.announcementForm}>
+            <input
+              type="text"
+              placeholder="Event Name (e.g., Annual BBQ)"
+              value={newEvent.title}
+              onChange={(e) =>
+                setNewEvent({ ...newEvent, title: e.target.value })
+              }
+              required
+            />
+            <div className={styles.inlineGroup}>
+              <div>
+                <label>Date</label>
+                <input
+                  type="date"
+                  value={newEvent.event_date}
+                  onChange={(e) =>
+                    setNewEvent({ ...newEvent, event_date: e.target.value })
+                  }
+                  required
+                />
+              </div>
+              <div>
+                <label>Time</label>
+                <input
+                  type="time"
+                  value={newEvent.event_time}
+                  onChange={(e) =>
+                    setNewEvent({ ...newEvent, event_time: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+            <input
+              type="text"
+              placeholder="Location (e.g., Clubhouse, South Park)"
+              value={newEvent.location}
+              onChange={(e) =>
+                setNewEvent({ ...newEvent, location: e.target.value })
+              }
+              required
+            />
+            <textarea
+              placeholder="Additional details for residents..."
+              value={newEvent.description}
+              onChange={(e) =>
+                setNewEvent({ ...newEvent, description: e.target.value })
+              }
+            />
+            <button type="submit" className={styles.submitBtn}>
+              Add to Calendar
+            </button>
+          </form>
+        </div>
+      )}
+
+      {/* --- REQUESTS TABLE (Shows only if both forms are closed) --- */}
+      {!showForm && !showEventForm && (
         <div className={styles.tableCard}>
           <div className={styles.tableHeader}>
             <h3>
@@ -187,7 +299,6 @@ export default function BoardPortal({ user }) {
                       {req.first_name} {req.last_name}
                     </td>
                     <td>{req.subject}</td>
-
                     {viewMode === "active" ? (
                       <>
                         <td>

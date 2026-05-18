@@ -1,47 +1,56 @@
-import { useState } from "react";
+import { useState, useEffect } from "react"; // Fixed: Added useEffect import
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 import styles from "./NeighborhoodCalendar.module.css";
 
-// Move mock data here - outside the component
-const MOCK_EVENTS = [
-  {
-    date: "2026-05-20",
-    title: "Board Meeting",
-    time: "7:00 PM",
-    loc: "Library",
-  },
-  { date: "2026-05-23", title: "Pool Opening", time: "10:00 AM", loc: "Pool" },
-];
-
 export default function NeighborhoodCalendar() {
   const [date, setDate] = useState(new Date());
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [events, setEvents] = useState([]); // Fixed: Added events state
+
+  // Fetch live events from your Cloud Run API
+  useEffect(() => {
+    fetch(
+      "https://town-central-hoa-platform-469564564131.us-central1.run.app/api/events",
+    )
+      .then((res) => res.json())
+      .then((data) => {
+        setEvents(data);
+      })
+      .catch((err) => console.error("Calendar fetch error:", err));
+  }, []);
+
+  // Helper to normalize dates for comparison (Database dates can be tricky)
+  const formatDate = (dateObj) => {
+    return new Date(dateObj).toLocaleDateString("en-CA"); // Returns YYYY-MM-DD
+  };
 
   const handleDateChange = (newDate) => {
     setDate(newDate);
-    // Format date to YYYY-MM-DD to match our mock data
-    const dateString = newDate.toLocaleDateString("en-CA");
-    const found = MOCK_EVENTS.find((e) => e.date === dateString);
-    setSelectedEvent(found || null);
-  };
+    const dateString = formatDate(newDate);
 
-  const getGoogleCalendarUrl = (event) => {
-    const baseUrl =
-      "https://calendar.google.com/calendar/render?action=TEMPLATE";
-    // Format: YYYYMMDDTHHmmSSZ (Simplified for mock)
-    const dateStr = event.date.replace(/-/g, "");
-    return `${baseUrl}&text=${encodeURIComponent(event.title)}&dates=${dateStr}/${dateStr}&details=${encodeURIComponent(event.loc)}`;
+    // Search the live events state instead of MOCK_EVENTS
+    const found = events.find((e) => formatDate(e.event_date) === dateString);
+    setSelectedEvent(found || null);
   };
 
   const tileClassName = ({ date, view }) => {
     if (view === "month") {
-      const dateString = date.toLocaleDateString("en-CA");
-      if (MOCK_EVENTS.some((e) => e.date === dateString)) {
-        return styles.eventDay; // Applies the green dot style
+      const dateString = formatDate(date);
+      // Check live events to apply the green dot style
+      if (events.some((e) => formatDate(e.event_date) === dateString)) {
+        return styles.eventDay;
       }
     }
     return null;
+  };
+
+  // Google Calendar Sync Helper
+  const getGoogleCalendarUrl = (event) => {
+    const baseUrl =
+      "https://calendar.google.com/calendar/render?action=TEMPLATE";
+    const dateStr = formatDate(event.event_date).replace(/-/g, "");
+    return `${baseUrl}&text=${encodeURIComponent(event.title)}&dates=${dateStr}/${dateStr}&details=${encodeURIComponent(event.location || "")}`;
   };
 
   // Map URL helper
@@ -56,7 +65,7 @@ export default function NeighborhoodCalendar() {
           onChange={handleDateChange}
           value={date}
           className={styles.customCalendar}
-          tileClassName={tileClassName} // Adds dots to days with events
+          tileClassName={tileClassName}
         />
       </div>
 
@@ -65,16 +74,18 @@ export default function NeighborhoodCalendar() {
         {selectedEvent ? (
           <div className={styles.eventInfo}>
             <h4>{selectedEvent.title}</h4>
-            <p>🕒 {selectedEvent.time}</p>
+            <p>🕒 {selectedEvent.event_time || "TBA"}</p>
 
             <a
-              href={getMapsUrl(selectedEvent.loc)}
+              href={getMapsUrl(selectedEvent.location)}
               target="_blank"
               rel="noreferrer"
               className={styles.mapLink}
             >
-              📍 {selectedEvent.loc} (View on Map)
+              📍 {selectedEvent.location} (View on Map)
             </a>
+
+            <p className={styles.description}>{selectedEvent.description}</p>
 
             <div className={styles.syncContainer}>
               <a
@@ -83,13 +94,13 @@ export default function NeighborhoodCalendar() {
                 rel="noreferrer"
                 className={styles.googleBtn}
               >
-                Google
+                Sync to Google
               </a>
               <button
                 className={styles.appleBtn}
                 onClick={() => alert("ICS file generation ready!")}
               >
-                Apple
+                Sync to Apple
               </button>
             </div>
           </div>
