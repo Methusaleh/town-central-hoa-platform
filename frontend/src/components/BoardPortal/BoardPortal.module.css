@@ -114,6 +114,7 @@
   color: #1e293b;
 }
 
+/* --- ANNOUNCEMENT FORM --- */
 .formCard {
   background: white;
   padding: 30px;
@@ -129,13 +130,25 @@
   margin-top: 20px;
 }
 
+/* Updated to include the priority select */
 .announcementForm input,
-.announcementForm textarea {
+.announcementForm textarea,
+.prioritySelect {
   padding: 12px;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   font-family: inherit;
   font-size: 1rem;
+  background-color: white;
+  color: #1e293b;
+}
+
+.announcementForm input:focus,
+.announcementForm textarea:focus,
+.prioritySelect:focus {
+  outline: none;
+  border-color: #2ecc71;
+  box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.1);
 }
 
 .announcementForm textarea {
@@ -147,10 +160,15 @@
   background: #2ecc71;
   color: white;
   border: none;
-  padding: 12px;
+  padding: 14px;
   border-radius: 8px;
   font-weight: 700;
   cursor: pointer;
+  transition: background 0.2s;
+}
+
+.submitBtn:hover {
+  background: #27ae60;
 }
 
 .cancelBtn {
@@ -161,6 +179,11 @@
   border-radius: 8px;
   font-weight: 700;
   cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cancelBtn:hover {
+  background: #e2e8f0;
 }
 
 @keyframes fadeIn {

@@ -41,10 +41,13 @@ export default function BoardPortal() {
 
       if (response.ok) {
         alert("Announcement posted successfully!");
+        // 1. Reset the form fields
         setAnnouncement({ title: "", content: "", priority: "normal" });
+        // 2. Switch view back to the requests table
         setShowForm(false);
-        // Reload to show the new announcement at the top of the feed
-        window.location.reload();
+
+        // REMOVE window.location.reload();
+        // This is what was kicking you back to the landing page!
       } else {
         alert("Failed to post announcement to server.");
       }
