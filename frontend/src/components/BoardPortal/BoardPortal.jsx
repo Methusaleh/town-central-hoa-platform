@@ -6,7 +6,9 @@ export default function BoardPortal() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("http://localhost:8080/api/requests/admin/all")
+    fetch(
+      "https://town-central-hoa-platform-469564564131.us-central1.run.app/api/requests/admin/all",
+    )
       .then((res) => res.json())
       .then((data) => {
         setRequests(data);

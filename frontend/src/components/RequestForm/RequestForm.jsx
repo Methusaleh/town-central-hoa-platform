@@ -12,16 +12,19 @@ export default function RequestForm({ user }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch("http://localhost:8080/api/requests", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...formData,
-          first_name: user?.first_name || "Guest",
-          last_name: "Resident",
-          resident_id: 1,
-        }),
-      });
+      const response = await fetch(
+        "https://town-central-hoa-platform-469564564131.us-central1.run.app/api/requests",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...formData,
+            first_name: user?.first_name || "Guest",
+            last_name: "Resident",
+            resident_id: 1,
+          }),
+        },
+      );
 
       if (response.ok) {
         setStatus("success");
