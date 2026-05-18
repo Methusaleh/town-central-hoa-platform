@@ -3,23 +3,27 @@ import AnnouncementFeed from "../../components/AnnouncementFeed/AnnouncementFeed
 import DuesCard from "../../components/DuesCard/DuesCard";
 import NeighborhoodCalendar from "../../components/NeighborhoodCalendar/NeighborhoodCalendar";
 import RequestForm from "../../components/RequestForm/RequestForm";
+import BoardPortal from "../../components/BoardPortal/BoardPortal";
 import styles from "./Dashboard.module.css";
 
 export default function Dashboard({ user, onLogout }) {
-  // 'feed' is the home view, 'maintenance' is the form view
+  // Tabs: 'feed', 'maintenance', 'dues', 'board'
   const [activeTab, setActiveTab] = useState("feed");
 
   return (
     <div className={styles.layout}>
+      {/* Decorative Background Orbs */}
       <div className={styles.orb1}></div>
       <div className={styles.orb2}></div>
 
+      {/* Sidebar Navigation */}
       <aside className={styles.sidebar}>
         <div className={styles.brand}>Town Central</div>
         <nav className={styles.nav}>
           <button onClick={onLogout} className={styles.navItem}>
             ← Public Home
           </button>
+
           <div
             style={{
               margin: "10px 0",
@@ -57,15 +61,23 @@ export default function Dashboard({ user, onLogout }) {
             Contact the Board
           </button>
 
+          {/* Executive Board View Toggle */}
           {(user?.role === "board_member" || user?.role === "super_admin") && (
-            <button className={styles.boardItem}>Board Executive Portal</button>
+            <button
+              className={`${styles.boardItem} ${activeTab === "board" ? styles.activeBoard : ""}`}
+              onClick={() => setActiveTab("board")}
+            >
+              Board Executive Portal
+            </button>
           )}
         </nav>
+
         <button className={styles.logoutBtn} onClick={onLogout}>
           Logout
         </button>
       </aside>
 
+      {/* Main Content Area */}
       <main className={styles.main}>
         {/* VIEW 1: HOME FEED */}
         {activeTab === "feed" && (
@@ -102,10 +114,16 @@ export default function Dashboard({ user, onLogout }) {
                 View your balance, payment history, and pay annual assessments.
               </p>
             </header>
-            {/* We wrap the DuesCard in a larger container for the dedicated page */}
             <div className={styles.duesPageWrapper}>
               <DuesCard residentName={user?.first_name} />
             </div>
+          </div>
+        )}
+
+        {/* VIEW 4: BOARD EXECUTIVE PORTAL (Step 3) */}
+        {activeTab === "board" && (
+          <div className={styles.fadeContent}>
+            <BoardPortal />
           </div>
         )}
       </main>

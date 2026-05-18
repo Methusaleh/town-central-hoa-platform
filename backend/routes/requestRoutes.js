@@ -31,4 +31,16 @@ router.post("/", async (req, res) => {
   }
 });
 
+// GET all requests for the Board Portal
+router.get("/admin/all", async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      "SELECT * FROM community_requests ORDER BY created_at DESC",
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch admin requests" });
+  }
+});
+
 module.exports = router;
