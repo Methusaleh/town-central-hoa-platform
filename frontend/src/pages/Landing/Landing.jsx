@@ -1,7 +1,7 @@
 import Footer from "../../components/Footer/Footer";
 import styles from "./Landing.module.css";
 
-export default function Landing({ onLogin, onContactClick }) {
+export default function Landing({ onLogin, onRegisterClick, onContactClick }) {
   return (
     <div className={styles.pageContainer}>
       <div className={styles.heroWrapper}>
@@ -18,8 +18,11 @@ export default function Landing({ onLogin, onContactClick }) {
             The official resident portal for Town Central.
           </p>
           <div className={styles.ctaContainer}>
-            <button className={styles.primaryAction} onClick={onLogin}>
-              Enter Portal
+            <button className={styles.primaryAction} onClick={onRegisterClick}>
+              Claim Your Profile
+            </button>
+            <button className={styles.secondaryAction} onClick={onLogin}>
+              Direct Login (Demo)
             </button>
           </div>
         </main>

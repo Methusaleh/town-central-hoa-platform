@@ -2,12 +2,13 @@ import { useState } from "react";
 import Landing from "./pages/Landing/Landing";
 import Dashboard from "./pages/Dashboard/Dashboard";
 import ContactPage from "./pages/Contact/ContactPage";
+import Register from "./pages/Register/Register"; // 1. Import the new page
 
 export default function App() {
-  // 'view' can be "landing", "dashboard", or "contact"
+  // 'view' can be "landing", "dashboard", "contact", or "register"
   const [view, setView] = useState("landing");
 
-  // Test user for dashboard verification
+  // Test user state
   const [user, setUser] = useState({
     first_name: "Aaron",
     role: "super_admin",
@@ -16,11 +17,20 @@ export default function App() {
   const goToLanding = () => setView("landing");
   const goToDashboard = () => setView("dashboard");
   const goToContact = () => setView("contact");
+  const goToRegister = () => setView("register"); // 2. Add the navigation handler
 
   return (
     <div className="app-container">
       {view === "landing" && (
-        <Landing onLogin={goToDashboard} onContactClick={goToContact} />
+        <Landing 
+          onLogin={goToDashboard} 
+          onRegisterClick={goToRegister} // 3. Pass register handler to landing
+          onContactClick={goToContact} 
+        />
+      )}
+
+      {view === "register" && (
+        <Register onBack={goToLanding} onRegisterSuccess={goToDashboard} />
       )}
 
       {view === "dashboard" && <Dashboard user={user} onLogout={goToLanding} />}
