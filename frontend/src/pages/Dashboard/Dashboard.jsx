@@ -4,6 +4,7 @@ import DuesCard from "../../components/DuesCard/DuesCard";
 import NeighborhoodCalendar from "../../components/NeighborhoodCalendar/NeighborhoodCalendar";
 import RequestForm from "../../components/RequestForm/RequestForm";
 import BoardPortal from "../../components/BoardPortal/BoardPortal";
+import VendorDirectory from "../../components/VendorDirectory/VendorDirectory";
 import styles from "./Dashboard.module.css";
 
 export default function Dashboard({ user, onLogout }) {
@@ -50,6 +51,13 @@ export default function Dashboard({ user, onLogout }) {
             onClick={() => setActiveTab("dues")}
           >
             My Dues
+          </button>
+
+          <button
+            className={`${styles.navItem} ${activeTab === "vendors" ? styles.activeNav : ""}`}
+            onClick={() => setActiveTab("vendors")}
+          >
+            Trusted Companies
           </button>
 
           <button
@@ -124,6 +132,13 @@ export default function Dashboard({ user, onLogout }) {
         {activeTab === "board" && (
           <div className={styles.fadeContent}>
             <BoardPortal user={user} />
+          </div>
+        )}
+
+        {/* VIEW 5: TRUSTED VENDORS */}
+        {activeTab === "vendors" && (
+          <div className={styles.fadeContent}>
+            <VendorDirectory />
           </div>
         )}
       </main>
