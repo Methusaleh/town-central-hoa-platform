@@ -41,7 +41,7 @@ export default function App() {
       )}
 
       {view === "dashboard" && (
-        <DashboardLayout 
+        <Dashboard 
           user={user} 
           onNavigateToProfile={() => setView("profile")} 
           onLogout={() => {
