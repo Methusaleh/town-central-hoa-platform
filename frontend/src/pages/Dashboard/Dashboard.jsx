@@ -7,8 +7,9 @@ import BoardPortal from "../../components/BoardPortal/BoardPortal";
 import VendorDirectory from "../../components/VendorDirectory/VendorDirectory";
 import styles from "./Dashboard.module.css";
 
-export default function Dashboard({ user, onLogout }) {
-  // Tabs: 'feed', 'maintenance', 'dues', 'board'
+// Added onNavigateToProfile to the destructured props
+export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
+  // Tabs: 'feed', 'maintenance', 'dues', 'board', 'vendors'
   const [activeTab, setActiveTab] = useState("feed");
 
   return (
@@ -28,7 +29,7 @@ export default function Dashboard({ user, onLogout }) {
           <div
             style={{
               margin: "10px 0",
-              borderBottom: "1px solid rgba(0,0,0,0.05)",
+              borderBottom: "1px solid rgba(255,255,255,0.1)",
             }}
           ></div>
 
@@ -60,6 +61,14 @@ export default function Dashboard({ user, onLogout }) {
             Trusted Companies
           </button>
 
+          {/* Account Settings Tab Link */}
+          <button
+            className={styles.navItem}
+            onClick={onNavigateToProfile}
+          >
+            ⚙️ Account Settings
+          </button>
+
           <button
             onClick={() =>
               (window.location.href = "mailto:board@towncentral.com")
@@ -79,6 +88,24 @@ export default function Dashboard({ user, onLogout }) {
             </button>
           )}
         </nav>
+
+        {/* Dynamic Sidebar User Card Footer */}
+        <div 
+          className={styles.sidebarUserCard} 
+          onClick={onNavigateToProfile}
+          style={{ cursor: 'pointer', marginTop: 'auto', marginBottom: '15px' }}
+        >
+          <img 
+            src={user?.photo || "https://via.placeholder.com/40"} 
+            alt="User Avatar" 
+            className={styles.userAvatarMini}
+            style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.2)' }}
+          />
+          <div className={styles.userInfoMini} style={{ marginLeft: '10px' }}>
+            <h4 style={{ margin: 0, fontSize: '0.9rem', color: '#fff' }}>{user?.first_name || "Resident"}</h4>
+            <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)' }}>View Profile</span>
+          </div>
+        </div>
 
         <button className={styles.logoutBtn} onClick={onLogout}>
           Logout
@@ -128,7 +155,7 @@ export default function Dashboard({ user, onLogout }) {
           </div>
         )}
 
-        {/* VIEW 4: BOARD EXECUTIVE PORTAL (Step 3) */}
+        {/* VIEW 4: BOARD EXECUTIVE PORTAL */}
         {activeTab === "board" && (
           <div className={styles.fadeContent}>
             <BoardPortal user={user} />

@@ -2,6 +2,7 @@ import { useState } from "react";
 import Landing from "./pages/Landing/Landing";
 import Dashboard from "./pages/Dashboard/Dashboard";
 import ContactPage from "./pages/Contact/ContactPage";
+import Profile from "./pages/Profile/Profile";
 import Register from "./pages/Register/Register"; // 1. Import the new page
 
 export default function App() {
@@ -15,6 +16,7 @@ export default function App() {
   });
 
   const goToLanding = () => setView("landing");
+  const goToProfile = () => setView("profile");
   const goToDashboard = (loggedInUser) => {
     if (loggedInUser && loggedInUser.first_name) {
       setUser(loggedInUser); // Dynamically set the user details from Google Auth!
@@ -38,9 +40,23 @@ export default function App() {
         <Register onBack={goToLanding} onRegisterSuccess={goToDashboard} />
       )}
 
-      {view === "dashboard" && <Dashboard user={user} onLogout={goToLanding} />}
+      {view === "dashboard" && (
+        <DashboardLayout 
+          user={user} 
+          onNavigateToProfile={() => setView("profile")} 
+          onLogout={() => {
+            // Optional: clear user state on logout
+            setUser(null);
+            setView("landing");
+          }}
+        />
+      )}
 
       {view === "contact" && <ContactPage onBack={goToLanding} />}
+
+      {view === "profile" && (
+        <Profile user={user} onBack={() => setView("dashboard")} />
+      )}
     </div>
   );
 }
