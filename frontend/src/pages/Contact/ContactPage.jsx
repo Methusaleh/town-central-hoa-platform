@@ -35,7 +35,7 @@ export default function ContactPage({ onBack }) {
         </div>
       </section>
 
-      <div classname={styles.guideWrapper}>
+      <div className={styles.guideWrapper}>
         <CivicGuide />
       </div>
     </div>

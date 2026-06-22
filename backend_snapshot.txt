@@ -9,6 +9,8 @@ const announcementRoutes = require("./routes/announcementRoutes"); // 1. ADD THI
 const duesRoutes = require("./routes/duesRoutes");
 const requestRoutes = require("./routes/requestRoutes");
 const eventRoutes = require("./routes/eventRoutes");
+const residentRoutes = require("./routes/residentRoutes");
+const vendorRoutes = require("./routes/vendorRoutes");
 const app = express();
 
 const allowedOrigins = [
@@ -34,6 +36,8 @@ app.use("/api/announcements", announcementRoutes);
 app.use("/api/dues", duesRoutes);
 app.use("/api/requests", requestRoutes);
 app.use("/api/events", eventRoutes);
+app.use("/api/residents", residentRoutes);
+app.use("/api/vendors", vendorRoutes);
 
 // We will plug in separate route files here as we build them
 // app.use('/api/residents', residentRoutes);
@@ -1286,6 +1290,118 @@ router.post("/", async (req, res) => {
     const values = [title, content, priority || "normal"];
     const { rows } = await db.query(query, values);
     res.status(201).json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+module.exports = router;
+
+==================================================
+FILE: ./backend/routes/vendorRoutes.js
+==================================================
+const express = require("express");
+const router = express.Router();
+const db = require("../db");
+
+// 1. READ: Get all verified vendors
+router.get("/", async (req, res) => {
+  try {
+    const { rows } = await db.query("SELECT * FROM verified_vendors ORDER BY company_name ASC");
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 2. CREATE: Add a new trusted company
+router.post("/", async (req, res) => {
+  const { company_name, service_type, contact_phone, contact_email, website_url, notes } = req.body;
+  try {
+    const query = `
+      INSERT INTO verified_vendors (company_name, service_type, contact_phone, contact_email, website_url, notes)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING *;
+    `;
+    const { rows } = await db.query(query, [company_name, service_type, contact_phone, contact_email, website_url, notes]);
+    res.status(201).json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 3. UPDATE: Edit an existing company's details
+router.put("/:id", async (req, res) => {
+  const { id } = req.params;
+  const { company_name, service_type, contact_phone, contact_email, website_url, notes } = req.body;
+  try {
+    const query = `
+      UPDATE verified_vendors 
+      SET company_name = $1, service_type = $2, contact_phone = $3, contact_email = $4, website_url = $5, notes = $6
+      WHERE id = $7
+      RETURNING *;
+    `;
+    const { rows } = await db.query(query, [company_name, service_type, contact_phone, contact_email, website_url, notes, id]);
+    res.json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 4. DELETE: Remove a company completely
+router.delete("/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    await db.query("DELETE FROM verified_vendors WHERE id = $1", [id]);
+    res.json({ message: "Vendor successfully removed from directory." });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+module.exports = router;
+==================================================
+FILE: ./backend/routes/residentRoutes.js
+==================================================
+const express = require("express");
+const router = express.Router();
+const db = require("../db");
+
+// POST /api/residents/lookup - Search the master roster by exact or partial address
+router.post("/lookup", async (req, res) => {
+  const { address } = req.body;
+
+  if (!address) {
+    return res.status(400).json({ error: "Address query is required" });
+  }
+
+  try {
+    // ILIKE performs a case-insensitive search to make typing error-friendly
+    const query = `
+      SELECT id, street_address, first_name, last_name, is_claimed 
+      FROM neighborhood_roster 
+      WHERE street_address ILIKE $1
+    `;
+    const { rows } = await db.query(query, [`%${address.trim()}%`]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "Address not found on the master neighborhood roster. Please check spelling or contact the board." });
+    }
+
+    const match = rows[0];
+
+    if (match.is_claimed) {
+      return res.status(400).json({ error: "This property profile has already been claimed and registered." });
+    }
+
+    // Return the pre-seeded matching data to autofill the form
+    res.json({
+      success: true,
+      residentId: match.id,
+      firstName: match.first_name,
+      lastName: match.last_name,
+      matchedAddress: match.street_address
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

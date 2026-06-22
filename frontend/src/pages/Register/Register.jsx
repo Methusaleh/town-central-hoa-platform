@@ -111,10 +111,10 @@ export default function Register({ onBack, onRegisterSuccess }) {
                   
                   // Pass the real authenticated credentials forward to your App state!
                   onRegisterSuccess({
-                    first_name: googleUser.displayName.split(" ")[0], // Grab their actual first name
+                    first_name: googleUser.displayName ? googleUser.displayName.split(" ")[0] : "Resident", 
                     email: googleUser.email,
                     photo: googleUser.photoURL,
-                    role: "resident" // Standard tier role assignment
+                    role: "resident" 
                   });
                 } catch (err) {
                   setError("Failed to complete social verification. Please try again.");
