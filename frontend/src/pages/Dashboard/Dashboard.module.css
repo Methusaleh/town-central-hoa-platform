@@ -50,16 +50,18 @@
   border-right: 1px solid rgba(0, 0, 0, 0.05);
   display: flex;
   flex-direction: column;
+  justify-content: space-between; /* Spreads navigation and profile footer */
   padding: 30px 20px;
   z-index: 10;
   flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .brand {
   font-size: 1.6rem;
   font-weight: 800;
   color: #1e293b;
-  margin-bottom: 50px;
+  margin-bottom: 40px;
   letter-spacing: -1px;
 }
 
@@ -79,13 +81,13 @@
   padding: 14px 20px;
   border-radius: 12px;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* Smoother interaction */
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   font-weight: 600;
   width: 100%;
   overflow: hidden;
 }
 
-/* Step 2: The "Active/Hover" Pill Indicator */
+/* The "Active/Hover" Pill Indicator */
 .navItem::before {
   content: "";
   position: absolute;
@@ -102,7 +104,7 @@
 .navItem:hover {
   background: white;
   color: #2ecc71;
-  padding-left: 25px; /* Interactive slide effect */
+  padding-left: 25px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
@@ -113,11 +115,16 @@
 }
 
 .activeNav::before {
-  height: 60%; /* Shows the indicator for current tab */
+  height: 60%;
+}
+
+.menuDivider {
+  margin: 5px 0 15px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .boardItem {
-  margin-top: 30px;
+  margin-top: 20px;
   background: linear-gradient(135deg, #f1c40f, #f39c12);
   color: white;
   border: none;
@@ -135,8 +142,63 @@
   transform: scale(1.02);
 }
 
-.logoutBtn {
+/* --- SIDEBAR FOOTER (USER SECTION) --- */
+.sidebarFooter {
   margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.profileTrigger {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.profileTrigger:hover {
+  background: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+.userAvatarMini {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #2ecc71;
+  flex-shrink: 0;
+}
+
+.userInfoMini {
+  margin-left: 12px;
+  overflow: hidden;
+}
+
+.userInfoMini h4 {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.userInfoMini span {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  display: block;
+  margin-top: 2px;
+}
+
+.logoutBtn {
   background: #fff;
   color: #ef4444;
   border: 1px solid #fee2e2;
@@ -155,7 +217,7 @@
 /* --- MAIN CONTENT AREA (Layer 10) --- */
 .main {
   flex: 1;
-  padding: 40px 60px 80px; /* 80px bottom padding fix applied */
+  padding: 40px 60px 80px;
   overflow-y: auto;
   overflow-x: hidden;
   position: relative;
@@ -181,7 +243,7 @@
 }
 
 .feedCard {
-  width: 100%; /* Spans full width when Dues card is removed from home */
+  width: 100%;
   max-width: 900px;
   margin: 0 auto;
   background: rgba(255, 255, 255, 0.7);

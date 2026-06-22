@@ -7,7 +7,6 @@ import BoardPortal from "../../components/BoardPortal/BoardPortal";
 import VendorDirectory from "../../components/VendorDirectory/VendorDirectory";
 import styles from "./Dashboard.module.css";
 
-// Added onNavigateToProfile to the destructured props
 export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
   // Tabs: 'feed', 'maintenance', 'dues', 'board', 'vendors'
   const [activeTab, setActiveTab] = useState("feed");
@@ -21,17 +20,13 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
       {/* Sidebar Navigation */}
       <aside className={styles.sidebar}>
         <div className={styles.brand}>Town Central</div>
+        
         <nav className={styles.nav}>
           <button onClick={onLogout} className={styles.navItem}>
             ← Public Home
           </button>
 
-          <div
-            style={{
-              margin: "10px 0",
-              borderBottom: "1px solid rgba(255,255,255,0.1)",
-            }}
-          ></div>
+          <div className={styles.menuDivider}></div>
 
           <button
             className={`${styles.navItem} ${activeTab === "feed" ? styles.activeNav : ""}`}
@@ -61,18 +56,8 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
             Trusted Companies
           </button>
 
-          {/* Account Settings Tab Link */}
           <button
-            className={styles.navItem}
-            onClick={onNavigateToProfile}
-          >
-            ⚙️ Account Settings
-          </button>
-
-          <button
-            onClick={() =>
-              (window.location.href = "mailto:board@towncentral.com")
-            }
+            onClick={() => (window.location.href = "mailto:board@towncentral.com")}
             className={styles.navItem}
           >
             Contact the Board
@@ -89,27 +74,24 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
           )}
         </nav>
 
-        {/* Dynamic Sidebar User Card Footer */}
-        <div 
-          className={styles.sidebarUserCard} 
-          onClick={onNavigateToProfile}
-          style={{ cursor: 'pointer', marginTop: 'auto', marginBottom: '15px' }}
-        >
-          <img 
-            src={user?.photo || "https://via.placeholder.com/40"} 
-            alt="User Avatar" 
-            className={styles.userAvatarMini}
-            style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.2)' }}
-          />
-          <div className={styles.userInfoMini} style={{ marginLeft: '10px' }}>
-            <h4 style={{ margin: 0, fontSize: '0.9rem', color: '#fff' }}>{user?.first_name || "Resident"}</h4>
-            <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)' }}>View Profile</span>
+        {/* Repositioned & Cleaned Profile Card Footer */}
+        <div className={styles.sidebarFooter}>
+          <div className={styles.profileTrigger} onClick={onNavigateToProfile}>
+            <img 
+              src={user?.photo || "https://via.placeholder.com/40"} 
+              alt="User Avatar" 
+              className={styles.userAvatarMini}
+            />
+            <div className={styles.userInfoMini}>
+              <h4>{user?.first_name || "Resident"}</h4>
+              <span>⚙️ Account Settings</span>
+            </div>
           </div>
-        </div>
 
-        <button className={styles.logoutBtn} onClick={onLogout}>
-          Logout
-        </button>
+          <button className={styles.logoutBtn} onClick={onLogout}>
+            Logout
+          </button>
+        </div>
       </aside>
 
       {/* Main Content Area */}
@@ -145,9 +127,7 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
           <div className={styles.fadeContent}>
             <header className={styles.header}>
               <h2>Financial Account</h2>
-              <p>
-                View your balance, payment history, and pay annual assessments.
-              </p>
+              <p>View your balance, payment history, and pay annual assessments.</p>
             </header>
             <div className={styles.duesPageWrapper}>
               <DuesCard residentName={user?.first_name} />
