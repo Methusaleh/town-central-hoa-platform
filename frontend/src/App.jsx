@@ -15,7 +15,12 @@ export default function App() {
   });
 
   const goToLanding = () => setView("landing");
-  const goToDashboard = () => setView("dashboard");
+  const goToDashboard = (loggedInUser) => {
+    if (loggedInUser && loggedInUser.first_name) {
+      setUser(loggedInUser); // Dynamically set the user details from Google Auth!
+    }
+    setView("dashboard");
+  };
   const goToContact = () => setView("contact");
   const goToRegister = () => setView("register"); // 2. Add the navigation handler
 

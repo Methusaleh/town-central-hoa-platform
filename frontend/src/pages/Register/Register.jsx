@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { signInWithGoogle } from "../../firebase";
 import styles from "./Register.module.css";
 
 export default function Register({ onBack, onRegisterSuccess }) {
@@ -99,10 +100,30 @@ export default function Register({ onBack, onRegisterSuccess }) {
 
             <button 
               className={styles.submitBtn} 
-              disabled={!guidelinesAccepted}
-              onClick={onRegisterSuccess}
+              disabled={!guidelinesAccepted || searching}
+              onClick={async () => {
+                try {
+                  setSearching(true);
+                  // Launch the safe secure Google auth window
+                  const googleUser = await signInWithGoogle();
+                  
+                  alert(`Successfully linked account for: ${googleUser.displayName}`);
+                  
+                  // Pass the real authenticated credentials forward to your App state!
+                  onRegisterSuccess({
+                    first_name: googleUser.displayName.split(" ")[0], // Grab their actual first name
+                    email: googleUser.email,
+                    photo: googleUser.photoURL,
+                    role: "resident" // Standard tier role assignment
+                  });
+                } catch (err) {
+                  setError("Failed to complete social verification. Please try again.");
+                } finally {
+                  setSearching(false);
+                }
+              }}
             >
-              Complete Registration & Enter Portal
+              {searching ? "Verifying Identity..." : "Link Google Account & Enter Portal"}
             </button>
           </div>
         )}
