@@ -216,35 +216,35 @@ export default function BoardPortal({ user }) {
 
   // Financial Ledger Submission Handler (Updated endpoint mapping to support clean relational parameters)
   const handleUpdateFinanceLedger = async (e) => {
-    e.preventDefault();
-    setFinanceStatus({ type: "", text: "" });
+  e.preventDefault();
+  setFinanceStatus({ type: "", text: "" });
 
-    if (!financeForm.roster_lot_id) {
-      setFinanceStatus({ type: "error", text: "Please choose a valid resident property profile using the lookup tool fields." });
-      return;
-    }
+  if (!financeForm.street_address) {
+    setFinanceStatus({ type: "error", text: "Please choose a valid resident property profile using the lookup tool fields." });
+    return;
+  }
 
-    try {
-      const response = await fetch(`${API_BASE}/api/dues/update-balance`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          roster_lot_id: parseInt(financeForm.roster_lot_id, 10),
-          balance: financeForm.balance,
-          status: financeForm.status
-        })
-      });
-      const data = await response.json();
+  try {
+    const response = await fetch(`${API_BASE}/api/dues/update-balance`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        street_address: financeForm.street_address, // Submits clean address string!
+        balance: financeForm.balance,
+        status: financeForm.status
+      })
+    });
+    const data = await response.json();
 
-      if (!response.ok) throw new Error(data.error || "Failed to alter financial ledger entry.");
+    if (!response.ok) throw new Error(data.error || "Failed to alter financial ledger entry.");
 
-      setFinanceStatus({ type: "success", text: data.message || "Financial ledger updated successfully!" });
-      setFinanceForm({ roster_lot_id: "", balance: "", status: "Pending" });
-      setSelectedLotText("");
-    } catch (err) {
-      setFinanceStatus({ type: "error", text: err.message });
-    }
-  };
+    setFinanceStatus({ type: "success", text: data.message || "Financial ledger updated successfully!" });
+    setFinanceForm({ street_address: "", balance: "", status: "Pending" });
+    setSelectedLotText("");
+  } catch (err) {
+    setFinanceStatus({ type: "error", text: err.message });
+  }
+};
 
   // Vendor submissions handler
   const handleVendorSubmit = async (e) => {
