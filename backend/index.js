@@ -7,6 +7,7 @@ const requestRoutes = require("./routes/requestRoutes");
 const eventRoutes = require("./routes/eventRoutes");
 const residentRoutes = require("./routes/residentRoutes");
 const vendorRoutes = require("./routes/vendorRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
 const app = express();
 
 const allowedOrigins = [
@@ -34,6 +35,7 @@ app.use("/api/requests", requestRoutes);
 app.use("/api/events", eventRoutes);
 app.use("/api/residents", residentRoutes);
 app.use("/api/vendors", vendorRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 // We will plug in separate route files here as we build them
 // app.use('/api/residents', residentRoutes);
