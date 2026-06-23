@@ -39,12 +39,12 @@ export default function BoardPortal({ user }) {
   });
   const [rosterStatus, setRosterStatus] = useState({ type: "", text: "" });
 
-  // --- Financials Management State (Updated for Co-Ownership/Lot ID Mapping) ---
+  // --- Financials Management State ---
   const [masterRoster, setMasterRoster] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [selectedLotText, setSelectedLotText] = useState(""); // Holds visual selection description
+  const [selectedLotText, setSelectedLotText] = useState(""); 
   const [financeForm, setFinanceForm] = useState({
-    roster_lot_id: "",
+    street_address: "",
     balance: "",
     status: "Pending"
   });
@@ -93,24 +93,23 @@ export default function BoardPortal({ user }) {
     }
   };
 
+  // FETCH FULL ROSTER FOR AUTOCOMPLETE AND LIST VIEWS
+  const fetchRosterData = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/residents/master-list-placeholder`);
+      const data = await response.json();
+      setMasterRoster(data);
+    } catch (err) {
+      console.error("Error fetching live directory:", err);
+    }
+  };
+
   useEffect(() => {
     if (activeSection === "vendors") {
       fetchVendorsData();
     }
-    
-    // NEW: Fetch master roster entities to feed our dynamic autocomplete lookups
     if (activeSection === "financials" || activeSection === "roster") {
-      fetch(`${API_BASE}/api/residents/master-list-placeholder`) // Placeholder endpoint for your full directory index
-        .then(res => res.json())
-        .then(data => setMasterRoster(data))
-        .catch(() => {
-          // Robust demo seed dataset mirroring your Oklahoma neighborhood footprints
-          setMasterRoster([
-            { id: 1, first_name: "Aaron", last_name: "Admin", street_address: "1559 Hickory Trl" },
-            { id: 2, first_name: "Becky", last_name: "Kipf", street_address: "1559 Hickory Trl" },
-            { id: 3, first_name: "John", last_name: "Doe", street_address: "1200 West Point Dr" }
-          ]);
-        });
+      fetchRosterData();
     }
   }, [activeSection]);
 
@@ -192,10 +191,9 @@ export default function BoardPortal({ user }) {
     }
   };
 
-  // Manual Roster Addition Handler
   const handleOnboardResident = async (e) => {
     e.preventDefault();
-    rosterStatus({ type: "", text: "" });
+    setRosterStatus({ type: "", text: "" });
 
     try {
       const response = await fetch(`${API_BASE}/api/residents/admin-add`, {
@@ -209,44 +207,43 @@ export default function BoardPortal({ user }) {
 
       setRosterStatus({ type: "success", text: "Resident record established successfully!" });
       setRosterForm({ first_name: "", last_name: "", email: "", street_address: "" });
+      fetchRosterData();
     } catch (err) {
       setRosterStatus({ type: "error", text: err.message });
     }
   };
 
-  // Financial Ledger Submission Handler (Updated endpoint mapping to support clean relational parameters)
   const handleUpdateFinanceLedger = async (e) => {
-  e.preventDefault();
-  setFinanceStatus({ type: "", text: "" });
+    e.preventDefault();
+    setFinanceStatus({ type: "", text: "" });
 
-  if (!financeForm.street_address) {
-    setFinanceStatus({ type: "error", text: "Please choose a valid resident property profile using the lookup tool fields." });
-    return;
-  }
+    if (!financeForm.street_address) {
+      setFinanceStatus({ type: "error", text: "Please select a valid property address string via search lookup." });
+      return;
+    }
 
-  try {
-    const response = await fetch(`${API_BASE}/api/dues/update-balance`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        street_address: financeForm.street_address, // Submits clean address string!
-        balance: financeForm.balance,
-        status: financeForm.status
-      })
-    });
-    const data = await response.json();
+    try {
+      const response = await fetch(`${API_BASE}/api/dues/update-balance`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          street_address: financeForm.street_address,
+          balance: financeForm.balance,
+          status: financeForm.status
+        })
+      });
+      const data = await response.json();
 
-    if (!response.ok) throw new Error(data.error || "Failed to alter financial ledger entry.");
+      if (!response.ok) throw new Error(data.error || "Failed to update balance.");
 
-    setFinanceStatus({ type: "success", text: data.message || "Financial ledger updated successfully!" });
-    setFinanceForm({ street_address: "", balance: "", status: "Pending" });
-    setSelectedLotText("");
-  } catch (err) {
-    setFinanceStatus({ type: "error", text: err.message });
-  }
-};
+      setFinanceStatus({ type: "success", text: data.message || "Financial ledger updated successfully!" });
+      setFinanceForm({ street_address: "", balance: "", status: "Pending" });
+      setSelectedLotText("");
+    } catch (err) {
+      setFinanceStatus({ type: "error", text: err.message });
+    }
+  };
 
-  // Vendor submissions handler
   const handleVendorSubmit = async (e) => {
     e.preventDefault();
     const isEditing = editingVendorId !== null;
@@ -266,11 +263,9 @@ export default function BoardPortal({ user }) {
         setEditingVendorId(null);
         setShowVendorForm(false);
         fetchVendorsData();
-      } else {
-        alert("Failed to save vendor configuration parameters.");
       }
     } catch (err) {
-      console.error("Vendor persistence fault:", err);
+      console.error(err);
     }
   };
 
@@ -288,22 +283,15 @@ export default function BoardPortal({ user }) {
   };
 
   const handleDeleteVendor = async (id) => {
-    if (!window.confirm("Are you sure you want to completely remove this company from the trusted vendor log?")) return;
-
+    if (!window.confirm("Are you sure you want to remove this company?")) return;
     try {
       const response = await fetch(`${API_BASE}/api/vendors/${id}`, { method: "DELETE" });
-      if (response.ok) {
-        alert("Vendor removed from community listings.");
-        fetchVendorsData();
-      } else {
-        alert("Server failed to remove vendor listing row.");
-      }
+      if (response.ok) fetchVendorsData();
     } catch (err) {
       console.error(err);
     }
   };
 
-  // Helper calculation filter for our predictive multi-account lookup engine
   const autocompleteSuggestions = masterRoster.filter(r => {
     const searchString = selectedLotText.toLowerCase();
     return (
@@ -317,13 +305,13 @@ export default function BoardPortal({ user }) {
     <div className={styles.container}>
       {/* SECTION SELECTOR HEADERS */}
       <div style={{ display: "flex", gap: "25px", borderBottom: "2px solid #e2e8f0", paddingBottom: "10px", overflowX: "auto" }}>
-        <button onClick={() => setActiveSection("requests")} className={`${styles.navItem} ${activeSection === "requests" ? styles.activeNav : ""}`} style={{ background: "none", border: "none", fontSize: "1.1rem", fontWeight: "700", color: activeSection === "requests" ? "#2ecc71" : "#94a3b8", cursor: "pointer", paddingBottom: "5px", whiteSpace: "nowrap" }}>📋 Operations & Tickets</button>
-        <button onClick={() => setActiveSection("roster")} style={{ background: "none", border: "none", fontSize: "1.1rem", fontWeight: "700", color: activeSection === "roster" ? "#2ecc71" : "#94a3b8", cursor: "pointer", paddingBottom: "5px", whiteSpace: "nowrap" }}>👥 Master Roster</button>
-        <button onClick={() => setActiveSection("financials")} style={{ background: "none", border: "none", fontSize: "1.1rem", fontWeight: "700", color: activeSection === "financials" ? "#2ecc71" : "#94a3b8", cursor: "pointer", paddingBottom: "5px", whiteSpace: "nowrap" }}>💰 Assessment Ledger</button>
-        <button onClick={() => setActiveSection("vendors")} style={{ background: "none", border: "none", fontSize: "1.1rem", fontWeight: "700", color: activeSection === "vendors" ? "#2ecc71" : "#94a3b8", cursor: "pointer", paddingBottom: "5px", whiteSpace: "nowrap" }}>🏢 Verified Vendors</button>
+        <button onClick={() => setActiveSection("requests")} style={{ background: "none", border: "none", fontSize: "1.1rem", fontWeight: "700", color: activeSection === "requests" ? "#2ecc71" : "#94a3b8", cursor: "pointer", paddingBottom: "5px", borderBottom: activeSection === "requests" ? "3px solid #2ecc71" : "3px solid transparent" }}>📋 Operations & Tickets</button>
+        <button onClick={() => setActiveSection("roster")} style={{ background: "none", border: "none", fontSize: "1.1rem", fontWeight: "700", color: activeSection === "roster" ? "#2ecc71" : "#94a3b8", cursor: "pointer", paddingBottom: "5px", borderBottom: activeSection === "roster" ? "3px solid #2ecc71" : "3px solid transparent" }}>👥 Master Roster</button>
+        <button onClick={() => setActiveSection("financials")} style={{ background: "none", border: "none", fontSize: "1.1rem", fontWeight: "700", color: activeSection === "financials" ? "#2ecc71" : "#94a3b8", cursor: "pointer", paddingBottom: "5px", borderBottom: activeSection === "financials" ? "3px solid #2ecc71" : "3px solid transparent" }}>💰 Assessment Ledger</button>
+        <button onClick={() => setActiveSection("vendors")} style={{ background: "none", border: "none", fontSize: "1.1rem", fontWeight: "700", color: activeSection === "vendors" ? "#2ecc71" : "#94a3b8", cursor: "pointer", paddingBottom: "5px", borderBottom: activeSection === "vendors" ? "3px solid #2ecc71" : "3px solid transparent" }}>🏢 Verified Vendors</button>
       </div>
 
-      {/* --- RENDER SECTION 1: REQUESTS & ALERTS WORKSPACE --- */}
+      {/* --- SECTION 1: OPERATIONS & TICKETS --- */}
       {activeSection === "requests" && (
         <>
           <header className={styles.header} style={{ marginTop: "10px" }}>
@@ -388,24 +376,25 @@ export default function BoardPortal({ user }) {
                     <tr>
                       <th>Date Submitted</th>
                       <th>Resident</th>
-                      <th>Subject</th>
-                      {viewMode === "active" ? (
-                        <><th>Type</th><th>Status</th><th>Action</th></>
-                      ) : <th>Resolved Details</th>}
+                      <th>Subject / Description</th>
+                      <th>Type</th>
+                      <th>Status</th>
+                      {viewMode === "active" && <th>Action</th>}
                     </tr>
                   </thead>
                   <tbody>
                     {filteredRequests.map((req) => (
                       <tr key={req.id}>
                         <td className={styles.dateCol}>{new Date(req.created_at).toLocaleDateString()}</td>
-                        <td>{req.first_name} {req.last_name}</td>
-                        <td>{req.subject}</td>
+                        <td style={{ fontWeight: "600" }}>{req.first_name} {req.last_name}</td>
+                        <td>
+                          <div style={{ fontWeight: "700", color: "#0f172a" }}>{req.subject}</div>
+                          <div style={{ fontSize: "0.85rem", color: "#64748b", marginTop: "4px", background: "#f8fafc", padding: "8px", borderRadius: "6px", borderLeft: "3px solid #cbd5e1" }}>{req.description || "No text description details provided."}</div>
+                        </td>
+                        <td><span className={styles.typeTag}>{req.request_type}</span></td>
+                        <td><span className={`${styles.statusBadge} ${styles.statusOpen}`}>{req.status}</span></td>
                         {viewMode === "active" ? (
-                          <>
-                            <td><span className={styles.typeTag}>{req.request_type}</span></td>
-                            <td><span className={`${styles.statusBadge} ${styles.statusOpen}`}>{req.status}</span></td>
-                            <td><button className={styles.viewBtn} onClick={() => handleResolve(req.id)}>Resolve & Archive</button></td>
-                          </>
+                          <td><button className={styles.viewBtn} onClick={() => handleResolve(req.id)}>Resolve & Archive</button></td>
                         ) : (
                           <td className={styles.resolvedInfo}>By {req.resolved_by || "Admin"} on {req.resolved_at ? new Date(req.resolved_at).toLocaleDateString() : "N/A"}</td>
                         )}
@@ -419,13 +408,13 @@ export default function BoardPortal({ user }) {
         </>
       )}
 
-      {/* --- RENDER SECTION 2: MASTER ROSTER DIRECTORY --- */}
+      {/* --- SECTION 2: MASTER ROSTER DIRECTORY VIEW --- */}
       {activeSection === "roster" && (
         <div className={styles.tableCard} style={{ marginTop: "10px" }}>
           <div className={styles.tableHeader}>
             <div>
               <h3 style={{ margin: 0 }}>Roster Security Directory</h3>
-              <p style={{ margin: "5px 0 0 0", fontSize: "0.85rem", color: "#64748b" }}>Manage official properties, verify claims, and onboard incoming families safely.</p>
+              <p style={{ margin: "5px 0 0 0", fontSize: "0.85rem", color: "#64748b" }}>Displaying all pre-seeded neighborhood properties and claimed user profiles.</p>
             </div>
             <button className={styles.postBtn} onClick={() => setShowRosterModal(!showRosterModal)}>{showRosterModal ? "Close Form" : "➕ Onboard Property"}</button>
           </div>
@@ -448,19 +437,42 @@ export default function BoardPortal({ user }) {
             </div>
           )}
 
-          <div style={{ background: "#f8fafc", padding: "15px", borderRadius: "10px", textAlign: "center", color: "#64748b", fontStyle: "italic", fontSize: "0.9rem", border: "1px dashed #cbd5e1" }}>
-            💡 To pull up specific individual records or double-check a property line layout, use the global search matching engine tool fields or execute a lookup verification check directly on the live registry portal.
-          </div>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>Lot ID</th>
+                <th>Full Resident Name</th>
+                <th>Assigned Street Address</th>
+                <th>Email Registration Hook</th>
+                <th>Portal Claim Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {masterRoster.map((res) => (
+                <tr key={res.id}>
+                  <td style={{ fontWeight: "700", color: "#64748b" }}>{res.lot_number || `LOT-${100 + res.id}`}</td>
+                  <td style={{ fontWeight: "600" }}>{res.first_name} {res.last_name}</td>
+                  <td>📍 {res.street_address}</td>
+                  <td style={{ color: res.email ? "#0f172a" : "#94a3b8" }}>{res.email || "No email assigned"}</td>
+                  <td>
+                    <span style={{ padding: "4px 8px", borderRadius: "12px", fontSize: "0.75rem", fontWeight: "700", textTransform: "uppercase", backgroundColor: res.is_claimed ? "#d1fae5" : "#f1f5f9", color: res.is_claimed ? "#065f46" : "#475569" }}>
+                      {res.is_claimed ? "🔒 Claimed" : "⏳ Pending"}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
-      {/* --- RENDER SECTION 3: FINANCIAL ASSESSMENT LEDGER (With Relational Co-Owner Autocomplete) --- */}
+      {/* --- SECTION 3: ASSESSMENT LEDGER --- */}
       {activeSection === "financials" && (
         <div className={styles.tableCard} style={{ marginTop: "10px" }}>
           <div className={styles.tableHeader}>
             <div>
               <h3 style={{ margin: 0 }}>Resident Assessment Ledger</h3>
-              <p style={{ margin: "5px 0 0 0", fontSize: "0.85rem", color: "#64748b" }}>Log offline checks, clear balances, or issue manual assessment status corrections.</p>
+              <p style={{ margin: "5px 0 0 0", fontSize: "0.85rem", color: "#64748b" }}>Type any name or street segment to fetch the underlying ledger record row.</p>
             </div>
           </div>
 
@@ -472,12 +484,11 @@ export default function BoardPortal({ user }) {
               </div>
             )}
             <form onSubmit={handleUpdateFinanceLedger} className={styles.announcementForm}>
-              {/* RELATIONAL PREDICTIVE LOOKUP FIELD */}
               <div style={{ position: "relative" }}>
-                <label>Search Resident or Property Address *</label>
+                <label>Search Resident Name or Street Address *</label>
                 <input 
                   type="text" 
-                  placeholder="Type name or street location..." 
+                  placeholder="Type Aaron, Becky, Thomas, 1559, etc..." 
                   value={selectedLotText} 
                   onChange={(e) => {
                     setSelectedLotText(e.target.value);
@@ -490,27 +501,26 @@ export default function BoardPortal({ user }) {
                 />
                 
                 {showSuggestions && selectedLotText && autocompleteSuggestions.length > 0 && (
-                  <div style={{ position: "absolute", top: "100%", left: 0, right: 0, backgroundColor: "white", border: "1px solid #e2e8f0", borderRadius: "8px", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", zIndex: 1000, maxHeight: "200px", overflowY: "auto", marginTop: "4px" }}>
-                    {autocompleteSuggestions.map((lot, idx) => (
+                  <div style={{ position: "absolute", top: "100%", left: 0, right: 0, backgroundColor: "white", border: "1px solid #e2e8f0", borderRadius: "8px", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", zIndex: 1000, maxHeight: "180px", overflowY: "auto", marginTop: "4px" }}>
+                    {autocompleteSuggestions.map((lot) => (
                       <div
                         key={lot.id}
                         onMouseDown={() => {
-                          setFinanceForm({ ...financeForm, roster_lot_id: lot.id });
+                          setFinanceForm({ ...financeForm, street_address: lot.street_address });
                           setSelectedLotText(`${lot.first_name} ${lot.last_name} (${lot.street_address})`);
                           setShowSuggestions(false);
                         }}
-                        style={{ padding: "10px 14px", cursor: "pointer", borderBottom: idx < autocompleteSuggestions.length - 1 ? "1px solid #f1f5f9" : "none", fontSize: "0.9rem" }}
+                        style={{ padding: "10px 14px", cursor: "pointer", borderBottom: "1px solid #f1f5f9", fontSize: "0.9rem" }}
                         onMouseEnter={(e) => e.target.style.backgroundColor = "#f8fafc"}
                         onMouseLeave={(e) => e.target.style.backgroundColor = "transparent"}
                       >
-                        <strong>{lot.first_name} {lot.last_name}</strong> — 📍 {lot.street_address}
+                        👤 <strong>{lot.first_name} {lot.last_name}</strong> — 📍 {lot.street_address}
                       </div>
                     ))}
                   </div>
                 )}
               </div>
 
-              {/* OUTSTANDING BALANCE & STATUS ROW (Aligned baseline via Flexbox) */}
               <div className={styles.inlineGroup} style={{ alignItems: "flex-end" }}>
                 <div>
                   <label>Outstanding Assessment Balance ($) *</label>
@@ -525,21 +535,19 @@ export default function BoardPortal({ user }) {
                   </select>
                 </div>
               </div>
-              <button type="submit" className={styles.submitBtn} style={{ backgroundColor: "#3498db" }}>
-                Commit Ledger Overwrite
-              </button>
+              <button type="submit" className={styles.submitBtn} style={{ backgroundColor: "#3498db" }}>Commit Ledger Overwrite</button>
             </form>
           </div>
         </div>
       )}
 
-      {/* --- RENDER SECTION 4: TRUSTED VENDORS MANAGEMENT WORKSPACE --- */}
+      {/* --- SECTION 4: VERIFIED VENDORS --- */}
       {activeSection === "vendors" && (
         <div className={styles.tableCard} style={{ marginTop: "10px" }}>
           <div className={styles.tableHeader}>
             <div>
               <h3 style={{ margin: 0 }}>Trusted Companies Directory Control</h3>
-              <p style={{ margin: "5px 0 0 0", fontSize: "0.85rem", color: "#64748b" }}>Add, modify, or remove contractor and business recommendation row cards visible to homeowners.</p>
+              <p style={{ margin: "5px 0 0 0", fontSize: "0.85rem", color: "#64748b" }}>Add, modify, or remove contractor and business recommendation rows visible to homeowners.</p>
             </div>
             <button className={showVendorForm ? styles.cancelBtn : styles.postBtn} onClick={() => { setShowVendorForm(!showVendorForm); if (showVendorForm) { setEditingVendorId(null); setVendorForm({ company_name: "", service_type: "", contact_phone: "", contact_email: "", website_url: "", notes: "" }); } }}>{showVendorForm ? "Cancel" : "➕ Add New Vendor"}</button>
           </div>
