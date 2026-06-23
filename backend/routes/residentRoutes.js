@@ -11,7 +11,6 @@ router.post("/lookup", async (req, res) => {
   }
 
   try {
-    // ILIKE performs a case-insensitive search to make typing error-friendly
     const query = `
       SELECT id, street_address, first_name, last_name, is_claimed 
       FROM neighborhood_roster 
@@ -29,7 +28,6 @@ router.post("/lookup", async (req, res) => {
       return res.status(400).json({ error: "This property profile has already been claimed and registered." });
     }
 
-    // Return the pre-seeded matching data to autofill the form
     res.json({
       success: true,
       residentId: match.id,
@@ -83,7 +81,6 @@ router.put("/avatar", async (req, res) => {
   }
 
   try {
-    // Save the base64 image data string directly into the profile_photo slot
     const query = `
       UPDATE neighborhood_roster 
       SET profile_photo = $1 
@@ -111,13 +108,11 @@ router.put("/avatar", async (req, res) => {
 router.post("/admin-add", async (req, res) => {
   const { first_name, last_name, email, street_address } = req.body;
 
-  // Strict validation mapping to your NOT NULL database constraints
   if (!first_name || !last_name || !street_address) {
     return res.status(400).json({ error: "First Name, Last Name, and Street Address are required fields." });
   }
 
   try {
-    // If an email is provided, verify it isn't already taking up a slot in the system
     if (email && email.trim() !== "") {
       const checkEmail = await db.query("SELECT id FROM neighborhood_roster WHERE email = $1", [email.trim().toLowerCase()]);
       if (checkEmail.rows.length > 0) {
@@ -148,4 +143,21 @@ router.post("/admin-add", async (req, res) => {
     res.status(500).json({ error: "Internal server error creating resident record." });
   }
 });
+
+// --- ADDED FOR AUTOCOMPLETE: Fetch true directory indexing for administrative subcomponents ---
+router.get("/master-list-placeholder", async (req, res) => {
+  try {
+    const query = `
+      SELECT id, first_name, last_name, street_address, lot_number, is_claimed 
+      FROM neighborhood_roster 
+      ORDER BY last_name ASC, first_name ASC;
+    `;
+    const { rows } = await db.query(query);
+    res.json(rows);
+  } catch (err) {
+    console.error("Roster autocomplete query error:", err.message);
+    res.status(500).json({ error: "Server error retrieving master directory index parameters." });
+  }
+});
+
 module.exports = router;
