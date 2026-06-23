@@ -1,15 +1,17 @@
 import { useState, useEffect } from "react";
 import styles from "./DuesCard.module.css";
 
-export default function DuesCard({ residentName }) {
+// CHANGE THE PROP INJECTION TO READ USER OBJECT INSTEAD OF RESIDENTNAME STRING
+export default function DuesCard({ user }) {
   const [duesInfo, setDuesInfo] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchDues = async () => {
       try {
+        // Hitting the upgraded endpoint securely using the authenticated session payload email
         const response = await fetch(
-          `https://town-central-hoa-platform-469564564131.us-central1.run.app/api/dues/${residentName}`,
+          `https://town-central-hoa-platform-469564564131.us-central1.run.app/api/dues/${user?.email}`,
         );
         const data = await response.json();
         setDuesInfo(data);
@@ -20,8 +22,8 @@ export default function DuesCard({ residentName }) {
       }
     };
 
-    if (residentName) fetchDues();
-  }, [residentName]);
+    if (user?.email) fetchDues();
+  }, [user?.email]);
 
   if (loading)
     return <div className={styles.loading}>Loading account details...</div>;

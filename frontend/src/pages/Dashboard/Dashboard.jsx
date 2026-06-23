@@ -135,7 +135,7 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
               <p>View your balance, payment history, and pay annual assessments.</p>
             </header>
             <div className={styles.duesPageWrapper}>
-              <DuesCard residentName={user?.first_name} />
+              <DuesCard user={user} />
             </div>
           </div>
         )}
