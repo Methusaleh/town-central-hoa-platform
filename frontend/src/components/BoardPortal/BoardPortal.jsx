@@ -3,7 +3,7 @@ import styles from "./BoardPortal.module.css";
 
 export default function BoardPortal({ user }) {
   // Master Section Control
-  const [activeSection, setActiveSection] = useState("requests"); // "requests", "roster", or "financials"
+  const [activeSection, setActiveSection] = useState("requests"); // "requests", "roster", "financials", or "vendors"
 
   // Requests Section State
   const [requests, setRequests] = useState([]);
@@ -30,8 +30,6 @@ export default function BoardPortal({ user }) {
   });
 
   // --- Roster Management State ---
-  const [roster, setRoster] = useState([]);
-  const [searchQuery, setSearchQuery] = useState("");
   const [showRosterModal, setShowRosterModal] = useState(false);
   const [rosterForm, setRosterForm] = useState({
     first_name: "",
@@ -41,13 +39,26 @@ export default function BoardPortal({ user }) {
   });
   const [rosterStatus, setRosterStatus] = useState({ type: "", text: "" });
 
-  // --- NEW: Financials Management State ---
+  // --- Financials Management State ---
   const [financeForm, setFinanceForm] = useState({
     first_name: "",
     balance: "",
     status: "Pending"
   });
   const [financeStatus, setFinanceStatus] = useState({ type: "", text: "" });
+
+  // --- NEW: Vendor Management State ---
+  const [vendorsList, setVendorsList] = useState([]);
+  const [editingVendorId, setEditingVendorId] = useState(null);
+  const [showVendorForm, setShowVendorForm] = useState(false);
+  const [vendorForm, setVendorForm] = useState({
+    company_name: "",
+    service_type: "",
+    contact_phone: "",
+    contact_email: "",
+    website_url: "",
+    notes: ""
+  });
 
   const locationInputRef = useRef(null);
   const filteredRequests = requests.filter((req) =>
@@ -57,7 +68,7 @@ export default function BoardPortal({ user }) {
   // Live Production Server API URL
   const API_BASE = "https://town-central-hoa-platform-469564564131.us-central1.run.app";
 
-  // Load Requests
+  // Load Initial Requests
   useEffect(() => {
     fetch(`${API_BASE}/api/requests/admin/all`)
       .then((res) => res.json())
@@ -68,16 +79,20 @@ export default function BoardPortal({ user }) {
       .catch((err) => console.error("Admin fetch error:", err));
   }, []);
 
-  // Fetch Master Roster Directory lines
-  const fetchRosterData = () => {
-    fetch(`${API_BASE}/api/vendors`) // Placeholder or dedicated index pull
-      .then((res) => res.json())
-      .catch((err) => console.error(err));
+  // Fetch Live Vendors Directory Rows
+  const fetchVendorsData = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/vendors`);
+      const data = await response.json();
+      setVendorsList(data);
+    } catch (err) {
+      console.error("Error pulling vendors directory records:", err);
+    }
   };
 
   useEffect(() => {
-    if (activeSection === "roster") {
-      fetchRosterData();
+    if (activeSection === "vendors") {
+      fetchVendorsData();
     }
   }, [activeSection]);
 
@@ -176,13 +191,12 @@ export default function BoardPortal({ user }) {
 
       setRosterStatus({ type: "success", text: "Resident record established successfully!" });
       setRosterForm({ first_name: "", last_name: "", email: "", street_address: "" });
-      fetchRosterData();
     } catch (err) {
       setRosterStatus({ type: "error", text: err.message });
     }
   };
 
-  // --- NEW: Financial Ledger Submission Handler ---
+  // Financial Ledger Submission Handler
   const handleUpdateFinanceLedger = async (e) => {
     e.preventDefault();
     setFinanceStatus({ type: "", text: "" });
@@ -208,27 +222,92 @@ export default function BoardPortal({ user }) {
     }
   };
 
+  // --- NEW: Vendor Form Formatter (Create or Update router link) ---
+  const handleVendorSubmit = async (e) => {
+    e.preventDefault();
+    const isEditing = editingVendorId !== null;
+    const urlTarget = isEditing ? `${API_BASE}/api/vendors/${editingVendorId}` : `${API_BASE}/api/vendors`;
+    const httpMethod = isEditing ? "PUT" : "POST";
+
+    try {
+      const response = await fetch(urlTarget, {
+        method: httpMethod,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(vendorForm)
+      });
+
+      if (response.ok) {
+        alert(isEditing ? "Vendor updated successfully!" : "New trusted vendor saved!");
+        setVendorForm({ company_name: "", service_type: "", contact_phone: "", contact_email: "", website_url: "", notes: "" });
+        setEditingVendorId(null);
+        setShowVendorForm(false);
+        fetchVendorsData(); // Refresh table view grid contents
+      } else {
+        alert("Failed to save vendor configuration parameters.");
+      }
+    } catch (err) {
+      console.error("Vendor persistence fault:", err);
+    }
+  };
+
+  // --- NEW: Vendor Edit Mode Trigger ---
+  const startEditVendor = (vendor) => {
+    setEditingVendorId(vendor.id);
+    setVendorForm({
+      company_name: vendor.company_name,
+      service_type: vendor.service_type,
+      contact_phone: vendor.contact_phone || "",
+      contact_email: vendor.contact_email || "",
+      website_url: vendor.website_url || "",
+      notes: vendor.notes || ""
+    });
+    setShowVendorForm(true);
+  };
+
+  // --- NEW: Vendor Delete Trigger ---
+  const handleDeleteVendor = async (id) => {
+    if (!window.confirm("Are you sure you want to completely remove this company from the trusted vendor log?")) return;
+
+    try {
+      const response = await fetch(`${API_BASE}/api/vendors/${id}`, { method: "DELETE" });
+      if (response.ok) {
+        alert("Vendor removed from community listings.");
+        fetchVendorsData();
+      } else {
+        alert("Server failed to remove vendor listing row.");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   return (
     <div className={styles.container}>
       {/* SECTION SELECTOR HEADERS */}
-      <div style={{ display: "flex", gap: "25px", borderBottom: "2px solid #e2e8f0", paddingBottom: "10px" }}>
+      <div style={{ display: "flex", gap: "25px", borderBottom: "2px solid #e2e8f0", paddingBottom: "10px", overflowX: "auto" }}>
         <button 
           onClick={() => setActiveSection("requests")}
-          style={{ background: "none", border: "none", fontSize: "1.1rem", fontWeight: "700", color: activeSection === "requests" ? "#2ecc71" : "#94a3b8", cursor: "pointer", paddingBottom: "5px", borderBottom: activeSection === "requests" ? "3px solid #2ecc71" : "3px solid transparent" }}
+          style={{ background: "none", border: "none", fontSize: "1.1rem", fontWeight: "700", color: activeSection === "requests" ? "#2ecc71" : "#94a3b8", cursor: "pointer", paddingBottom: "5px", whiteSpace: "nowrap", borderBottom: activeSection === "requests" ? "3px solid #2ecc71" : "3px solid transparent" }}
         >
-          📋 Resident Operations & Tickets
+          📋 Operations & Tickets
         </button>
         <button 
           onClick={() => setActiveSection("roster")}
-          style={{ background: "none", border: "none", fontSize: "1.1rem", fontWeight: "700", color: activeSection === "roster" ? "#2ecc71" : "#94a3b8", cursor: "pointer", paddingBottom: "5px", borderBottom: activeSection === "roster" ? "3px solid #2ecc71" : "3px solid transparent" }}
+          style={{ background: "none", border: "none", fontSize: "1.1rem", fontWeight: "700", color: activeSection === "roster" ? "#2ecc71" : "#94a3b8", cursor: "pointer", paddingBottom: "5px", whiteSpace: "nowrap", borderBottom: activeSection === "roster" ? "3px solid #2ecc71" : "3px solid transparent" }}
         >
-          👥 Master Neighborhood Roster
+          👥 Master Roster
         </button>
         <button 
           onClick={() => setActiveSection("financials")}
-          style={{ background: "none", border: "none", fontSize: "1.1rem", fontWeight: "700", color: activeSection === "financials" ? "#2ecc71" : "#94a3b8", cursor: "pointer", paddingBottom: "5px", borderBottom: activeSection === "financials" ? "3px solid #2ecc71" : "3px solid transparent" }}
+          style={{ background: "none", border: "none", fontSize: "1.1rem", fontWeight: "700", color: activeSection === "financials" ? "#2ecc71" : "#94a3b8", cursor: "pointer", paddingBottom: "5px", whiteSpace: "nowrap", borderBottom: activeSection === "financials" ? "3px solid #2ecc71" : "3px solid transparent" }}
         >
-          💰 Financial Assessment Ledger
+          💰 Assessment Ledger
+        </button>
+        <button 
+          onClick={() => setActiveSection("vendors")}
+          style={{ background: "none", border: "none", fontSize: "1.1rem", fontWeight: "700", color: activeSection === "vendors" ? "#2ecc71" : "#94a3b8", cursor: "pointer", paddingBottom: "5px", whiteSpace: "nowrap", borderBottom: activeSection === "vendors" ? "3px solid #2ecc71" : "3px solid transparent" }}
+        >
+          🏢 Verified Vendors
         </button>
       </div>
 
@@ -373,7 +452,7 @@ export default function BoardPortal({ user }) {
         </div>
       )}
 
-      {/* --- NEW: RENDER SECTION 3: FINANCIAL ASSESSMENT LEDGER --- */}
+      {/* --- RENDER SECTION 3: FINANCIAL ASSESSMENT LEDGER --- */}
       {activeSection === "financials" && (
         <div className={styles.tableCard} style={{ marginTop: "10px" }}>
           <div className={styles.tableHeader}>
@@ -393,35 +472,18 @@ export default function BoardPortal({ user }) {
             <form onSubmit={handleUpdateFinanceLedger} className={styles.announcementForm}>
               <div>
                 <label>Resident First Name *</label>
-                <input 
-                  type="text" 
-                  placeholder="e.g. Aaron (Must match resident_dues row exactly)" 
-                  value={financeForm.first_name} 
-                  onChange={(e) => setFinanceForm({...financeForm, first_name: e.target.value})} 
-                  required 
-                />
+                <input type="text" placeholder="e.g. Aaron (Must match resident_dues row exactly)" value={financeForm.first_name} onChange={(e) => setFinanceForm({...financeForm, first_name: e.target.value})} required />
               </div>
               <div className={styles.inlineGroup} style={{ alignItems: "flex-end" }}>
                 <div>
                   <label>Outstanding Assessment Balance ($) *</label>
-                  <input 
-                    type="number" 
-                    step="0.01" 
-                    placeholder="0.00" 
-                    value={financeForm.balance} 
-                    onChange={(e) => setFinanceForm({...financeForm, balance: e.target.value})} 
-                    required 
-                  />
+                  <input type="number" step="0.01" placeholder="0.00" value={financeForm.balance} onChange={(e) => setFinanceForm({...financeForm, balance: e.target.value})} required />
                 </div>
                 <div>
                   <label>Payment Status Assignment</label>
-                  <select 
-                    value={financeForm.status} 
-                    onChange={(e) => setFinanceForm({...financeForm, status: e.target.value})} 
-                    className={styles.prioritySelect}
-                  >
+                  <select value={financeForm.status} onChange={(e) => setFinanceForm({...financeForm, status: e.target.value})} className={styles.prioritySelect}>
                     <option value="Pending">Pending / Unpaid</option>
-                    <option value="Partial">Partial Payment</option> {/* Added for our new workflow! */}
+                    <option value="Partial">Partial Payment</option>
                     <option value="Paid">Paid in Full</option>
                   </select>
                 </div>
@@ -431,6 +493,117 @@ export default function BoardPortal({ user }) {
               </button>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* --- NEW: RENDER SECTION 4: TRUSTED VENDORS MANAGEMENT WORKSPACE --- */}
+      {activeSection === "vendors" && (
+        <div className={styles.tableCard} style={{ marginTop: "10px" }}>
+          <div className={styles.tableHeader}>
+            <div>
+              <h3 style={{ margin: 0 }}>Trusted Companies Directory Control</h3>
+              <p style={{ margin: "5px 0 0 0", fontSize: "0.85rem", color: "#64748b" }}>Add, modify, or remove contractor and business recommendation row cards visible to homeowners.</p>
+            </div>
+            <button 
+              className={showVendorForm ? styles.cancelBtn : styles.postBtn}
+              onClick={() => {
+                setShowVendorForm(!showVendorForm);
+                if (showVendorForm) {
+                  setEditingVendorId(null);
+                  setVendorForm({ company_name: "", service_type: "", contact_phone: "", contact_email: "", website_url: "", notes: "" });
+                }
+              }}
+            >
+              {showVendorForm ? "Cancel" : "➕ Add New Vendor"}
+            </button>
+          </div>
+
+          {/* Create or Edit Vendor Form Block */}
+          {showVendorForm && (
+            <div className={styles.formCard} style={{ marginBottom: "30px", border: "1px solid #e2e8f0" }}>
+              <h4>{editingVendorId !== null ? "📝 Edit Vetted Contractor Records" : "🏢 Onboard Recommended Business Card"}</h4>
+              <form onSubmit={handleVendorSubmit} className={styles.announcementForm}>
+                <div className={styles.inlineGroup}>
+                  <div>
+                    <label>Company Name *</label>
+                    <input type="text" placeholder="e.g. Piedmont Roofing LLC" value={vendorForm.company_name} onChange={(e) => setVendorForm({...vendorForm, company_name: e.target.value})} required />
+                  </div>
+                  <div>
+                    <label>Service Type Category *</label>
+                    <input type="text" placeholder="e.g. Plumbing, Landscaping" value={vendorForm.service_type} onChange={(e) => setVendorForm({...vendorForm, service_type: e.target.value})} required />
+                  </div>
+                </div>
+                <div className={styles.inlineGroup}>
+                  <div>
+                    <label>Contact Phone</label>
+                    <input type="tel" placeholder="e.g. (405) 555-0199" value={vendorForm.contact_phone} onChange={(e) => setVendorForm({...vendorForm, contact_phone: e.target.value})} />
+                  </div>
+                  <div>
+                    <label>Contact Email</label>
+                    <input type="email" placeholder="e.g. bids@contractor.com" value={vendorForm.contact_email} onChange={(e) => setVendorForm({...vendorForm, contact_email: e.target.value})} />
+                  </div>
+                </div>
+                <div>
+                  <label>Official Website URL</label>
+                  <input type="url" placeholder="https://www.example.com" value={vendorForm.website_url} onChange={(e) => setVendorForm({...vendorForm, website_url: e.target.value})} />
+                </div>
+                <div>
+                  <label>Board Recommendation Note</label>
+                  <textarea placeholder="e.g. Blasted community storm drain line cleanly. Highly recommended for sewer issues." value={vendorForm.notes} onChange={(e) => setVendorForm({...vendorForm, notes: e.target.value})} style={{ minHeight: "80px" }} />
+                </div>
+                <button type="submit" className={styles.submitBtn}>
+                  {editingVendorId !== null ? "Save Contractor Adjustments" : "Publish to Resident Directory"}
+                </button>
+              </form>
+            </div>
+          )}
+
+          {/* Interactive Vendor Management Records Table */}
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>Company Profile Name</th>
+                <th>Classification Tag</th>
+                <th>Contact Access Channels</th>
+                <th style={{ textAlign: "right" }}>Administrative Operations Operations</th>
+              </tr>
+            </thead>
+            <tbody>
+              {vendorsList.map((vendor) => (
+                <tr key={vendor.id}>
+                  <td style={{ fontWeight: "700", color: "#0f172a" }}>{vendor.company_name}</td>
+                  <td><span className={styles.typeTag} style={{ backgroundColor: "rgba(46, 204, 113, 0.1)", color: "#2ecc71" }}>{vendor.service_type}</span></td>
+                  <td style={{ fontSize: "0.85rem", color: "#475569" }}>
+                    {vendor.contact_phone && <div>📞 {vendor.contact_phone}</div>}
+                    {vendor.contact_email && <div>✉️ {vendor.contact_email}</div>}
+                  </td>
+                  <td style={{ textAlign: "right" }}>
+                    <div style={{ display: "inline-flex", gap: "8px" }}>
+                      <button 
+                        onClick={() => startEditVendor(vendor)}
+                        className={styles.viewBtn} 
+                        style={{ color: "#3498db" }}
+                      >
+                        Edit
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteVendor(vendor.id)}
+                        className={styles.viewBtn} 
+                        style={{ color: "#ef4444", borderColor: "#fee2e2" }}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {vendorsList.length === 0 && (
+                <tr>
+                  <td colSpan="4" style={{ textAlign: "center", color: "#94a3b8", padding: "20px" }}>No recommended vendors established in database log lines yet.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       )}
     </div>
