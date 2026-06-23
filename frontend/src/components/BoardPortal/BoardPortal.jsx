@@ -9,6 +9,7 @@ export default function BoardPortal({ user }) {
     title: "",
     content: "",
     priority: "normal",
+    channel_type: "general", // Default channel type
   });
   const [viewMode, setViewMode] = useState("active"); // "active" or "archived"
   const [showEventForm, setShowEventForm] = useState(false);
@@ -61,30 +62,27 @@ export default function BoardPortal({ user }) {
   const handlePostAnnouncement = async (e) => {
     e.preventDefault();
     try {
+      // Pointed explicitly to the fresh engine gateway endpoint we registered in index.js
       const response = await fetch(
-        "https://town-central-hoa-platform-469564564131.us-central1.run.app/api/announcements",
+        "https://town-central-hoa-platform-469564564131.us-central1.run.app/api/notifications",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             title: announcement.title,
-            content: announcement.content,
-            priority: announcement.priority, // Now sends the dynamic value from state
+            message: announcement.content,
+            channel_type: announcement.channel_type, // Passing dynamic channel values
+            sender_id: user?.id || null
           }),
         },
       );
 
       if (response.ok) {
-        alert("Announcement posted successfully!");
-        // 1. Reset the form fields
-        setAnnouncement({ title: "", content: "", priority: "normal" });
-        // 2. Switch view back to the requests table
+        alert("Notification dispatched and archived in database!");
+        setAnnouncement({ title: "", content: "", priority: "normal", channel_type: "general" });
         setShowForm(false);
-
-        // REMOVE window.location.reload();
-        // This is what was kicking you back to the landing page!
       } else {
-        alert("Failed to post announcement to server.");
+        alert("Failed to submit notification package to the network.");
       }
     } catch (err) {
       console.error("Posting error:", err);
@@ -186,6 +184,19 @@ export default function BoardPortal({ user }) {
               }
               required
             />
+            <select
+              value={announcement.channel_type}
+              onChange={(e) =>
+                setAnnouncement({ ...announcement, channel_type: e.target.value })
+              }
+              className={styles.prioritySelect}
+            >
+              <option value="general">Standard Dashboard Feed Post</option>
+              <option value="critical_email">Critical Email Alert</option>
+              <option value="sms_notice">SMS Mobile Text Notice</option>
+              <option value="newsletter">Monthly Newsletter Archive</option>
+            </select>
+
             <select
               value={announcement.priority}
               onChange={(e) =>
