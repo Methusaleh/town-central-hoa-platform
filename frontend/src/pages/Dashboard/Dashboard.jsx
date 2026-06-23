@@ -19,7 +19,10 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
 
       {/* Sidebar Navigation */}
       <aside className={styles.sidebar}>
-        <div className={styles.brand}>Town Central</div>
+        <div className={styles.brandContainer}>
+          <div className={styles.brand}>Town Central</div>
+          <span className={styles.brandSubtitle}>Resident Portal</span>
+        </div>
         
         <nav className={styles.nav}>
           <button onClick={onLogout} className={styles.navItem}>

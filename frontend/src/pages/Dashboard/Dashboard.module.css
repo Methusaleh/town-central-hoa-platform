@@ -50,19 +50,36 @@
   border-right: 1px solid rgba(0, 0, 0, 0.05);
   display: flex;
   flex-direction: column;
-  justify-content: space-between; /* Spreads navigation and profile footer */
+  justify-content: space-between;
   padding: 30px 20px;
   z-index: 10;
   flex-shrink: 0;
   box-sizing: border-box;
 }
 
+/* New Brand Wrapper Group */
+.brandContainer {
+  margin-bottom: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .brand {
   font-size: 1.6rem;
   font-weight: 800;
   color: #1e293b;
-  margin-bottom: 40px;
   letter-spacing: -1px;
+  margin: 0;
+}
+
+.brandSubtitle {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  display: block;
 }
 
 .nav {
@@ -275,6 +292,7 @@
     opacity: 0;
     transform: translateY(15px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
