@@ -26,7 +26,9 @@ app.use(
   }),
 );
 
-app.use(express.json());
+// Allows our base64 image streams to pass through smoothly up to 2MB
+app.use(express.json({ limit: "2mb" }));
+app.use(express.urlencoded({ limit: "2mb", extended: true }));
 
 // 2. ADD THIS: Plug in the announcements route
 app.use("/api/announcements", announcementRoutes);
