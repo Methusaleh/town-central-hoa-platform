@@ -100,10 +100,15 @@ FILE: ./frontend/src/firebase.js
 ==================================================
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
+import { 
+  getAuth, 
+  GoogleAuthProvider, 
+  signInWithPopup, 
+  signOut,
+  createUserWithEmailAndPassword // <-- Added this built-in Firebase method
+} from "firebase/auth";
 
 // Your web app's Firebase configuration
-// These can be replaced with your live credentials once you create your Firebase Console project
 const firebaseConfig = {
   apiKey: "AIzaSyA-oYpm-4_Mmj377y1NjgMVVSRCWXoJx7c",
   authDomain: "town-central-portal.firebaseapp.com",
@@ -126,10 +131,20 @@ export const googleProvider = new GoogleAuthProvider();
 export const signInWithGoogle = async () => {
   try {
     const result = await signInWithPopup(auth, googleProvider);
-    // This gives you the authenticated user object (name, email, photoURL, etc.)
     return result.user;
   } catch (error) {
     console.error("Google Authentication Error:", error);
+    throw error;
+  }
+};
+
+// Custom traditional email/password registration helper
+export const registerWithEmail = async (email, password) => {
+  try {
+    const result = await createUserWithEmailAndPassword(auth, email, password);
+    return result.user;
+  } catch (error) {
+    console.error("Email Registration Error:", error);
     throw error;
   }
 };
@@ -588,14 +603,13 @@ FILE: ./frontend/src/components/BoardPortal/BoardPortal.module.css
   border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
-  color: #64748b;
+  color: #3b82f6;
   transition: all 0.2s ease;
 }
 
 .viewBtn:hover {
-  background: #edf2f7;
-  border-color: #cbd5e1;
-  color: #1e293b;
+  background: #eff6ff;
+  border-color: #3b82f6;
 }
 
 /* --- ANNOUNCEMENT FORM --- */
@@ -614,7 +628,6 @@ FILE: ./frontend/src/components/BoardPortal/BoardPortal.module.css
   margin-top: 20px;
 }
 
-/* Updated to include the priority select */
 .announcementForm input,
 .announcementForm textarea,
 .prioritySelect {
@@ -625,6 +638,8 @@ FILE: ./frontend/src/components/BoardPortal/BoardPortal.module.css
   font-size: 1rem;
   background-color: white;
   color: #1e293b;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .announcementForm input:focus,
@@ -649,6 +664,7 @@ FILE: ./frontend/src/components/BoardPortal/BoardPortal.module.css
   font-weight: 700;
   cursor: pointer;
   transition: background 0.2s;
+  width: 100%;
 }
 
 .submitBtn:hover {
@@ -675,6 +691,7 @@ FILE: ./frontend/src/components/BoardPortal/BoardPortal.module.css
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -685,23 +702,6 @@ FILE: ./frontend/src/components/BoardPortal/BoardPortal.module.css
   color: #2ecc71;
   font-weight: 700;
   font-size: 0.85rem;
-}
-
-/* Make the button look like a primary action when it's "Mark Resolved" */
-.viewBtn {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  padding: 6px 14px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 600;
-  color: #3b82f6; /* Blue for action */
-  transition: all 0.2s ease;
-}
-
-.viewBtn:hover {
-  background: #eff6ff;
-  border-color: #3b82f6;
 }
 
 /* --- TABLE HEADER & TOGGLE --- */
@@ -725,7 +725,7 @@ FILE: ./frontend/src/components/BoardPortal/BoardPortal.module.css
   color: #64748b;
   border: 1px solid #e2e8f0;
   padding: 8px 16px;
-  border-radius: 20px; /* Rounded pill shape */
+  border-radius: 20px;
   font-size: 0.8rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -739,7 +739,7 @@ FILE: ./frontend/src/components/BoardPortal/BoardPortal.module.css
 
 .toggleBtn:hover {
   background: #ffffff;
-  color: #3b82f6; /* Blue accent on hover */
+  color: #3b82f6;
   border-color: #3b82f6;
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
   transform: translateY(-1px);
@@ -749,7 +749,6 @@ FILE: ./frontend/src/components/BoardPortal/BoardPortal.module.css
   transform: translateY(0);
 }
 
-/* Optional: Style for the resolved info text in the Archive */
 .resolvedInfo {
   font-style: italic;
   color: #94a3b8;
@@ -764,7 +763,7 @@ FILE: ./frontend/src/components/BoardPortal/BoardPortal.module.css
 }
 
 .eventBtn {
-  background: #3498db; /* Blue for events */
+  background: #3498db;
   color: white;
   border: none;
   padding: 12px 24px;
@@ -784,7 +783,7 @@ FILE: ./frontend/src/components/BoardPortal/BoardPortal.module.css
   gap: 15px;
 }
 
-.inlineGroup > div {
+.inlineGroup>div {
   flex: 1;
 }
 
@@ -796,7 +795,6 @@ FILE: ./frontend/src/components/BoardPortal/BoardPortal.module.css
   display: block;
   text-transform: uppercase;
 }
-
 ==================================================
 FILE: ./frontend/src/components/BoardPortal/BoardPortal.jsx
 ==================================================
@@ -811,6 +809,7 @@ export default function BoardPortal({ user }) {
     title: "",
     content: "",
     priority: "normal",
+    channel_type: "general", // Default channel type
   });
   const [viewMode, setViewMode] = useState("active"); // "active" or "archived"
   const [showEventForm, setShowEventForm] = useState(false);
@@ -863,30 +862,27 @@ export default function BoardPortal({ user }) {
   const handlePostAnnouncement = async (e) => {
     e.preventDefault();
     try {
+      // Pointed explicitly to the fresh engine gateway endpoint we registered in index.js
       const response = await fetch(
-        "https://town-central-hoa-platform-469564564131.us-central1.run.app/api/announcements",
+        "https://town-central-hoa-platform-469564564131.us-central1.run.app/api/notifications",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             title: announcement.title,
-            content: announcement.content,
-            priority: announcement.priority, // Now sends the dynamic value from state
+            message: announcement.content,
+            channel_type: announcement.channel_type, // Passing dynamic channel values
+            sender_id: user?.id || null
           }),
         },
       );
 
       if (response.ok) {
-        alert("Announcement posted successfully!");
-        // 1. Reset the form fields
-        setAnnouncement({ title: "", content: "", priority: "normal" });
-        // 2. Switch view back to the requests table
+        alert("Notification dispatched and archived in database!");
+        setAnnouncement({ title: "", content: "", priority: "normal", channel_type: "general" });
         setShowForm(false);
-
-        // REMOVE window.location.reload();
-        // This is what was kicking you back to the landing page!
       } else {
-        alert("Failed to post announcement to server.");
+        alert("Failed to submit notification package to the network.");
       }
     } catch (err) {
       console.error("Posting error:", err);
@@ -988,6 +984,19 @@ export default function BoardPortal({ user }) {
               }
               required
             />
+            <select
+              value={announcement.channel_type}
+              onChange={(e) =>
+                setAnnouncement({ ...announcement, channel_type: e.target.value })
+              }
+              className={styles.prioritySelect}
+            >
+              <option value="general">Standard Dashboard Feed Post</option>
+              <option value="critical_email">Critical Email Alert</option>
+              <option value="sms_notice">SMS Mobile Text Notice</option>
+              <option value="newsletter">Monthly Newsletter Archive</option>
+            </select>
+
             <select
               value={announcement.priority}
               onChange={(e) =>
@@ -2125,7 +2134,7 @@ export default function ContactPage({ onBack }) {
         </div>
       </section>
 
-      <div classname={styles.guideWrapper}>
+      <div className={styles.guideWrapper}>
         <CivicGuide />
       </div>
     </div>
@@ -2260,19 +2269,36 @@ FILE: ./frontend/src/pages/Dashboard/Dashboard.module.css
   border-right: 1px solid rgba(0, 0, 0, 0.05);
   display: flex;
   flex-direction: column;
-  justify-content: space-between; /* Spreads navigation and profile footer */
+  justify-content: space-between;
   padding: 30px 20px;
   z-index: 10;
   flex-shrink: 0;
   box-sizing: border-box;
 }
 
+/* Brand Wrapper Group */
+.brandContainer {
+  margin-bottom: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .brand {
   font-size: 1.6rem;
   font-weight: 800;
   color: #1e293b;
-  margin-bottom: 40px;
   letter-spacing: -1px;
+  margin: 0;
+}
+
+.brandSubtitle {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  display: block;
 }
 
 .nav {
@@ -2385,6 +2411,23 @@ FILE: ./frontend/src/pages/Dashboard/Dashboard.module.css
   flex-shrink: 0;
 }
 
+/* Generic Fallback Avatar Badge */
+.avatarPlaceholderMini {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2ecc71, #27ae60);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.1rem;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 2px 8px rgba(46, 204, 113, 0.2);
+  flex-shrink: 0;
+}
+
 .userInfoMini {
   margin-left: 12px;
   overflow: hidden;
@@ -2485,6 +2528,7 @@ FILE: ./frontend/src/pages/Dashboard/Dashboard.module.css
     opacity: 0;
     transform: translateY(15px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -2514,7 +2558,10 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
 
       {/* Sidebar Navigation */}
       <aside className={styles.sidebar}>
-        <div className={styles.brand}>Town Central</div>
+        <div className={styles.brandContainer}>
+          <div className={styles.brand}>Town Central</div>
+          <span className={styles.brandSubtitle}>Resident Portal</span>
+        </div>
         
         <nav className={styles.nav}>
           <button onClick={onLogout} className={styles.navItem}>
@@ -2570,22 +2617,24 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
         </nav>
 
         {/* Repositioned & Cleaned Profile Card Footer */}
-        <div className={styles.sidebarFooter}>
-          <div className={styles.profileTrigger} onClick={onNavigateToProfile}>
+        <div className={styles.profileTrigger} onClick={onNavigateToProfile}>
+          {/* If user has a photo, show it. Otherwise, show the text-avatar placeholder */}
+          {user?.photo ? (
             <img 
-              src={user?.photo || "https://via.placeholder.com/40"} 
+              src={user.photo} 
               alt="User Avatar" 
               className={styles.userAvatarMini}
             />
-            <div className={styles.userInfoMini}>
-              <h4>{user?.first_name || "Resident"}</h4>
-              <span>⚙️ Account Settings</span>
+          ) : (
+            <div className={styles.avatarPlaceholderMini}>
+              {user?.first_name ? user.first_name.charAt(0).toUpperCase() : "R"}
             </div>
+          )}
+          
+          <div className={styles.userInfoMini}>
+            <h4>{user?.first_name || "Resident"}</h4>
+            <span>⚙️ Account Settings</span>
           </div>
-
-          <button className={styles.logoutBtn} onClick={onLogout}>
-            Logout
-          </button>
         </div>
       </aside>
 
@@ -2651,7 +2700,7 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
 FILE: ./frontend/src/pages/Register/Register.jsx
 ==================================================
 import { useState } from "react";
-import { signInWithGoogle } from "../../firebase";
+import { signInWithGoogle, registerWithEmail } from "../../firebase";
 import styles from "./Register.module.css";
 
 export default function Register({ onBack, onRegisterSuccess }) {
@@ -2661,6 +2710,11 @@ export default function Register({ onBack, onRegisterSuccess }) {
   const [residentData, setResidentData] = useState(null);
   const [error, setError] = useState(null);
   const [searching, setSearching] = useState(false);
+
+  // New States for Custom Email/Password Flow
+  const [authMethod, setAuthMethod] = useState("google"); // "google" or "email"
+  const [customEmail, setCustomEmail] = useState("");
+  const [customPassword, setCustomPassword] = useState("");
 
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
@@ -2680,13 +2734,92 @@ export default function Register({ onBack, onRegisterSuccess }) {
 
       if (response.ok) {
         setResidentData(data);
-        setStep(2); // Push to guidelines agreement step
+        setStep(2); 
       } else {
         setError(data.error || "An error occurred during lookup.");
       }
     } catch (err) {
       console.error("Lookup error:", err);
       setError("Network error: Could not reach server.");
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleSocialRegister = async () => {
+    try {
+      setSearching(true);
+      setError(null);
+      const googleUser = await signInWithGoogle();
+      
+      // 1. Persist the lock state to PostgreSQL database first
+      const dbResponse = await fetch(`${API_URL}/api/residents/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ residentId: residentData?.residentId })
+      });
+
+      if (!dbResponse.ok) {
+        throw new Error("Failed to secure property profile on neighborhood database roster.");
+      }
+
+      alert(`Successfully linked account for: ${googleUser.displayName}`);
+      
+      onRegisterSuccess({
+        first_name: googleUser.displayName ? googleUser.displayName.split(" ")[0] : "Resident",
+        email: googleUser.email,
+        photo: googleUser.photoURL,
+        role: "resident"
+      });
+    } catch (err) {
+      console.error(err);
+      setError(err.message || "Failed to complete social verification. Please try again.");
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleTraditionalRegister = async (e) => {
+    e.preventDefault();
+    if (!guidelinesAccepted) {
+      setError("You must accept the community guidelines to proceed.");
+      return;
+    }
+    
+    try {
+      setSearching(true);
+      setError(null);
+      
+      // 1. Authenticate with Firebase Auth engine
+      const traditionalUser = await registerWithEmail(customEmail, customPassword);
+      
+      // 2. Persist the lock state to PostgreSQL database right after
+      const dbResponse = await fetch(`${API_URL}/api/residents/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ residentId: residentData?.residentId })
+      });
+
+      if (!dbResponse.ok) {
+        throw new Error("Auth created, but failed to lock property profile on neighborhood roster.");
+      }
+
+      alert("Account created successfully with email!");
+      
+      onRegisterSuccess({
+        first_name: residentData?.firstName || "Resident",
+        email: traditionalUser.email,
+        photo: null, 
+        role: "resident"
+      });
+    } catch (err) {
+      if (err.code === "auth/email-already-in-use") {
+        setError("This email address is already registered inside Firebase.");
+      } else if (err.code === "auth/weak-password") {
+        setError("Password should be at least 6 characters long.");
+      } else {
+        setError(err.message || "Account creation failed. Please check your credentials.");
+      }
     } finally {
       setSearching(false);
     }
@@ -2733,11 +2866,10 @@ export default function Register({ onBack, onRegisterSuccess }) {
             
             <div className={styles.guidelinesBox}>
               <h4>📋 Platform Community Guidelines</h4>
-              <p>To ensure a safe, professional, and constructive environment for all Town Central residents, you must agree to the following baseline terms:</p>
+              <p>To ensure a safe environment, you must agree to the baseline terms:</p>
               <ul>
-                <li><strong>Professional Interactions:</strong> Keep all discussions, complaints, and comments polite, neighborly, and constructive.</li>
-                <li><strong>On-Topic Communication:</strong> Use this portal strictly for HOA business, maintenance filings, safety alerts, and community-wide events.</li>
-                <li><strong>No Public Rants:</strong> System administrators reserve the right to immediately remove any off-topic, hostile, or harassing content post-publication.</li>
+                <li><strong>Professional Interactions:</strong> Keep all posts neighborly and constructive.</li>
+                <li><strong>On-Topic Communication:</strong> Use this portal strictly for HOA business.</li>
               </ul>
             </div>
 
@@ -2750,33 +2882,76 @@ export default function Register({ onBack, onRegisterSuccess }) {
               <span>I agree to keep my posts professional and abide by the community guidelines.</span>
             </label>
 
-            <button 
-              className={styles.submitBtn} 
-              disabled={!guidelinesAccepted || searching}
-              onClick={async () => {
-                try {
-                  setSearching(true);
-                  // Launch the safe secure Google auth window
-                  const googleUser = await signInWithGoogle();
-                  
-                  alert(`Successfully linked account for: ${googleUser.displayName}`);
-                  
-                  // Pass the real authenticated credentials forward to your App state!
-                  onRegisterSuccess({
-                    first_name: googleUser.displayName.split(" ")[0], // Grab their actual first name
-                    email: googleUser.email,
-                    photo: googleUser.photoURL,
-                    role: "resident" // Standard tier role assignment
-                  });
-                } catch (err) {
-                  setError("Failed to complete social verification. Please try again.");
-                } finally {
-                  setSearching(false);
-                }
-              }}
-            >
-              {searching ? "Verifying Identity..." : "Link Google Account & Enter Portal"}
-            </button>
+            {error && <p className={styles.errorMsg}>❌ {error}</p>}
+
+            {/* Toggle tabs for Method Selection */}
+            <div className={styles.methodToggle}>
+              <button 
+                className={`${styles.toggleTab} ${authMethod === "google" ? styles.activeTab : ""}`}
+                onClick={() => { setError(null); setAuthMethod("google"); }}
+              >
+                Google Account
+              </button>
+              <button 
+                className={`${styles.toggleTab} ${authMethod === "email" ? styles.activeTab : ""}`}
+                onClick={() => { setError(null); setAuthMethod("email"); }}
+              >
+                Email / Password
+              </button>
+            </div>
+
+            {/* Render Selected Method View */}
+            {authMethod === "google" ? (
+              <button 
+                className={styles.googleBtn} // <-- Swapped class name here
+                disabled={!guidelinesAccepted || searching}
+                onClick={handleSocialRegister}
+              >
+                {searching ? (
+                  "Verifying Identity..."
+                ) : (
+                  <>
+                    <svg className={styles.googleIcon} viewBox="0 0 24 24" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
+                      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
+                    </svg>
+                    <span>Sign in with Google</span>
+                  </>
+                )}
+              </button>
+            ) : (
+              <form onSubmit={handleTraditionalRegister} className={styles.form}>
+                <div className={styles.inputGroup}>
+                  <label>Preferred Email</label>
+                  <input 
+                    type="email" 
+                    placeholder="resident@example.com"
+                    value={customEmail}
+                    onChange={(e) => setCustomEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className={styles.inputGroup}>
+                  <label>Create Password</label>
+                  <input 
+                    type="password" 
+                    placeholder="Min 6 characters"
+                    value={customPassword}
+                    onChange={(e) => setCustomPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                <button 
+                  type="submit" 
+                  className={styles.submitBtn} 
+                  disabled={!guidelinesAccepted || searching}
+                >
+                  {searching ? "Creating Account..." : "Create Account & Enter Portal"}
+                </button>
+              </form>
+            )}
           </div>
         )}
       </div>
@@ -2893,6 +3068,7 @@ FILE: ./frontend/src/pages/Register/Register.module.css
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
+  width: 100%;
 }
 
 .submitBtn:hover:not(:disabled) {
@@ -2904,6 +3080,45 @@ FILE: ./frontend/src/pages/Register/Register.module.css
   background: #cbd5e1;
   color: #94a3b8;
   cursor: not-allowed;
+}
+
+/* Official Google Identity Button Styling */
+.googleBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: #ffffff;
+  color: #1f2937;
+  border: 1px solid #d1d5db;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.googleBtn:hover:not(:disabled) {
+  background: #f9fafb;
+  border-color: #9ca3af;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.googleBtn:disabled {
+  background: #f3f4f6;
+  color: #9ca3af;
+  border-color: #e5e7eb;
+  cursor: not-allowed;
+}
+
+.googleIcon {
+  width: 18px;
+  height: 18px;
+  display: block;
 }
 
 /* Step 2 specific layouts */
@@ -2982,6 +3197,35 @@ FILE: ./frontend/src/pages/Register/Register.module.css
   margin-bottom: 20px;
   line-height: 1.4;
 }
+
+/* Auth Authentication Toggles */
+.methodToggle {
+  display: flex;
+  background: #e2e8f0;
+  padding: 4px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  gap: 4px;
+}
+
+.toggleTab {
+  flex: 1;
+  background: transparent;
+  border: none;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.activeTab {
+  background: white;
+  color: #1e293b;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
 ==================================================
 FILE: ./frontend/src/pages/Profile/Profile.jsx
 ==================================================
@@ -3003,7 +3247,9 @@ export default function Profile({ user, onBack }) {
   return (
     <div className={styles.container}>
       <header className={styles.header}>
-        <button onClick={onBack} className={styles.backBtn}>← Back to Dashboard</button>
+        <button onClick={onBack} className={styles.backBtn}>
+          ← Back to Dashboard
+        </button>
         <h2>Account Settings</h2>
       </header>
 
@@ -3011,17 +3257,26 @@ export default function Profile({ user, onBack }) {
         {/* Left Card: Profile Overview */}
         <div className={styles.card}>
           <div className={styles.avatarSection}>
-            <img 
-              src={user?.photo || "https://via.placeholder.com/150"} 
-              alt="Profile Avatar" 
-              className={styles.avatar} 
-            />
+            {/* If user has a photo, show it. Otherwise, show the text-avatar fallback */}
+            {user?.photo ? (
+              <img
+                src={user.photo}
+                alt="Profile Avatar"
+                className={styles.avatar}
+              />
+            ) : (
+              <div className={styles.avatarPlaceholderLarge}>
+                {user?.first_name
+                  ? user.first_name.charAt(0).toUpperCase()
+                  : "R"}
+              </div>
+            )}
             <h3>{user?.first_name || "Resident"}</h3>
             <span className={styles.badge}>{user?.role || "Resident"}</span>
           </div>
-          
+
           <hr className={styles.divider} />
-          
+
           <div className={styles.infoGroup}>
             <label>Email Address</label>
             <p>{user?.email || "Not linked"}</p>
@@ -3029,24 +3284,31 @@ export default function Profile({ user, onBack }) {
 
           <div className={styles.infoGroup}>
             <label>Linked Property</label>
-            <p><strong>{user?.address || "123 Town Central Dr"}</strong></p>
+            <p>
+              <strong>{user?.address || "123 Town Central Dr"}</strong>
+            </p>
           </div>
         </div>
 
         {/* Right Card: Preferences */}
         <div className={styles.card}>
           <h3>Community Preferences</h3>
-          <p className={styles.subtext}>Manage how you want to receive communication from the HOA Board.</p>
-          
+          <p className={styles.subtext}>
+            Manage how you want to receive communication from the HOA Board.
+          </p>
+
           <div className={styles.settingRow}>
             <div>
               <h4>Critical Email Alerts</h4>
-              <p>Immediate notifications for maintenance closures or safety notices.</p>
+              <p>
+                Immediate notifications for maintenance closures or safety
+                notices.
+              </p>
             </div>
-            <input 
-              type="checkbox" 
-              checked={notifications.emailAlerts} 
-              onChange={() => handleToggle("emailAlerts")} 
+            <input
+              type="checkbox"
+              checked={notifications.emailAlerts}
+              onChange={() => handleToggle("emailAlerts")}
             />
           </div>
 
@@ -3055,10 +3317,10 @@ export default function Profile({ user, onBack }) {
               <h4>SMS Mobile Notices</h4>
               <p>Receive text alerts for urgent community updates.</p>
             </div>
-            <input 
-              type="checkbox" 
-              checked={notifications.textAlerts} 
-              onChange={() => handleToggle("textAlerts")} 
+            <input
+              type="checkbox"
+              checked={notifications.textAlerts}
+              onChange={() => handleToggle("textAlerts")}
             />
           </div>
 
@@ -3067,14 +3329,17 @@ export default function Profile({ user, onBack }) {
               <h4>Monthly Newsletter</h4>
               <p>Stay up to date on community events and meeting minutes.</p>
             </div>
-            <input 
-              type="checkbox" 
-              checked={notifications.newsletter} 
-              onChange={() => handleToggle("newsletter")} 
+            <input
+              type="checkbox"
+              checked={notifications.newsletter}
+              onChange={() => handleToggle("newsletter")}
             />
           </div>
 
-          <button className={styles.saveBtn} onClick={() => alert("Preferences saved successfully!")}>
+          <button
+            className={styles.saveBtn}
+            onClick={() => alert("Preferences saved successfully!")}
+          >
             Save Preferences
           </button>
         </div>
@@ -3082,6 +3347,7 @@ export default function Profile({ user, onBack }) {
     </div>
   );
 }
+
 ==================================================
 FILE: ./frontend/src/pages/Profile/Profile.module.css
 ==================================================
@@ -3146,7 +3412,24 @@ FILE: ./frontend/src/pages/Profile/Profile.module.css
   height: 100px;
   border-radius: 50%;
   object-fit: cover;
-  border: 3px solid #0070f3;
+  border: 3px solid #2ecc71;
+  /* Updated to match theme green */
+}
+
+/* Large Fallback Avatar Badge matching our Dashboard style */
+.avatarPlaceholderLarge {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2ecc71, #27ae60);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 2.5rem;
+  border: 3px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 4px 14px rgba(46, 204, 113, 0.2);
 }
 
 .badge {
