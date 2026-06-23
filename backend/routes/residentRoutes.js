@@ -42,4 +42,36 @@ router.post("/lookup", async (req, res) => {
   }
 });
 
+// POST /api/residents/register - Flag a roster profile as claimed in the DB
+router.post("/register", async (req, res) => {
+  const { residentId } = req.body;
+
+  if (!residentId) {
+    return res.status(400).json({ error: "Resident ID is required for registration persistence." });
+  }
+
+  try {
+    const query = `
+      UPDATE neighborhood_roster 
+      SET is_claimed = true 
+      WHERE id = $1 
+      RETURNING id, street_address, is_claimed;
+    `;
+    const { rows } = await db.query(query, [residentId]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "Resident record not found." });
+    }
+
+    res.json({
+      success: true,
+      message: "Roster profile successfully locked and claimed.",
+      updatedRecord: rows[0]
+    });
+  } catch (err) {
+    console.error("Database registration update error:", err.message);
+    res.status(500).json({ error: "Server error updating roster state." });
+  }
+});
+
 module.exports = router;

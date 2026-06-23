@@ -51,6 +51,17 @@ export default function Register({ onBack, onRegisterSuccess }) {
       setError(null);
       const googleUser = await signInWithGoogle();
       
+      // 1. Persist the lock state to PostgreSQL database first
+      const dbResponse = await fetch(`${API_URL}/api/residents/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ residentId: residentData?.residentId })
+      });
+
+      if (!dbResponse.ok) {
+        throw new Error("Failed to secure property profile on neighborhood database roster.");
+      }
+
       alert(`Successfully linked account for: ${googleUser.displayName}`);
       
       onRegisterSuccess({
@@ -60,7 +71,8 @@ export default function Register({ onBack, onRegisterSuccess }) {
         role: "resident"
       });
     } catch (err) {
-      setError("Failed to complete social verification. Please try again.");
+      console.error(err);
+      setError(err.message || "Failed to complete social verification. Please try again.");
     } finally {
       setSearching(false);
     }
@@ -76,14 +88,27 @@ export default function Register({ onBack, onRegisterSuccess }) {
     try {
       setSearching(true);
       setError(null);
+      
+      // 1. Authenticate with Firebase Auth engine
       const traditionalUser = await registerWithEmail(customEmail, customPassword);
       
+      // 2. Persist the lock state to PostgreSQL database right after
+      const dbResponse = await fetch(`${API_URL}/api/residents/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ residentId: residentData?.residentId })
+      });
+
+      if (!dbResponse.ok) {
+        throw new Error("Auth created, but failed to lock property profile on neighborhood roster.");
+      }
+
       alert("Account created successfully with email!");
       
       onRegisterSuccess({
         first_name: residentData?.firstName || "Resident",
         email: traditionalUser.email,
-        photo: null, // No avatar image for traditional email signups
+        photo: null, 
         role: "resident"
       });
     } catch (err) {
@@ -92,7 +117,7 @@ export default function Register({ onBack, onRegisterSuccess }) {
       } else if (err.code === "auth/weak-password") {
         setError("Password should be at least 6 characters long.");
       } else {
-        setError("Account creation failed. Please check your credentials.");
+        setError(err.message || "Account creation failed. Please check your credentials.");
       }
     } finally {
       setSearching(false);
