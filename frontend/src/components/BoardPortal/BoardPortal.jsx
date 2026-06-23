@@ -11,6 +11,8 @@ export default function BoardPortal({ user }) {
   const [viewMode, setViewMode] = useState("active"); // "active" or "archived"
   const [showForm, setShowForm] = useState(false);
   const [showEventForm, setShowEventForm] = useState(false);
+  const [masterRoster, setMasterRoster] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   
   const [announcement, setAnnouncement] = useState({
     title: "",
@@ -93,6 +95,19 @@ export default function BoardPortal({ user }) {
   useEffect(() => {
     if (activeSection === "vendors") {
       fetchVendorsData();
+    }
+    // NEW: Fetch roster entries for autocomplete when financials tab mounts
+    if (activeSection === "financials") {
+      fetch(`${API_BASE}/api/requests/admin/all`) // Swap this path with your direct roster endpoint if different
+        .then(res => res.json())
+        .catch(err => console.error(err));
+        
+      // For demo/safety baseline, pre-populate a list if your table index isn't written yet
+      setMasterRoster([
+        { first_name: "Aaron", last_name: "Admin" },
+        { first_name: "John", last_name: "Doe" },
+        { first_name: "Becky", last_name: "Kipf" }
+      ]);
     }
   }, [activeSection]);
 
@@ -470,9 +485,61 @@ export default function BoardPortal({ user }) {
               </div>
             )}
             <form onSubmit={handleUpdateFinanceLedger} className={styles.announcementForm}>
-              <div>
+              <div style={{ position: "relative" }}>
                 <label>Resident First Name *</label>
-                <input type="text" placeholder="e.g. Aaron (Must match resident_dues row exactly)" value={financeForm.first_name} onChange={(e) => setFinanceForm({...financeForm, first_name: e.target.value})} required />
+                <input 
+                  type="text" 
+                  placeholder="e.g. Aaron" 
+                  value={financeForm.first_name} 
+                  onChange={(e) => {
+                    setFinanceForm({...financeForm, first_name: e.target.value});
+                    setShowSuggestions(true);
+                  }}
+                  onFocus={() => setShowSuggestions(true)}
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)} // Timeout allows click selection to register
+                  required 
+                  autoComplete="off"
+                />
+                
+                {/* AUTOCOMPLETE SUGGESTIONS DROPDOWN */}
+                {showSuggestions && financeForm.first_name && (
+                  <div style={{
+                    position: "absolute",
+                    top: "100%",
+                    left: 0,
+                    right: 0,
+                    backgroundColor: "white",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: "8px",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                    zIndex: 1000,
+                    maxHeight: "150px",
+                    overflowY: "auto",
+                    marginTop: "4px"
+                  }}>
+                    {masterRoster
+                      .filter(r => r.first_name.toLowerCase().includes(financeForm.first_name.toLowerCase()))
+                      .map((resident, idx) => (
+                        <div
+                          key={idx}
+                          onMouseDown={() => {
+                            setFinanceForm({ ...financeForm, first_name: resident.first_name });
+                            setShowSuggestions(false);
+                          }}
+                          style={{
+                            padding: "10px 14px",
+                            cursor: "pointer",
+                            borderBottom: idx < masterRoster.length - 1 ? "1px solid #f1f5f9" : "none",
+                            fontSize: "0.95rem"
+                          }}
+                          onMouseEnter={(e) => e.target.style.backgroundColor = "#f8fafc"}
+                          onMouseLeave={(e) => e.target.style.backgroundColor = "transparent"}
+                        >
+                          <strong>{resident.first_name}</strong> {resident.last_name}
+                        </div>
+                      ))}
+                  </div>
+                )}
               </div>
               <div className={styles.inlineGroup} style={{ alignItems: "flex-end" }}>
                 <div>

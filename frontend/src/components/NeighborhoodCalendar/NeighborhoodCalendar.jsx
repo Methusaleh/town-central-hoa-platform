@@ -76,6 +76,24 @@ export default function NeighborhoodCalendar() {
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`;
   };
 
+  const formatEventTime = (timeStr) => {
+    if (!timeStr) return "All Day";
+    
+    // If it's already a full time string with seconds like "12:00:00"
+    const parts = timeStr.split(":");
+    if (parts.length >= 2) {
+      let hours = parseInt(parts[0], 10);
+      const minutes = parts[1];
+      const ampm = hours >= 12 ? "P.M." : "A.M.";
+      
+      hours = hours % 12;
+      hours = hours ? hours : 12; // convert '0' to '12'
+      
+      return `${hours}:${minutes} ${ampm}`;
+    }
+    return timeStr;
+  };
+
   return (
     <div className={styles.calendarWrapper}>
       <div className={styles.calendarContainer}>
@@ -95,7 +113,7 @@ export default function NeighborhoodCalendar() {
             {selectedEvents.map((event, index) => (
               <div key={event.id || index} className={styles.eventInfo}>
                 <h4>{event.title}</h4>
-                <p>🕒 {event.event_time || "All Day"}</p>
+                <p>🕒 {formatEventTime(event.event_time)}</p>
 
                 <a
                   href={getMapsUrl(event.location)}
