@@ -57,7 +57,7 @@
   box-sizing: border-box;
 }
 
-/* New Brand Wrapper Group */
+/* Brand Wrapper Group */
 .brandContainer {
   margin-bottom: 40px;
   display: flex;
@@ -189,6 +189,23 @@
   border-radius: 50%;
   object-fit: cover;
   border: 2px solid #2ecc71;
+  flex-shrink: 0;
+}
+
+/* Generic Fallback Avatar Badge */
+.avatarPlaceholderMini {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2ecc71, #27ae60);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.1rem;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 2px 8px rgba(46, 204, 113, 0.2);
   flex-shrink: 0;
 }
 

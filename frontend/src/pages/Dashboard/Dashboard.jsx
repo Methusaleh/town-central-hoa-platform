@@ -78,22 +78,24 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
         </nav>
 
         {/* Repositioned & Cleaned Profile Card Footer */}
-        <div className={styles.sidebarFooter}>
-          <div className={styles.profileTrigger} onClick={onNavigateToProfile}>
+        <div className={styles.profileTrigger} onClick={onNavigateToProfile}>
+          {/* If user has a photo, show it. Otherwise, show the text-avatar placeholder */}
+          {user?.photo ? (
             <img 
-              src={user?.photo || "https://via.placeholder.com/40"} 
+              src={user.photo} 
               alt="User Avatar" 
               className={styles.userAvatarMini}
             />
-            <div className={styles.userInfoMini}>
-              <h4>{user?.first_name || "Resident"}</h4>
-              <span>⚙️ Account Settings</span>
+          ) : (
+            <div className={styles.avatarPlaceholderMini}>
+              {user?.first_name ? user.first_name.charAt(0).toUpperCase() : "R"}
             </div>
+          )}
+          
+          <div className={styles.userInfoMini}>
+            <h4>{user?.first_name || "Resident"}</h4>
+            <span>⚙️ Account Settings</span>
           </div>
-
-          <button className={styles.logoutBtn} onClick={onLogout}>
-            Logout
-          </button>
         </div>
       </aside>
 
