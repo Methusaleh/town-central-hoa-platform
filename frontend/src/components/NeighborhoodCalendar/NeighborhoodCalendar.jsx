@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"; // Fixed: Added useEffect import
+import { useState, useEffect } from "react";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 import styles from "./NeighborhoodCalendar.module.css";
@@ -6,7 +6,7 @@ import styles from "./NeighborhoodCalendar.module.css";
 export default function NeighborhoodCalendar() {
   const [date, setDate] = useState(new Date());
   const [selectedEvents, setSelectedEvents] = useState([]);
-  const [events, setEvents] = useState([]); // Fixed: Added events state
+  const [events, setEvents] = useState([]);
 
   // Fetch live events from your Cloud Run API
   useEffect(() => {
@@ -20,7 +20,7 @@ export default function NeighborhoodCalendar() {
       .catch((err) => console.error("Calendar fetch error:", err));
   }, []);
 
-  // Helper to normalize dates for comparison (Database dates can be tricky)
+  // Helper to normalize dates for comparison
   const formatDate = (dateInput) => {
     if (!dateInput) return null;
 
@@ -35,20 +35,17 @@ export default function NeighborhoodCalendar() {
   const handleDateChange = (newDate) => {
     setDate(newDate);
 
-    // 1. Build a manual YYYY-MM-DD string for the clicked local date
-    // This ensures we match the "Strict" formatting of the database dates
+    // Build a manual YYYY-MM-DD string for the clicked local date
     const year = newDate.getFullYear();
     const month = String(newDate.getMonth() + 1).padStart(2, "0");
     const day = String(newDate.getDate()).padStart(2, "0");
     const clickedDate = `${year}-${month}-${day}`;
 
-    // 2. Filter all events to find EVERY match for the clicked date
+    // Filter all events to find every match for the clicked date
     const foundEvents = events.filter(
       (e) => formatDate(e.event_date) === clickedDate,
     );
 
-    // 3. Pass the entire array to state (plural)
-    // This ensures your .map() function has a list to work with
     setSelectedEvents(foundEvents);
   };
 
@@ -76,7 +73,6 @@ export default function NeighborhoodCalendar() {
 
   // Map URL helper
   const getMapsUrl = (location) => {
-    // Uses the official Google Maps search query format
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`;
   };
 
@@ -110,23 +106,37 @@ export default function NeighborhoodCalendar() {
                   📍 {event.location || "No location set"}
                 </a>
 
+                {/* Polished interactive paperclip link for attached neighborhood documents */}
                 {event.attachment_url && (
-                  <div style={{ margin: "10px 0" }}>
+                  <div style={{ margin: "14px 0", padding: "2px 0" }}>
                     <a 
                       href={event.attachment_url} 
                       target="_blank" 
                       rel="noreferrer" 
                       style={{
                         display: "inline-flex",
-                        align_items: "center",
-                        gap: "6px",
+                        alignItems: "center",
+                        gap: "8px",
                         fontSize: "0.85rem",
-                        color: "#e67e22", // Clean orange accent color to call attention to attachments
+                        color: "#e67e22", // Standout orange accent theme for downloads
                         fontWeight: "700",
-                        textDecoration: "none"
+                        textDecoration: "none",
+                        backgroundColor: "#fff5eb",
+                        padding: "6px 12px",
+                        borderRadius: "6px",
+                        border: "1px solid #fde6d2",
+                        transition: "all 0.2s ease"
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = "#fdedde";
+                        e.currentTarget.style.transform = "translateY(-1px)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = "#fff5eb";
+                        e.currentTarget.style.transform = "translateY(0)";
                       }}
                     >
-                      📎 {event.attachment_name || "Download Attached Document"}
+                      📎 {event.attachment_name || "View Attached Document"}
                     </a>
                   </div>
                 )}
@@ -145,7 +155,7 @@ export default function NeighborhoodCalendar() {
                     Add to Google
                   </a>
                 </div>
-                {/* Add a divider if there's more than one event */}
+                
                 {index < selectedEvents.length - 1 && (
                   <hr className={styles.divider} />
                 )}
