@@ -19,6 +19,8 @@ export default function BoardPortal({ user }) {
     event_time: "",
     location: "",
     description: "",
+    attachment_url: "",
+    attachment_name: "",
   });
 
   const filteredRequests = requests.filter((req) =>
@@ -133,6 +135,8 @@ export default function BoardPortal({ user }) {
           event_time: "",
           location: "",
           description: "",
+          attachment_url: "",
+          attachment_name: "",
         });
         setShowEventForm(false);
       }
@@ -237,6 +241,8 @@ export default function BoardPortal({ user }) {
               }
               required
             />
+            
+            {/* Row 1: Date & Time Split */}
             <div className={styles.inlineGroup}>
               <div>
                 <label>Date</label>
@@ -260,8 +266,10 @@ export default function BoardPortal({ user }) {
                 />
               </div>
             </div>
+
+            {/* Row 2: Location Input Field with Google Places Autocomplete */}
             <input
-              ref={locationInputRef} // Attach the ref here
+              ref={locationInputRef}
               type="text"
               placeholder="Search for a location (e.g. Piedmont Baptist Church)"
               value={newEvent.location}
@@ -270,6 +278,34 @@ export default function BoardPortal({ user }) {
               }
               required
             />
+
+            {/* Row 3: Dedicated Attachments Grid Block[cite: 2] */}
+            <div className={styles.inlineGroup}>
+              <div>
+                <label>Attachment URL (e.g. Google Drive link)</label>
+                <input
+                  type="url"
+                  placeholder="https://drive.google.com/..."
+                  value={newEvent.attachment_url}
+                  onChange={(e) =>
+                    setNewEvent({ ...newEvent, attachment_url: e.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <label>Friendly File Label</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Meeting_Agenda.pdf"
+                  value={newEvent.attachment_name}
+                  onChange={(e) =>
+                    setNewEvent({ ...newEvent, attachment_name: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+
+            {/* Row 4: Additional Event Details */}
             <textarea
               placeholder="Additional details for residents..."
               value={newEvent.description}
@@ -277,6 +313,7 @@ export default function BoardPortal({ user }) {
                 setNewEvent({ ...newEvent, description: e.target.value })
               }
             />
+            
             <button type="submit" className={styles.submitBtn}>
               Add to Calendar
             </button>

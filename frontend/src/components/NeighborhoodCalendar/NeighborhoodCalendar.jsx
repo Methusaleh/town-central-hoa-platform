@@ -110,6 +110,27 @@ export default function NeighborhoodCalendar() {
                   📍 {event.location || "No location set"}
                 </a>
 
+                {event.attachment_url && (
+                  <div style={{ margin: "10px 0" }}>
+                    <a 
+                      href={event.attachment_url} 
+                      target="_blank" 
+                      rel="noreferrer" 
+                      style={{
+                        display: "inline-flex",
+                        align_items: "center",
+                        gap: "6px",
+                        fontSize: "0.85rem",
+                        color: "#e67e22", // Clean orange accent color to call attention to attachments
+                        fontWeight: "700",
+                        textDecoration: "none"
+                      }}
+                    >
+                      📎 {event.attachment_name || "Download Attached Document"}
+                    </a>
+                  </div>
+                )}
+
                 {event.description && (
                   <p className={styles.description}>{event.description}</p>
                 )}

@@ -14,13 +14,13 @@ router.get("/", async (req, res) => {
   }
 });
 
-// POST a new event
+// POST a new event with optional document attachments
 router.post("/", async (req, res) => {
-  const { title, event_date, event_time, location, description } = req.body;
+  const { title, event_date, event_time, location, description, attachment_url, attachment_name } = req.body;
   try {
     const query = `
-      INSERT INTO neighborhood_events (title, event_date, event_time, location, description)
-      VALUES ($1, $2, $3, $4, $5)
+      INSERT INTO neighborhood_events (title, event_date, event_time, location, description, attachment_url, attachment_name)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING *;
     `;
     const { rows } = await db.query(query, [
@@ -29,6 +29,8 @@ router.post("/", async (req, res) => {
       event_time,
       location,
       description,
+      attachment_url || null,   // Falls back gracefully if no file is attached
+      attachment_name || null
     ]);
     res.status(201).json(rows[0]);
   } catch (err) {
