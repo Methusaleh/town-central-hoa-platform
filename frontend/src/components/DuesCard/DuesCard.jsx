@@ -32,7 +32,11 @@ export default function DuesCard({ residentName }) {
         <h3>Annual Assessments</h3>
         <span
           className={
-            duesInfo?.status === "Paid" ? styles.paidTag : styles.pendingTag
+            duesInfo?.status === "Paid" 
+              ? styles.paidTag 
+              : duesInfo?.status === "Partial"
+                ? styles.pendingTag // Adopts the amber warning color notice frame
+                : styles.pendingTag
           }
         >
           {duesInfo?.status || "No Record"}

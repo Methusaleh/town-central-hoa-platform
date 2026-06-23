@@ -401,7 +401,7 @@ export default function BoardPortal({ user }) {
                   required 
                 />
               </div>
-              <div className={styles.inlineGroup}>
+              <div className={styles.inlineGroup} style={{ alignItems: "flex-end" }}>
                 <div>
                   <label>Outstanding Assessment Balance ($) *</label>
                   <input 
@@ -421,6 +421,7 @@ export default function BoardPortal({ user }) {
                     className={styles.prioritySelect}
                   >
                     <option value="Pending">Pending / Unpaid</option>
+                    <option value="Partial">Partial Payment</option> {/* Added for our new workflow! */}
                     <option value="Paid">Paid in Full</option>
                   </select>
                 </div>
