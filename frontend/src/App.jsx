@@ -55,7 +55,11 @@ export default function App() {
       {view === "contact" && <ContactPage onBack={goToLanding} />}
 
       {view === "profile" && (
-        <Profile user={user} onBack={() => setView("dashboard")} />
+        <Profile 
+          user={user} 
+          onBack={() => setView("dashboard")} 
+          onUserUpdate={(updatedUser) => setUser(updatedUser)} // Injected real-time state bridge link
+        />
       )}
     </div>
   );
