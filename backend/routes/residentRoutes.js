@@ -74,4 +74,37 @@ router.post("/register", async (req, res) => {
   }
 });
 
+// PUT /api/residents/avatar - Update a resident's profile photo
+router.put("/avatar", async (req, res) => {
+  const { email, photoData } = req.body;
+
+  if (!email || !photoData) {
+    return res.status(400).json({ error: "Email and photo data are required fields." });
+  }
+
+  try {
+    // Save the base64 image data string directly into the profile_photo slot
+    const query = `
+      UPDATE neighborhood_roster 
+      SET profile_photo = $1 
+      WHERE email = $2 
+      RETURNING id, street_address, first_name, profile_photo;
+    `;
+    const { rows } = await db.query(query, [photoData, email.trim()]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "Resident account not found." });
+    }
+
+    res.json({
+      success: true,
+      message: "Avatar updated successfully.",
+      user: rows[0]
+    });
+  } catch (err) {
+    console.error("Error updating resident avatar:", err.message);
+    res.status(500).json({ error: "Server error while saving avatar." });
+  }
+});
+
 module.exports = router;
