@@ -1,9 +1,14 @@
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
+import { 
+  getAuth, 
+  GoogleAuthProvider, 
+  signInWithPopup, 
+  signOut,
+  createUserWithEmailAndPassword // <-- Added this built-in Firebase method
+} from "firebase/auth";
 
 // Your web app's Firebase configuration
-// These can be replaced with your live credentials once you create your Firebase Console project
 const firebaseConfig = {
   apiKey: "AIzaSyA-oYpm-4_Mmj377y1NjgMVVSRCWXoJx7c",
   authDomain: "town-central-portal.firebaseapp.com",
@@ -26,10 +31,20 @@ export const googleProvider = new GoogleAuthProvider();
 export const signInWithGoogle = async () => {
   try {
     const result = await signInWithPopup(auth, googleProvider);
-    // This gives you the authenticated user object (name, email, photoURL, etc.)
     return result.user;
   } catch (error) {
     console.error("Google Authentication Error:", error);
+    throw error;
+  }
+};
+
+// Custom traditional email/password registration helper
+export const registerWithEmail = async (email, password) => {
+  try {
+    const result = await createUserWithEmailAndPassword(auth, email, password);
+    return result.user;
+  } catch (error) {
+    console.error("Email Registration Error:", error);
     throw error;
   }
 };

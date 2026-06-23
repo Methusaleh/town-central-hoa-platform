@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { signInWithGoogle } from "../../firebase";
+import { signInWithGoogle, registerWithEmail } from "../../firebase";
 import styles from "./Register.module.css";
 
 export default function Register({ onBack, onRegisterSuccess }) {
@@ -9,6 +9,11 @@ export default function Register({ onBack, onRegisterSuccess }) {
   const [residentData, setResidentData] = useState(null);
   const [error, setError] = useState(null);
   const [searching, setSearching] = useState(false);
+
+  // New States for Custom Email/Password Flow
+  const [authMethod, setAuthMethod] = useState("google"); // "google" or "email"
+  const [customEmail, setCustomEmail] = useState("");
+  const [customPassword, setCustomPassword] = useState("");
 
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
@@ -28,13 +33,67 @@ export default function Register({ onBack, onRegisterSuccess }) {
 
       if (response.ok) {
         setResidentData(data);
-        setStep(2); // Push to guidelines agreement step
+        setStep(2); 
       } else {
         setError(data.error || "An error occurred during lookup.");
       }
     } catch (err) {
       console.error("Lookup error:", err);
       setError("Network error: Could not reach server.");
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleSocialRegister = async () => {
+    try {
+      setSearching(true);
+      setError(null);
+      const googleUser = await signInWithGoogle();
+      
+      alert(`Successfully linked account for: ${googleUser.displayName}`);
+      
+      onRegisterSuccess({
+        first_name: googleUser.displayName ? googleUser.displayName.split(" ")[0] : "Resident",
+        email: googleUser.email,
+        photo: googleUser.photoURL,
+        role: "resident"
+      });
+    } catch (err) {
+      setError("Failed to complete social verification. Please try again.");
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleTraditionalRegister = async (e) => {
+    e.preventDefault();
+    if (!guidelinesAccepted) {
+      setError("You must accept the community guidelines to proceed.");
+      return;
+    }
+    
+    try {
+      setSearching(true);
+      setError(null);
+      const traditionalUser = await registerWithEmail(customEmail, customPassword);
+      
+      alert("Account created successfully with email!");
+      
+      onRegisterSuccess({
+        first_name: residentData?.firstName || "Resident",
+        email: traditionalUser.email,
+        photo: null, // No avatar image for traditional email signups
+        role: "resident"
+      });
+    } catch (err) {
+      if (err.code === "auth/email-already-in-use") {
+        setError("This email address is already registered inside Firebase.");
+      } else if (err.code === "auth/weak-password") {
+        setError("Password should be at least 6 characters long.");
+      } else {
+        setError("Account creation failed. Please check your credentials.");
+      }
     } finally {
       setSearching(false);
     }
@@ -81,11 +140,10 @@ export default function Register({ onBack, onRegisterSuccess }) {
             
             <div className={styles.guidelinesBox}>
               <h4>📋 Platform Community Guidelines</h4>
-              <p>To ensure a safe, professional, and constructive environment for all Town Central residents, you must agree to the following baseline terms:</p>
+              <p>To ensure a safe environment, you must agree to the baseline terms:</p>
               <ul>
-                <li><strong>Professional Interactions:</strong> Keep all discussions, complaints, and comments polite, neighborly, and constructive.</li>
-                <li><strong>On-Topic Communication:</strong> Use this portal strictly for HOA business, maintenance filings, safety alerts, and community-wide events.</li>
-                <li><strong>No Public Rants:</strong> System administrators reserve the right to immediately remove any off-topic, hostile, or harassing content post-publication.</li>
+                <li><strong>Professional Interactions:</strong> Keep all posts neighborly and constructive.</li>
+                <li><strong>On-Topic Communication:</strong> Use this portal strictly for HOA business.</li>
               </ul>
             </div>
 
@@ -98,33 +156,64 @@ export default function Register({ onBack, onRegisterSuccess }) {
               <span>I agree to keep my posts professional and abide by the community guidelines.</span>
             </label>
 
-            <button 
-              className={styles.submitBtn} 
-              disabled={!guidelinesAccepted || searching}
-              onClick={async () => {
-                try {
-                  setSearching(true);
-                  // Launch the safe secure Google auth window
-                  const googleUser = await signInWithGoogle();
-                  
-                  alert(`Successfully linked account for: ${googleUser.displayName}`);
-                  
-                  // Pass the real authenticated credentials forward to your App state!
-                  onRegisterSuccess({
-                    first_name: googleUser.displayName ? googleUser.displayName.split(" ")[0] : "Resident", 
-                    email: googleUser.email,
-                    photo: googleUser.photoURL,
-                    role: "resident" 
-                  });
-                } catch (err) {
-                  setError("Failed to complete social verification. Please try again.");
-                } finally {
-                  setSearching(false);
-                }
-              }}
-            >
-              {searching ? "Verifying Identity..." : "Link Google Account & Enter Portal"}
-            </button>
+            {error && <p className={styles.errorMsg}>❌ {error}</p>}
+
+            {/* Toggle tabs for Method Selection */}
+            <div className={styles.methodToggle}>
+              <button 
+                className={`${styles.toggleTab} ${authMethod === "google" ? styles.activeTab : ""}`}
+                onClick={() => { setError(null); setAuthMethod("google"); }}
+              >
+                Google Account
+              </button>
+              <button 
+                className={`${styles.toggleTab} ${authMethod === "email" ? styles.activeTab : ""}`}
+                onClick={() => { setError(null); setAuthMethod("email"); }}
+              >
+                Email / Password
+              </button>
+            </div>
+
+            {/* Render Selected Method View */}
+            {authMethod === "google" ? (
+              <button 
+                className={styles.submitBtn} 
+                disabled={!guidelinesAccepted || searching}
+                onClick={handleSocialRegister}
+              >
+                {searching ? "Verifying Identity..." : "Link Google Account & Enter Portal"}
+              </button>
+            ) : (
+              <form onSubmit={handleTraditionalRegister} className={styles.form}>
+                <div className={styles.inputGroup}>
+                  <label>Preferred Email</label>
+                  <input 
+                    type="email" 
+                    placeholder="resident@example.com"
+                    value={customEmail}
+                    onChange={(e) => setCustomEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className={styles.inputGroup}>
+                  <label>Create Password</label>
+                  <input 
+                    type="password" 
+                    placeholder="Min 6 characters"
+                    value={customPassword}
+                    onChange={(e) => setCustomPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                <button 
+                  type="submit" 
+                  className={styles.submitBtn} 
+                  disabled={!guidelinesAccepted || searching}
+                >
+                  {searching ? "Creating Account..." : "Create Account & Enter Portal"}
+                </button>
+              </form>
+            )}
           </div>
         )}
       </div>
