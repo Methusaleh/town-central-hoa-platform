@@ -12,6 +12,7 @@ export default function App() {
   // Test user state
   const [user, setUser] = useState({
     first_name: "Aaron",
+    email: "samplethis84@gmail.com",
     role: "super_admin",
   });
 
