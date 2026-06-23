@@ -3,7 +3,7 @@ import styles from "./BoardPortal.module.css";
 
 export default function BoardPortal({ user }) {
   // Master Section Control
-  const [activeSection, setActiveSection] = useState("requests"); // "requests" or "roster"
+  const [activeSection, setActiveSection] = useState("requests"); // "requests", "roster", or "financials"
 
   // Requests Section State
   const [requests, setRequests] = useState([]);
@@ -29,7 +29,7 @@ export default function BoardPortal({ user }) {
     attachment_name: "",
   });
 
-  // --- NEW: Roster Management State ---
+  // --- Roster Management State ---
   const [roster, setRoster] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [showRosterModal, setShowRosterModal] = useState(false);
@@ -40,6 +40,14 @@ export default function BoardPortal({ user }) {
     street_address: ""
   });
   const [rosterStatus, setRosterStatus] = useState({ type: "", text: "" });
+
+  // --- NEW: Financials Management State ---
+  const [financeForm, setFinanceForm] = useState({
+    first_name: "",
+    balance: "",
+    status: "Pending"
+  });
+  const [financeStatus, setFinanceStatus] = useState({ type: "", text: "" });
 
   const locationInputRef = useRef(null);
   const filteredRequests = requests.filter((req) =>
@@ -62,7 +70,6 @@ export default function BoardPortal({ user }) {
 
   // Fetch Master Roster Directory lines
   const fetchRosterData = () => {
-    // For now we can use your address search logic or create a clean index retrieval gateway
     fetch(`${API_BASE}/api/vendors`) // Placeholder or dedicated index pull
       .then((res) => res.json())
       .catch((err) => console.error(err));
@@ -152,7 +159,7 @@ export default function BoardPortal({ user }) {
     }
   };
 
-  // --- NEW: Manual Roster Addition Handler ---
+  // Manual Roster Addition Handler
   const handleOnboardResident = async (e) => {
     e.preventDefault();
     setRosterStatus({ type: "", text: "" });
@@ -169,16 +176,42 @@ export default function BoardPortal({ user }) {
 
       setRosterStatus({ type: "success", text: "Resident record established successfully!" });
       setRosterForm({ first_name: "", last_name: "", email: "", street_address: "" });
-      fetchRosterData(); // Refresh directory list rows grid
+      fetchRosterData();
     } catch (err) {
       setRosterStatus({ type: "error", text: err.message });
+    }
+  };
+
+  // --- NEW: Financial Ledger Submission Handler ---
+  const handleUpdateFinanceLedger = async (e) => {
+    e.preventDefault();
+    setFinanceStatus({ type: "", text: "" });
+
+    try {
+      const response = await fetch(`${API_BASE}/api/dues/update-balance`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          first_name: financeForm.first_name,
+          balance: financeForm.balance,
+          status: financeForm.status
+        })
+      });
+      const data = await response.json();
+
+      if (!response.ok) throw new Error(data.error || "Failed to update financial ledger entry.");
+
+      setFinanceStatus({ type: "success", text: data.message || "Financial ledger updated successfully!" });
+      setFinanceForm({ first_name: "", balance: "", status: "Pending" });
+    } catch (err) {
+      setFinanceStatus({ type: "error", text: err.message });
     }
   };
 
   return (
     <div className={styles.container}>
       {/* SECTION SELECTOR HEADERS */}
-      <div style={{ display: "flex", gap: "15px", borderBottom: "2px solid #e2e8f0", paddingBottom: "10px" }}>
+      <div style={{ display: "flex", gap: "25px", borderBottom: "2px solid #e2e8f0", paddingBottom: "10px" }}>
         <button 
           onClick={() => setActiveSection("requests")}
           style={{ background: "none", border: "none", fontSize: "1.1rem", fontWeight: "700", color: activeSection === "requests" ? "#2ecc71" : "#94a3b8", cursor: "pointer", paddingBottom: "5px", borderBottom: activeSection === "requests" ? "3px solid #2ecc71" : "3px solid transparent" }}
@@ -190,6 +223,12 @@ export default function BoardPortal({ user }) {
           style={{ background: "none", border: "none", fontSize: "1.1rem", fontWeight: "700", color: activeSection === "roster" ? "#2ecc71" : "#94a3b8", cursor: "pointer", paddingBottom: "5px", borderBottom: activeSection === "roster" ? "3px solid #2ecc71" : "3px solid transparent" }}
         >
           👥 Master Neighborhood Roster
+        </button>
+        <button 
+          onClick={() => setActiveSection("financials")}
+          style={{ background: "none", border: "none", fontSize: "1.1rem", fontWeight: "700", color: activeSection === "financials" ? "#2ecc71" : "#94a3b8", cursor: "pointer", paddingBottom: "5px", borderBottom: activeSection === "financials" ? "3px solid #2ecc71" : "3px solid transparent" }}
+        >
+          💰 Financial Assessment Ledger
         </button>
       </div>
 
@@ -295,7 +334,7 @@ export default function BoardPortal({ user }) {
         </>
       )}
 
-      {/* --- RENDER SECTION 2: NEW MASTER ROSTER VIEW DIRECTORY --- */}
+      {/* --- RENDER SECTION 2: MASTER ROSTER DIRECTORY --- */}
       {activeSection === "roster" && (
         <div className={styles.tableCard} style={{ marginTop: "10px" }}>
           <div className={styles.tableHeader}>
@@ -328,9 +367,68 @@ export default function BoardPortal({ user }) {
             </div>
           )}
 
-          {/* Directory Verification Table Layout */}
           <div style={{ background: "#f8fafc", padding: "15px", borderRadius: "10px", textAlign: "center", color: "#64748b", fontStyle: "italic", fontSize: "0.9rem", border: "1px dashed #cbd5e1" }}>
             💡 To pull up specific individual records or double-check a property line layout, use the global search matching engine tool fields or execute a lookup verification check directly on the live registry portal.
+          </div>
+        </div>
+      )}
+
+      {/* --- NEW: RENDER SECTION 3: FINANCIAL ASSESSMENT LEDGER --- */}
+      {activeSection === "financials" && (
+        <div className={styles.tableCard} style={{ marginTop: "10px" }}>
+          <div className={styles.tableHeader}>
+            <div>
+              <h3 style={{ margin: 0 }}>Resident Assessment Ledger</h3>
+              <p style={{ margin: "5px 0 0 0", fontSize: "0.85rem", color: "#64748b" }}>Log offline checks, clear balances, or issue manual assessment status corrections.</p>
+            </div>
+          </div>
+
+          <div className={styles.formCard} style={{ border: "1px solid #e2e8f0", maxWidth: "600px" }}>
+            <h4>Update Ledger Statement</h4>
+            {financeStatus.text && (
+              <div style={{ padding: "10px", borderRadius: "6px", marginBottom: "15px", backgroundColor: financeStatus.type === "success" ? "#d4edda" : "#f8d7da", color: financeStatus.type === "success" ? "#155724" : "#721c24" }}>
+                {financeStatus.text}
+              </div>
+            )}
+            <form onSubmit={handleUpdateFinanceLedger} className={styles.announcementForm}>
+              <div>
+                <label>Resident First Name *</label>
+                <input 
+                  type="text" 
+                  placeholder="e.g. Aaron (Must match resident_dues row exactly)" 
+                  value={financeForm.first_name} 
+                  onChange={(e) => setFinanceForm({...financeForm, first_name: e.target.value})} 
+                  required 
+                />
+              </div>
+              <div className={styles.inlineGroup}>
+                <div>
+                  <label>Outstanding Assessment Balance ($) *</label>
+                  <input 
+                    type="number" 
+                    step="0.01" 
+                    placeholder="0.00" 
+                    value={financeForm.balance} 
+                    onChange={(e) => setFinanceForm({...financeForm, balance: e.target.value})} 
+                    required 
+                  />
+                </div>
+                <div>
+                  <label>Payment Status Assignment</label>
+                  <select 
+                    value={financeForm.status} 
+                    onChange={(e) => setFinanceForm({...financeForm, status: e.target.value})} 
+                    className={styles.prioritySelect}
+                  >
+                    <option value="Pending">Pending / Unpaid</option>
+                    <option value="Paid">Paid in Full</option>
+                  </select>
+                </div>
+              </div>
+              <button type="submit" className={styles.submitBtn} style={{ backgroundColor: "#3498db" }}>
+                Commit Ledger Overwrite
+              </button>
+            </form>
           </div>
         </div>
       )}
