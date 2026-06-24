@@ -1,3 +1,4 @@
+import { useState } from "react";
 import styles from "../BoardPortal.module.css";
 
 export default function RosterDirectory({ 
@@ -9,6 +10,18 @@ export default function RosterDirectory({
   rosterStatus, 
   handleOnboardResident 
 }) {
+  // ✅ FIXED: Hooks must live inside the component function body
+  const [sendWelcomePacket, setSendWelcomePacket] = useState(false);
+
+  // ✅ FIXED: Intercept submit to append our checkbox state to the parent's function call
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    // We pass both the current form inputs and our new checkbox state upwards
+    handleOnboardResident(e, sendWelcomePacket);
+    // Reset checkbox state after submission
+    setSendWelcomePacket(false);
+  };
+
   return (
     <div className={styles.tableCard} style={{ marginTop: "10px" }}>
       <div className={styles.tableHeader}>
@@ -31,7 +44,8 @@ export default function RosterDirectory({
               {rosterStatus.text}
             </div>
           )}
-          <form onSubmit={handleOnboardResident} className={styles.announcementForm}>
+          {/* ✅ FIXED: Point onSubmit to our local interceptor */}
+          <form onSubmit={handleSubmit} className={styles.announcementForm}>
             <div className={styles.inlineGroup}>
               <div>
                 <label>First Name *</label>
@@ -70,6 +84,18 @@ export default function RosterDirectory({
                 onChange={(e) => setRosterForm({...rosterForm, street_address: e.target.value})} 
                 required 
               />
+              <div style={{ margin: "15px 0", display: "flex", alignItems: "center", gap: "10px" }}>
+                <input 
+                  type="checkbox" 
+                  id="welcomePacket" 
+                  checked={sendWelcomePacket} 
+                  onChange={(e) => setSendWelcomePacket(e.target.checked)}
+                  style={{ width: "18px", height: "18px", cursor: "pointer" }}
+                />
+                <label htmlFor="welcomePacket" style={{ fontSize: "0.9rem", color: "#475569", cursor: "pointer", fontWeight: "600" }}>
+                  📧 Email Official Digital Welcome Packet to resident instantly upon onboarding
+                </label>
+              </div>
             </div>
             <button type="submit" className={styles.submitBtn}>Write Secure Roster Entry</button>
           </form>

@@ -104,9 +104,9 @@ router.put("/avatar", async (req, res) => {
   }
 });
 
-// POST /api/residents/admin-add - Onboard a new neighbor into the roster schema
+// Updated POST /api/residents/admin-add inside residentRoutes.js
 router.post("/admin-add", async (req, res) => {
-  const { first_name, last_name, email, street_address } = req.body;
+  const { first_name, last_name, email, street_address, sendWelcomePacket } = req.body;
 
   if (!first_name || !last_name || !street_address) {
     return res.status(400).json({ error: "First Name, Last Name, and Street Address are required fields." });
@@ -133,13 +133,43 @@ router.post("/admin-add", async (req, res) => {
       street_address.trim()
     ]);
 
-    res.status(201).json({
-      success: true,
-      message: "Resident successfully appended to the neighborhood roster database.",
-      resident: rows[0]
-    });
+    const newResident = rows[0];
+
+    // AUTOMATED WELCOME PACKET DISPATCH
+    if (sendWelcomePacket && email && email.trim() !== "") {
+      const mailOptions = {
+        from: `"Town Central Executive Board" <${process.env.EMAIL_USER}>`,
+        to: email.trim(),
+        subject: `Welcome to Town Central, ${first_name}! 🏡`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+            <div style="background-color: #2c3e50; padding: 20px; text-align: center; color: white;">
+              <h2>Welcome to the Neighborhood!</h2>
+            </div>
+            <div style="padding: 24px; color: #334155; line-height: 1.6;">
+              <p>Hi ${first_name},</p>
+              <p>Congratulations on your new home! The Town Central HOA Executive Board is thrilled to welcome you to our community.</p>
+              <p>To help you get settled, we have generated your official neighborhood digital onboarding packet. This contains pool keys instructions, trash schedules, and architectural guidelines.</p>
+              
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="https://town-central-hoa-platform.vercel.app/public-docs/Welcome_Packet_2026.pdf" style="background-color: #2ecc71; color: white; padding: 12px 24px; text-decoration: none; font-weight: bold; border-radius: 6px;">📥 Download Welcome Packet</a>
+              </div>
+              
+              <p>Once you are ready, please visit the portal to claim your profile and set up your secure resident login credentials.</p>
+            </div>
+          </div>
+        `
+      };
+
+      transporter.sendMail(mailOptions, (err, info) => {
+        if (err) console.error("Welcome Packet Delivery Fault:", err.message);
+        else console.log("Welcome Packet sent successfully:", info.response);
+      });
+    }
+
+    res.status(201).json({ success: true, resident: newResident });
   } catch (err) {
-    console.error("Database insertion error:", err.message);
+    console.error(err);
     res.status(500).json({ error: "Internal server error creating resident record." });
   }
 });

@@ -122,14 +122,15 @@ export default function BoardPortal({ user }) {
     } catch (err) { console.error(err); }
   };
 
-  const handleOnboardResident = async (e) => {
+  const handleOnboardResident = async (e, welcomePacket) => {
     e.preventDefault();
     setRosterStatus({ type: "", text: "" });
     try {
       const response = await fetch(`${API_BASE}/api/residents/admin-add`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(rosterForm)
+        // Send the state form fields alongside our new welcome injection flag
+        body: JSON.stringify({ ...rosterForm, sendWelcomePacket: welcomePacket })
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Failed to add.");
