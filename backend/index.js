@@ -9,6 +9,8 @@ const residentRoutes = require("./routes/residentRoutes");
 const vendorRoutes = require("./routes/vendorRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const app = express();
+const port = process.env.PORT || 8080; // Use Cloud Run's assigned port or default to 8080
+
 
 const allowedOrigins = [
   "http://localhost:5173",
@@ -43,4 +45,5 @@ app.use("/api/notifications", notificationRoutes);
 // app.use('/api/residents', residentRoutes);
 // app.use('/api/board', boardRoutes);
 
-app.listen(8080, () => console.log("Server running on port 8080"));
+// File: ./backend/index.js
+app.listen(port, "0.0.0.0", () => console.log(`Server running on port ${port}`));

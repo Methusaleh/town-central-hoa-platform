@@ -13,5 +13,12 @@ RUN npm install --only=production
 # Copy local code to the container image.
 COPY . .
 
+# Set the PORT environment variable to 8080.
+# Cloud Run expects the container to listen on the port defined by this variable.
+ENV PORT 8080
+
+# Expose port 8080.
+EXPOSE 8080
+
 # Run the web service on container startup.
 CMD [ "node", "index.js" ]
