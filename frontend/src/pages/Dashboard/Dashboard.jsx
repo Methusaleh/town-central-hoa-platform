@@ -98,6 +98,20 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
             Trusted Companies
           </button>
 
+          <button
+            className={`${styles.navItem} ${activeTab === 'documents' ? styles.activeNav : ''}`}
+            onClick={() => setActiveTab('documents')}
+          >
+            Community Documents
+          </button>
+
+          // 2. Add the view router below your main tags
+          {activeTab === 'documents' && (
+            <div className={styles.fadeContent}>
+              <DocumentCenter user={user} />
+            </div>
+          )}
+
           {/* UPGRADED: Toggles our beautiful modal instead of firing an external app thread */}
           <button
             onClick={() => setShowContactModal(true)}
