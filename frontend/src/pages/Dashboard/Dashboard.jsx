@@ -5,6 +5,7 @@ import NeighborhoodCalendar from "../../components/NeighborhoodCalendar/Neighbor
 import RequestForm from "../../components/RequestForm/RequestForm";
 import BoardPortal from "../../components/BoardPortal/BoardPortal";
 import VendorDirectory from "../../components/VendorDirectory/VendorDirectory";
+import DocumentCenter from "../../components/DocumentCenter/DocumentCenter";
 import styles from "./Dashboard.module.css";
 
 export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
