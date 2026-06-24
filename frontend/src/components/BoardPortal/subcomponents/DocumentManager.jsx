@@ -1,6 +1,6 @@
 // File: ./frontend/src/components/BoardPortal/subcomponents/DocumentManager.jsx
 import { useState } from "react";
-import styles from "../../BoardPortal.module.css";
+import styles from "../BoardPortal.module.css";
 
 export default function DocumentManager({ user }) {
   const [docForm, setDocForm] = useState({ 
