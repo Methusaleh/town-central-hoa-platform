@@ -2898,6 +2898,8 @@ FILE: ./frontend/src/pages/Contact/ContactPage.module.css
   min-height: 100vh;
   background-color: #f8f9fa;
   color: #2c3e50;
+  overflow-y: auto;
+  padding-bottom: 50px;
 }
 
 .nav {
@@ -3421,6 +3423,7 @@ import NeighborhoodCalendar from "../../components/NeighborhoodCalendar/Neighbor
 import RequestForm from "../../components/RequestForm/RequestForm";
 import BoardPortal from "../../components/BoardPortal/BoardPortal";
 import VendorDirectory from "../../components/VendorDirectory/VendorDirectory";
+import DocumentCenter from "../../components/DocumentCenter/DocumentCenter";
 import styles from "./Dashboard.module.css";
 
 export default function Dashboard({ user, onLogout, onNavigateToProfile }) {

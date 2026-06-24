@@ -59,17 +59,28 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
 
       {/* Sidebar Navigation */}
       <aside className={styles.sidebar}>
-        <div className={styles.brandContainer}>
-          <div className={styles.brand}>Town Central</div>
-          <span className={styles.brandSubtitle}>Resident Portal</span>
-        </div>
-        
         <nav className={styles.nav}>
-          <button onClick={onLogout} className={styles.navItem}>
-            ← Public Home
-          </button>
+          {/* NEW TOP PROFILE & LOGOUT AREA */}
+          <div className={styles.profileHeader} onClick={onNavigateToProfile}>
+            {user?.photo ? (
+              <img src={user.photo} alt="Avatar" className={styles.userAvatarMini} />
+            ) : (
+              <div className={styles.avatarPlaceholderMini}>
+                {user?.first_name ? user.first_name.charAt(0).toUpperCase() : "R"}
+              </div>
+            )}
+            <div className={styles.userInfoMini}>
+              <h4 style={{ margin: 0, fontSize: "0.9rem" }}>{user?.first_name || "Resident"}</h4>
+              <button onClick={onLogout} className={styles.logoutBtnSmall}>
+                Logout
+              </button>
+            </div>
+          </div>
 
-          <div className={styles.menuDivider}></div>
+          <div className={styles.brandContainer} style={{ marginTop: "20px" }}>
+            <div className={styles.brand}>Town Central</div>
+            <span className={styles.brandSubtitle}>Resident Portal</span>
+          </div>
 
           <button
             className={`${styles.navItem} ${activeTab === "feed" ? styles.activeNav : ""}`}
@@ -106,7 +117,6 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
             Community Documents
           </button>
 
-          {/* UPGRADED: Toggles our beautiful modal instead of firing an external app thread */}
           <button
             onClick={() => setShowContactModal(true)}
             className={styles.navItem}
@@ -124,26 +134,6 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
             </button>
           )}
         </nav>
-
-        {/* Profile Card Footer */}
-        <div className={styles.profileTrigger} onClick={onNavigateToProfile}>
-          {user?.photo ? (
-            <img 
-              src={user.photo} 
-              alt="User Avatar" 
-              className={styles.userAvatarMini}
-            />
-          ) : (
-            <div className={styles.avatarPlaceholderMini}>
-              {user?.first_name ? user.first_name.charAt(0).toUpperCase() : "R"}
-            </div>
-          )}
-          
-          <div className={styles.userInfoMini}>
-            <h4>{user?.first_name || "Resident"}</h4>
-            <span>⚙️ Account Settings</span>
-          </div>
-        </div>
       </aside>
 
       {/* Main Content Area */}
