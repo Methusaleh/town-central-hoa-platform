@@ -447,11 +447,57 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 30px;
   padding: 10px;
   background: white;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  position: relative;
+}
+
+.settingsTrigger {
+  margin-left: auto;
+  cursor: pointer;
+  color: #94a3b8;
+  font-size: 1.2rem;
+  transition: color 0.2s, transform 0.2s;
+}
+
+.settingsTrigger:hover {
+  color: #2ecc71;
+  transform: rotate(45deg);
+}
+
+.settingsDropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+  width: 120px;
+}
+
+.dropdownBtn {
+  padding: 10px 14px;
+  border: none;
+  background: none;
+  text-align: left;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.dropdownBtn:hover {
+  background: #f8fafc;
+}
+
+.logoutText {
+  color: #ef4444;
+  font-weight: 600;
 }
 
 .logoutBtnSmall {

@@ -17,6 +17,8 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
   const [contactForm, setContactForm] = useState({ subject: "", message: "" });
   const [sending, setSending] = useState(false);
 
+  const [showSettings, setShowSettings] = useState(false);
+
   const handleContactSubmit = async (e) => {
     e.preventDefault();
     setSending(true);
@@ -61,20 +63,31 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
       <aside className={styles.sidebar}>
         <nav className={styles.nav}>
           {/* NEW TOP PROFILE & LOGOUT AREA */}
-          <div className={styles.profileHeader} onClick={onNavigateToProfile}>
+          <div className={styles.profileHeader}>
             {user?.photo ? (
               <img src={user.photo} alt="Avatar" className={styles.userAvatarMini} />
             ) : (
               <div className={styles.avatarPlaceholderMini}>
-                {user?.first_name ? user.first_name.charAt(0).toUpperCase() : "R"}
+                {user?.first_name?.charAt(0).toUpperCase()}
               </div>
             )}
+            
             <div className={styles.userInfoMini}>
-              <h4 style={{ margin: 0, fontSize: "0.9rem" }}>{user?.first_name || "Resident"}</h4>
-              <button onClick={onLogout} className={styles.logoutBtnSmall}>
-                Logout
-              </button>
+              <h4 style={{ margin: 0, fontSize: "0.9rem" }}>{user?.first_name}</h4>
             </div>
+
+            {/* Cogwheel Trigger */}
+            <div className={styles.settingsTrigger} onClick={() => setShowSettings(!showSettings)}>
+              ⚙️
+            </div>
+
+            {/* Dropdown Menu */}
+            {showSettings && (
+              <div className={styles.settingsDropdown}>
+                <button className={styles.dropdownBtn} onClick={onNavigateToProfile}>Settings</button>
+                <button className={`${styles.dropdownBtn} ${styles.logoutText}`} onClick={onLogout}>Logout</button>
+              </div>
+            )}
           </div>
 
           <div className={styles.brandContainer} style={{ marginTop: "20px" }}>
