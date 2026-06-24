@@ -68,7 +68,7 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
               <img src={user.photo} alt="Avatar" className={styles.userAvatarMini} />
             ) : (
               <div className={styles.avatarPlaceholderMini}>
-                {user?.first_name?.charAt(0).toUpperCase()}
+                {user?.first_name ? user.first_name.charAt(0).toUpperCase() : "R"}
               </div>
             )}
             
@@ -155,7 +155,11 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
         {activeTab === "feed" && (
           <div className={styles.fadeContent}>
             <header className={styles.header}>
-              <h2>Welcome Back, {user?.first_name || "Resident"}</h2>
+              {/* Updated Catchy Title */}
+              <h2>Town Central Community Hub</h2>
+              <p style={{ color: "#64748b", marginTop: "-20px" }}>
+                Stay informed, stay connected.
+              </p>
             </header>
             <section style={{ marginBottom: "30px" }}>
               <NeighborhoodCalendar />
