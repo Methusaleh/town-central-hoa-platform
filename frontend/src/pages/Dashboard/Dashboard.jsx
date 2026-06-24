@@ -105,13 +105,6 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
             Community Documents
           </button>
 
-          // 2. Add the view router below your main tags
-          {activeTab === 'documents' && (
-            <div className={styles.fadeContent}>
-              <DocumentCenter user={user} />
-            </div>
-          )}
-
           {/* UPGRADED: Toggles our beautiful modal instead of firing an external app thread */}
           <button
             onClick={() => setShowContactModal(true)}
@@ -204,6 +197,17 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
         {activeTab === "vendors" && (
           <div className={styles.fadeContent}>
             <VendorDirectory />
+          </div>
+        )}
+
+        {/* VIEW 6: COMMUNITY DOCUMENTS */}
+        {activeTab === "documents" && (
+          <div className={styles.fadeContent}>
+            <header className={styles.header}>
+              <h2>Community Document Repository</h2>
+              <p>Access official files and governance covenants.</p>
+            </header>
+            <DocumentCenter user={user} />
           </div>
         )}
       </main>
