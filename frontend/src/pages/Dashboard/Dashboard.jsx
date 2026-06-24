@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import AnnouncementFeed from "../../components/AnnouncementFeed/AnnouncementFeed";
 import DuesCard from "../../components/DuesCard/DuesCard";
 import NeighborhoodCalendar from "../../components/NeighborhoodCalendar/NeighborhoodCalendar";
@@ -18,6 +18,19 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
   const [sending, setSending] = useState(false);
 
   const [showSettings, setShowSettings] = useState(false);
+
+  const settingsRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (settingsRef.current && !settingsRef.current.contains(event.target)) {
+        setShowSettings(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleContactSubmit = async (e) => {
     e.preventDefault();
@@ -63,7 +76,7 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
       <aside className={styles.sidebar}>
         <nav className={styles.nav}>
           {/* NEW TOP PROFILE & LOGOUT AREA */}
-          <div className={styles.profileHeader}>
+          <div className={styles.profileHeader} ref={settingsRef}>
             {user?.photo ? (
               <img src={user.photo} alt="Avatar" className={styles.userAvatarMini} />
             ) : (
