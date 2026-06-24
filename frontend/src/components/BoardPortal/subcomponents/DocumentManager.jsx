@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import styles from "../../BoardPortal.module.css";
+import styles from "../BoardPortal.module.css";
 
 export default function DocumentManager({ user }) {
   const [categories, setCategories] = useState([]);
