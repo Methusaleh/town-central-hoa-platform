@@ -6,6 +6,7 @@ import OperationsDashboard from "./subcomponents/OperationsDashboard";
 import RosterDirectory from "./subcomponents/RosterDirectory";
 import FinancialLedger from "./subcomponents/FinancialLedger";
 import VendorControls from "./subcomponents/VendorControls";
+import DocumentManager from "./subcomponents/DocumentManager";
 
 export default function BoardPortal({ user }) {
   const [activeSection, setActiveSection] = useState("requests");
@@ -207,6 +208,9 @@ export default function BoardPortal({ user }) {
         <button onClick={() => setActiveSection("roster")} style={{ background: "none", border: "none", fontSize: "1.1rem", fontWeight: "700", color: activeSection === "roster" ? "#2ecc71" : "#94a3b8", cursor: "pointer", paddingBottom: "5px", borderBottom: activeSection === "roster" ? "3px solid #2ecc71" : "3px solid transparent" }}>👥 Master Roster</button>
         <button onClick={() => setActiveSection("financials")} style={{ background: "none", border: "none", fontSize: "1.1rem", fontWeight: "700", color: activeSection === "financials" ? "#2ecc71" : "#94a3b8", cursor: "pointer", paddingBottom: "5px", borderBottom: activeSection === "financials" ? "3px solid #2ecc71" : "3px solid transparent" }}>💰 Assessment Ledger</button>
         <button onClick={() => setActiveSection("vendors")} style={{ background: "none", border: "none", fontSize: "1.1rem", fontWeight: "700", color: activeSection === "vendors" ? "#2ecc71" : "#94a3b8", cursor: "pointer", paddingBottom: "5px", borderBottom: activeSection === "vendors" ? "3px solid #2ecc71" : "3px solid transparent" }}>🏢 Verified Vendors</button>
+        <button onClick={() => setActiveSection("documents")} style={{ background: "none", border: "none", fontSize: "1.1rem", fontWeight: "700", color: activeSection === "documents" ? "#2ecc71" : "#94a3b8", cursor: "pointer", paddingBottom: "5px", borderBottom: activeSection === "documents" ? "3px solid #2ecc71" : "3px solid transparent" }}>
+          📄 Document Manager
+        </button>
       </div>
 
       {/* RENDER ACTIVE ISOLATED VIEW LAYER */}
@@ -242,6 +246,8 @@ export default function BoardPortal({ user }) {
           handleDeleteVendor={handleDeleteVendor}
         />
       )}
+
+      {activeSection === "documents" && <DocumentManager user={user} />}
     </div>
   );
 }
