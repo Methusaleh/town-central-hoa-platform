@@ -40,15 +40,18 @@ export default function DocumentManager({ user }) {
 
       if (response.ok) {
         const newCat = await response.json();
-        // Add to our list and automatically select it for the user
         setCategories([...categories, newCat]);
         setDocForm({ ...docForm, category_id: newCat.id });
         setNewCategoryName("");
         setShowNewCategory(false);
+      } else {
+        // THIS IS THE NEW PART: Catch backend errors!
+        const errorData = await response.json();
+        alert(`Failed to save category: ${errorData.error || "Unknown server error"}`);
       }
     } catch (err) {
       console.error("Error creating category:", err);
-      alert("Failed to create category.");
+      alert("Failed to reach the server.");
     } finally {
       setCreating(false);
     }

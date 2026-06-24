@@ -2,10 +2,31 @@ const express = require("express");
 const router = express.Router();
 const db = require("../db");
 
-// GET: All documents (Filter by board access if needed)
+// 1. GET: Fetch all categories
+router.get("/categories", async (req, res) => {
+  try {
+    const { rows } = await db.query("SELECT * FROM document_categories ORDER BY name ASC");
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 2. POST: Add a new category
+router.post("/categories", async (req, res) => {
+  const { name } = req.body;
+  try {
+    const query = "INSERT INTO document_categories (name) VALUES ($1) RETURNING *";
+    const { rows } = await db.query(query, [name]);
+    res.status(201).json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 3. GET: All documents
 router.get("/", async (req, res) => {
   try {
-    // Basic SELECT: You can add logic here to filter where requires_board_key is false for residents
     const { rows } = await db.query("SELECT * FROM documents ORDER BY created_at DESC");
     res.json(rows);
   } catch (err) {
@@ -13,16 +34,16 @@ router.get("/", async (req, res) => {
   }
 });
 
-// POST: Add a new document (Board Only)
+// 4. POST: Add a new document
 router.post("/", async (req, res) => {
-  const { title, file_url, is_private, requires_board_key, uploaded_by } = req.body;
+  const { title, file_url, category_id, is_private, requires_board_key, uploaded_by } = req.body;
   try {
     const query = `
-      INSERT INTO documents (title, file_url, is_private, requires_board_key, uploaded_by)
-      VALUES ($1, $2, $3, $4, $5)
+      INSERT INTO documents (title, file_url, category_id, is_private, requires_board_key, uploaded_by)
+      VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING *;
     `;
-    const { rows } = await db.query(query, [title, file_url, is_private, requires_board_key, uploaded_by]);
+    const { rows } = await db.query(query, [title, file_url, category_id, is_private, requires_board_key, uploaded_by]);
     res.status(201).json(rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
