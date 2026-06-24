@@ -848,6 +848,7 @@ import OperationsDashboard from "./subcomponents/OperationsDashboard";
 import RosterDirectory from "./subcomponents/RosterDirectory";
 import FinancialLedger from "./subcomponents/FinancialLedger";
 import VendorControls from "./subcomponents/VendorControls";
+import DocumentManager from "./subcomponents/DocumentManager";
 
 export default function BoardPortal({ user }) {
   const [activeSection, setActiveSection] = useState("requests");
@@ -1049,6 +1050,9 @@ export default function BoardPortal({ user }) {
         <button onClick={() => setActiveSection("roster")} style={{ background: "none", border: "none", fontSize: "1.1rem", fontWeight: "700", color: activeSection === "roster" ? "#2ecc71" : "#94a3b8", cursor: "pointer", paddingBottom: "5px", borderBottom: activeSection === "roster" ? "3px solid #2ecc71" : "3px solid transparent" }}>👥 Master Roster</button>
         <button onClick={() => setActiveSection("financials")} style={{ background: "none", border: "none", fontSize: "1.1rem", fontWeight: "700", color: activeSection === "financials" ? "#2ecc71" : "#94a3b8", cursor: "pointer", paddingBottom: "5px", borderBottom: activeSection === "financials" ? "3px solid #2ecc71" : "3px solid transparent" }}>💰 Assessment Ledger</button>
         <button onClick={() => setActiveSection("vendors")} style={{ background: "none", border: "none", fontSize: "1.1rem", fontWeight: "700", color: activeSection === "vendors" ? "#2ecc71" : "#94a3b8", cursor: "pointer", paddingBottom: "5px", borderBottom: activeSection === "vendors" ? "3px solid #2ecc71" : "3px solid transparent" }}>🏢 Verified Vendors</button>
+        <button onClick={() => setActiveSection("documents")} style={{ background: "none", border: "none", fontSize: "1.1rem", fontWeight: "700", color: activeSection === "documents" ? "#2ecc71" : "#94a3b8", cursor: "pointer", paddingBottom: "5px", borderBottom: activeSection === "documents" ? "3px solid #2ecc71" : "3px solid transparent" }}>
+          📄 Document Manager
+        </button>
       </div>
 
       {/* RENDER ACTIVE ISOLATED VIEW LAYER */}
@@ -1084,6 +1088,73 @@ export default function BoardPortal({ user }) {
           handleDeleteVendor={handleDeleteVendor}
         />
       )}
+
+      {activeSection === "documents" && <DocumentManager user={user} />}
+    </div>
+  );
+}
+==================================================
+FILE: ./frontend/src/components/BoardPortal/subcomponents/DocumentManager.jsx
+==================================================
+// File: ./frontend/src/components/BoardPortal/subcomponents/DocumentManager.jsx
+import { useState } from "react";
+import styles from "../../BoardPortal.module.css";
+
+export default function DocumentManager({ user }) {
+  const [docForm, setDocForm] = useState({ 
+    title: "", 
+    file_url: "", 
+    is_private: false, 
+    requires_board_key: false 
+  });
+  const API_BASE = "https://town-central-hoa-platform-469564564131.us-central1.run.app";
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await fetch(`${API_BASE}/api/documents`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...docForm, uploaded_by: user?.id || null }),
+      });
+
+      if (response.ok) {
+        alert("Document added to repository!");
+        setDocForm({ title: "", file_url: "", is_private: false, requires_board_key: false });
+      }
+    } catch (err) {
+      console.error("Upload error:", err);
+    }
+  };
+
+  return (
+    <div className={styles.formCard} style={{ marginTop: "10px" }}>
+      <h3>Upload Community Document</h3>
+      <form onSubmit={handleSubmit} className={styles.announcementForm}>
+        <input 
+          type="text" placeholder="Document Title" 
+          value={docForm.title} 
+          onChange={(e) => setDocForm({...docForm, title: e.target.value})} required 
+        />
+        <input 
+          type="url" placeholder="File URL (e.g., Google Drive link)" 
+          value={docForm.file_url} 
+          onChange={(e) => setDocForm({...docForm, file_url: e.target.value})} required 
+        />
+        
+        <div style={{ display: "flex", gap: "20px", margin: "10px 0" }}>
+          <label style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <input type="checkbox" checked={docForm.is_private} onChange={(e) => setDocForm({...docForm, is_private: e.target.checked})} />
+            Private Record
+          </label>
+          <label style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <input type="checkbox" checked={docForm.requires_board_key} onChange={(e) => setDocForm({...docForm, requires_board_key: e.target.checked})} />
+            Board Access Only
+          </label>
+        </div>
+        
+        <button type="submit" className={styles.submitBtn}>Upload Document</button>
+      </form>
     </div>
   );
 }
@@ -1782,96 +1853,60 @@ FILE: ./frontend/src/components/DocumentCenter/DocumentCenter.module.css
 ==================================================
 FILE: ./frontend/src/components/DocumentCenter/DocumentCenter.jsx
 ==================================================
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import styles from "./DocumentCenter.module.css";
 
 export default function DocumentCenter({ user }) {
-  // Mock asset payload matching your cloud architecture links
-  const documentCategories = [
-    {
-      id: "welcome",
-      title: "🏡 Onboarding & Welcome",
-      accessLevel: "all",
-      description: "Essential materials for new homeowners getting settled in Town Central.",
-      files: [
-        { name: "Official Digital Welcome Packet (2026).pdf", size: "2.4 MB", url: "https://town-central-hoa-platform.vercel.app/public-docs/Welcome_Packet_2026.pdf" },
-        { name: "Community Amenity Keycard Guide.pdf", size: "840 KB", url: "#" },
-        { name: "Piedmont Waste & Recycling Schedule.pdf", size: "1.1 MB", url: "#" }
-      ]
-    },
-    {
-      id: "governing",
-      title: "📜 Governing Documents",
-      accessLevel: "all",
-      description: "The legal declarations, bylaws, and protective covenants of the community.",
-      files: [
-        { name: "HOA Declaration of Covenants, Conditions & Restrictions (CC&Rs).pdf", size: "5.8 MB", url: "#" },
-        { name: "Community Bylaws & Voting Regulations.pdf", size: "1.9 MB", url: "#" },
-        { name: "Approved Architectural Design Guidelines.pdf", size: "3.2 MB", url: "#" }
-      ]
-    },
-    {
-      id: "forms",
-      title: "📝 Application Sheets & Forms",
-      accessLevel: "all",
-      description: "Blank template forms to print or download for board submittals.",
-      files: [
-        { name: "ARC Property Modification Application Form.pdf", size: "450 KB", url: "#" },
-        { name: "Clubhouse Private Reservation Contract.pdf", size: "620 KB", url: "#" }
-      ]
-    },
-    {
-      id: "financials",
-      title: "📊 Financials & Budgets",
-      accessLevel: "board_only", // Gated
-      files: [
-        { name: "Annual Approved Budget 2026.pdf", size: "1.2 MB", url: "#" },
-        { name: "Q1 Financial Ledger Summary.pdf", size: "900 KB", url: "#" }
-      ]
-    }
-  ];
+  const [documents, setDocuments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+
+  useEffect(() => {
+    fetch(`${API_URL}/api/documents`)
+      .then((res) => res.json())
+      .then((data) => {
+        setDocuments(data);
+        setLoading(false);
+      })
+      .catch((err) => console.error("Error fetching documents:", err));
+  }, [API_URL]);
 
   const handleDownload = (file) => {
-    if (file.url === "#") {
-      alert(`"${file.name}" is a placeholder link for the demo. The Welcome Packet is fully active!`);
-      return;
-    }
-    window.open(file.url, "_blank");
+    window.open(file.file_url, "_blank");
   };
+
+  if (loading) return <p>Loading documents...</p>;
 
   return (
     <div className={styles.container}>
       <header className={styles.header}>
         <h2>Community Document Repository</h2>
-        <p>Access official neighborhood files, legal governance covenants, and application forms directly from cloud storage.</p>
+        <p>Access official neighborhood files and governance covenants.</p>
       </header>
 
       <div className={styles.grid}>
-        {documentCategories
-          // Filter out board-only docs if the user is not authorized
-          .filter((cat) => 
-            cat.accessLevel === "all" || 
+        {/* Logic: If it requires board key, only show if user is board/admin */}
+        {documents
+          .filter((doc) => 
+            !doc.requires_board_key || 
             (user?.role === "board_member" || user?.role === "super_admin")
           )
-          .map((category) => (
-            <div key={category.id} className={styles.categoryCard}>
+          .map((doc) => (
+            <div key={doc.id} className={styles.categoryCard}>
               <div className={styles.categoryHeader}>
-                <h3>{category.title}</h3>
-                <p>{category.description}</p>
+                <h3>{doc.title}</h3>
               </div>
               
               <ul className={styles.fileList}>
-                {category.files.map((file, idx) => (
-                  <li key={idx} className={styles.fileRow} onClick={() => handleDownload(file)}>
-                    <div className={styles.fileInfo}>
-                      <span className={styles.fileName}>{file.name}</span>
-                      <span className={styles.fileSize}>{file.size}</span>
-                    </div>
-                    <button className={styles.downloadBtn}>
-                      📥 <span className={styles.btnText}>Download</span>
-                    </button>
-                  </li>
-                ))}
+                <li className={styles.fileRow} onClick={() => handleDownload(doc)}>
+                  <div className={styles.fileInfo}>
+                    <span className={styles.fileName}>{doc.title}</span>
+                    <span className={styles.fileSize}>Added: {new Date(doc.created_at).toLocaleDateString()}</span>
+                  </div>
+                  <button className={styles.downloadBtn}>
+                    📥 <span className={styles.btnText}>Download</span>
+                  </button>
+                </li>
               </ul>
             </div>
           ))}
