@@ -198,8 +198,43 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
       {showContactModal && (
         <div className={styles.modalBackdrop} onClick={() => setShowContactModal(false)}>
           <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
-            <h3>Message the Executive Board</h3>
-            <p>Have a question regarding community events, rules, or amenities? Send an encrypted dispatch directly to board management.</p>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <div>
+                <h3>Message the Executive Board</h3>
+                <p>Have a question regarding community events, rules, or amenities? Send a message directly to board management through the portal, or use the direct mail handle below.</p>
+              </div>
+            </div>
+
+            {/* NEW: DIRECT NATIVE EMAIL FALLBACK LINK */}
+            <div style={{
+              background: "#f0fdf4",
+              border: "1px solid #bbf7d0",
+              padding: "12px 16px",
+              borderRadius: "12px",
+              marginBottom: "20px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between"
+            }}>
+              <div style={{ fontSize: "0.85rem", color: "#166534", fontWeight: "600" }}>
+                📧 Prefer to use your personal email app?
+              </div>
+              <a 
+                href={`mailto:board@towncentralhoa.com?subject=HOA Inquiry - Lot Map Registration`}
+                style={{
+                  fontSize: "0.8rem",
+                  color: "white",
+                  backgroundColor: "#16a34a",
+                  padding: "6px 12px",
+                  borderRadius: "8px",
+                  textDecoration: "none",
+                  fontWeight: "700",
+                  boxShadow: "0 2px 4px rgba(22, 163, 74, 0.15)"
+                }}
+              >
+                Open Email App
+              </a>
+            </div>
             
             <form onSubmit={handleContactSubmit} className={styles.modalForm}>
               <div className={styles.modalInputGroup}>
@@ -228,7 +263,7 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
                   Cancel
                 </button>
                 <button type="submit" className={styles.modalSubmitBtn} disabled={sending}>
-                  {sending ? "Transmitting..." : "Send Message"}
+                  {sending ? "Transmitting..." : "Send Inside Portal"}
                 </button>
               </div>
             </form>
