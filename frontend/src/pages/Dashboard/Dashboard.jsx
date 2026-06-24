@@ -10,6 +10,45 @@ import styles from "./Dashboard.module.css";
 export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
   // Tabs: 'feed', 'maintenance', 'dues', 'board', 'vendors'
   const [activeTab, setActiveTab] = useState("feed");
+  
+  // New States for Contact Modal
+  const [showContactModal, setShowContactModal] = useState(false);
+  const [contactForm, setContactForm] = useState({ subject: "", message: "" });
+  const [sending, setSending] = useState(false);
+
+  const handleContactSubmit = async (e) => {
+    e.preventDefault();
+    setSending(true);
+
+    try {
+      // Future infrastructure point: Hook this payload up to your /api/notifications or a mail server
+      const response = await fetch("https://town-central-hoa-platform-469564564131.us-central1.run.app/api/requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          resident_id: user?.id || null,
+          first_name: user?.first_name || "Resident",
+          last_name: "ContactForm",
+          type: "Board Message",
+          subject: contactForm.subject,
+          description: contactForm.message
+        })
+      });
+
+      if (response.ok) {
+        alert("Your message has been securely delivered to the Executive Board!");
+        setContactForm({ subject: "", message: "" });
+        setShowContactModal(false);
+      } else {
+        alert("Failed to forward message container. Please try again.");
+      }
+    } catch (err) {
+      console.error("Contact submission fault:", err);
+      alert("Network error routing message to board.");
+    } finally {
+      setSending(false);
+    }
+  };
 
   return (
     <div className={styles.layout}>
@@ -59,8 +98,9 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
             Trusted Companies
           </button>
 
+          {/* UPGRADED: Toggles our beautiful modal instead of firing an external app thread */}
           <button
-            onClick={() => (window.location.href = "mailto:board@towncentral.com")}
+            onClick={() => setShowContactModal(true)}
             className={styles.navItem}
           >
             Contact the Board
@@ -77,9 +117,8 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
           )}
         </nav>
 
-        {/* Repositioned & Cleaned Profile Card Footer */}
+        {/* Profile Card Footer */}
         <div className={styles.profileTrigger} onClick={onNavigateToProfile}>
-          {/* If user has a photo, show it. Otherwise, show the text-avatar placeholder */}
           {user?.photo ? (
             <img 
               src={user.photo} 
@@ -154,6 +193,48 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
           </div>
         )}
       </main>
+
+      {/* --- INLINE CONTACT BOARD OVERLAY MODAL LAYER --- */}
+      {showContactModal && (
+        <div className={styles.modalBackdrop} onClick={() => setShowContactModal(false)}>
+          <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+            <h3>Message the Executive Board</h3>
+            <p>Have a question regarding community events, rules, or amenities? Send an encrypted dispatch directly to board management.</p>
+            
+            <form onSubmit={handleContactSubmit} className={styles.modalForm}>
+              <div className={styles.modalInputGroup}>
+                <label>Message Subject *</label>
+                <input 
+                  type="text" 
+                  placeholder="e.g., Amenity Keycard Request, General Inquiry" 
+                  value={contactForm.subject}
+                  onChange={(e) => setContactForm({ ...contactForm, subject: e.target.value })}
+                  required 
+                />
+              </div>
+              
+              <div className={styles.modalInputGroup}>
+                <label>Correspondence Body *</label>
+                <textarea 
+                  placeholder="Type your details here for board review..." 
+                  value={contactForm.message}
+                  onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
+                  required 
+                />
+              </div>
+
+              <div className={styles.modalButtonGroup}>
+                <button type="button" className={styles.modalCancelBtn} onClick={() => setShowContactModal(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className={styles.modalSubmitBtn} disabled={sending}>
+                  {sending ? "Transmitting..." : "Send Message"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
