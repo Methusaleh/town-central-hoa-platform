@@ -2,7 +2,6 @@ const express = require("express");
 const router = express.Router();
 const multer = require("multer");
 const db = require("../db");
-const { uploadToR2 } = require("../utils/s3Storage");
 const { S3Client, PutObjectCommand, DeleteObjectCommand } = require("@aws-sdk/client-s3");
 const { s3, uploadToR2 } = require("../utils/s3Storage");
 
