@@ -100,37 +100,43 @@ export default function DocumentManager({ user }) {
     setUploading(true);
 
     try {
-      // 2. Initialize FormData package
       const formData = new FormData();
-      
-      // Append text fields
       formData.append("title", docForm.title);
       formData.append("category_id", docForm.category_id);
       formData.append("is_private", docForm.is_private);
       formData.append("requires_board_key", docForm.requires_board_key);
       if (user?.id) formData.append("uploaded_by", user.id);
-      
-      // Append physical file (must match "file" expected by multer)
       formData.append("file", selectedFile);
 
-      // 3. Send without setting Content-Type!
       const response = await fetch(`${API_BASE}/api/documents`, {
         method: "POST",
         body: formData,
       });
 
-      if (response.ok) {
-        alert("Document securely uploaded and published!");
-        setDocForm({ title: "", category_id: "", is_private: false, requires_board_key: false });
-        setSelectedFile(null);
-        document.getElementById("file-upload").value = ""; // Reset input visually
-      } else {
-        const errorData = await response.json();
-        alert(`Upload failed: ${errorData.error}`);
+      if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Upload failed");
       }
+
+      // Success Block
+      alert("Document securely uploaded and published!");
+      
+      // Clear state
+      setDocForm({ title: "", category_id: "", is_private: false, requires_board_key: false });
+      setSelectedFile(null);
+      
+      // Reset file input safely
+      const fileInput = document.getElementById("file-upload");
+      if (fileInput) fileInput.value = "";
+      
+      // Refresh the document list so the new file shows up immediately
+      const refreshResponse = await fetch(`${API_BASE}/api/documents`);
+      const data = await refreshResponse.json();
+      setDocuments(data);
+
     } catch (err) {
       console.error("Upload error:", err);
-      alert("A network error occurred during upload.");
+      alert(err.message || "A network error occurred during upload.");
     } finally {
       setUploading(false);
     }
