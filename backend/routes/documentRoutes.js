@@ -3,6 +3,7 @@ const router = express.Router();
 const multer = require("multer");
 const db = require("../db");
 const { uploadToR2 } = require("../utils/s3Storage");
+const { S3Client, PutObjectCommand, DeleteObjectCommand } = require("@aws-sdk/client-s3");
 
 // Tell multer to hold the incoming file in memory temporarily (max 5MB)
 const storage = multer.memoryStorage();
@@ -73,6 +74,31 @@ router.post("/", upload.single("file"), async (req, res) => {
     res.status(201).json(rows[0]);
   } catch (err) {
     console.error("Upload error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete("/:id", async (req, res) => {
+  try {
+    // 1. Get the file URL first so we can extract the filename to delete from R2
+    const { rows } = await db.query("SELECT file_url FROM documents WHERE id = $1", [req.params.id]);
+    if (rows.length === 0) return res.status(404).json({ error: "Document not found" });
+
+    const fileUrl = rows[0].file_url;
+    const fileName = fileUrl.split("/").pop(); // Extract filename from URL
+
+    // 2. Delete from Cloudflare R2
+    await s3.send(new DeleteObjectCommand({
+      Bucket: process.env.CLOUDFLARE_R2_BUCKET_NAME,
+      Key: fileName,
+    }));
+
+    // 3. Delete from Postgres
+    await db.query("DELETE FROM documents WHERE id = $1", [req.params.id]);
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Delete error:", err);
     res.status(500).json({ error: err.message });
   }
 });
