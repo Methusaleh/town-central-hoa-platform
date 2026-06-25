@@ -179,14 +179,18 @@ export default function DocumentManager({ user }) {
         />
 
         {/* Restore the Board-Only Toggle */}
-        <label style={{ display: "flex", alignItems: "center", gap: "10px", margin: "10px 0" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", margin: "15px 0" }}>
           <input 
             type="checkbox" 
+            id="boardKey"
             checked={docForm.requires_board_key} 
             onChange={(e) => setDocForm({...docForm, requires_board_key: e.target.checked})} 
+            style={{ cursor: "pointer", width: "18px", height: "18px" }}
           />
-          Board Access Only (Hide from residents)
-        </label>
+          <label htmlFor="boardKey" style={{ cursor: "pointer", fontSize: "0.9rem", color: "#334155", fontWeight: "600" }}>
+            Board Access Only (Hide from residents)
+          </label>
+        </div>
 
         <button type="submit" className={styles.submitBtn} disabled={uploading}>
           {uploading ? "Uploading..." : "Upload & Publish"}
