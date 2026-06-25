@@ -171,12 +171,33 @@ export default function DocumentManager({ user }) {
           required 
         />
 
-        <input 
-          id="file-upload" 
-          type="file" 
-          onChange={(e) => setSelectedFile(e.target.files[0])} 
-          required 
-        />
+        <div 
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => {
+            e.preventDefault();
+            if (e.dataTransfer.files.length > 0) setSelectedFile(e.dataTransfer.files[0]);
+          }}
+          style={{ 
+            border: "2px dashed #cbd5e1", 
+            borderRadius: "12px", 
+            padding: "30px", 
+            textAlign: "center", 
+            background: selectedFile ? "#f0fdf4" : "#f8fafc",
+            cursor: "pointer",
+            transition: "0.2s"
+          }}
+          onClick={() => document.getElementById("hidden-file-input").click()}
+        >
+          <p style={{ margin: 0, fontWeight: "600", color: "#475569" }}>
+            {selectedFile ? `Selected: ${selectedFile.name}` : "Drag & Drop file here, or click to browse"}
+          </p>
+          <input 
+            id="hidden-file-input"
+            type="file" 
+            hidden 
+            onChange={(e) => setSelectedFile(e.target.files[0])} 
+          />
+        </div>
 
         {/* Restore the Board-Only Toggle */}
         <div style={{ display: "flex", alignItems: "center", gap: "10px", margin: "15px 0" }}>
