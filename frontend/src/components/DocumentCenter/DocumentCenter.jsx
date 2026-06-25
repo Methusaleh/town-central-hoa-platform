@@ -76,14 +76,21 @@ export default function DocumentCenter({ user }) {
                 <div className={styles.accordionContent}>
                   <ul className={styles.fileList}>
                     {categoryDocs.map(doc => (
-                      <li key={doc.id} className={styles.fileRow} onClick={() => handleDownload(doc)}>
+                      <li key={doc.id} className={styles.fileRow}>
                         <div className={styles.fileInfo}>
                           <span className={styles.fileName}>📄 {doc.title}</span>
                           <span className={styles.fileSize}>Added: {new Date(doc.created_at).toLocaleDateString()}</span>
                         </div>
-                        <button className={styles.downloadBtn}>
-                          📥 <span className={styles.btnText}>Download</span>
-                        </button>
+                        {/* Updated to 'View' button */}
+                        <a 
+                          href={doc.file_url} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className={styles.downloadBtn}
+                          style={{ textDecoration: 'none' }} // Ensure it looks like a button
+                        >
+                          👁️ <span className={styles.btnText}>View</span>
+                        </a>
                       </li>
                     ))}
                   </ul>

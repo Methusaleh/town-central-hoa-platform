@@ -161,11 +161,36 @@ export default function DocumentManager({ user }) {
         )}
       </div>
 
-      {/* --- UPLOAD FORM --- */}
-      <form onSubmit={handleSubmit} className={styles.announcementForm} style={{ marginTop: 0 }}>
-        <input type="text" placeholder="Document Title" value={docForm.title} onChange={(e) => setDocForm({...docForm, title: e.target.value})} required />
-        <input id="file-upload" type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg" onChange={(e) => setSelectedFile(e.target.files[0])} required style={{ padding: "10px", border: "1px dashed #cbd5e1", borderRadius: "8px" }} />
-        <button type="submit" className={styles.submitBtn} disabled={uploading}>{uploading ? "Uploading..." : "Upload & Publish"}</button>
+      {/* --- UPLOAD FORM WITH BOARD TOGGLE --- */}
+      <form onSubmit={handleSubmit} className={styles.announcementForm}>
+        <input 
+          type="text" 
+          placeholder="Document Title" 
+          value={docForm.title} 
+          onChange={(e) => setDocForm({...docForm, title: e.target.value})} 
+          required 
+        />
+
+        <input 
+          id="file-upload" 
+          type="file" 
+          onChange={(e) => setSelectedFile(e.target.files[0])} 
+          required 
+        />
+
+        {/* Restore the Board-Only Toggle */}
+        <label style={{ display: "flex", alignItems: "center", gap: "10px", margin: "10px 0" }}>
+          <input 
+            type="checkbox" 
+            checked={docForm.requires_board_key} 
+            onChange={(e) => setDocForm({...docForm, requires_board_key: e.target.checked})} 
+          />
+          Board Access Only (Hide from residents)
+        </label>
+
+        <button type="submit" className={styles.submitBtn} disabled={uploading}>
+          {uploading ? "Uploading..." : "Upload & Publish"}
+        </button>
       </form>
       
       <hr style={{ margin: "30px 0" }} />
