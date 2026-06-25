@@ -1045,7 +1045,7 @@ export default function BoardPortal({ user }) {
   return (
     <div className={styles.container}>
       {/* SECTION NAV BUTTONS */}
-      <div style={{ display: "flex", gap: "25px", borderBottom: "2px solid #e2e8f0", paddingBottom: "10px", overflowX: "auto" }}>
+      <div style={{ display: "flex", flexWrap: "wrap",gap: "25px", borderBottom: "2px solid #e2e8f0", paddingBottom: "10px", overflowX: "auto" }}>
         <button onClick={() => setActiveSection("requests")} style={{ background: "none", border: "none", fontSize: "1.1rem", fontWeight: "700", color: activeSection === "requests" ? "#2ecc71" : "#94a3b8", cursor: "pointer", paddingBottom: "5px", borderBottom: activeSection === "requests" ? "3px solid #2ecc71" : "3px solid transparent" }}>📋 Operations & Tickets</button>
         <button onClick={() => setActiveSection("roster")} style={{ background: "none", border: "none", fontSize: "1.1rem", fontWeight: "700", color: activeSection === "roster" ? "#2ecc71" : "#94a3b8", cursor: "pointer", paddingBottom: "5px", borderBottom: activeSection === "roster" ? "3px solid #2ecc71" : "3px solid transparent" }}>👥 Master Roster</button>
         <button onClick={() => setActiveSection("financials")} style={{ background: "none", border: "none", fontSize: "1.1rem", fontWeight: "700", color: activeSection === "financials" ? "#2ecc71" : "#94a3b8", cursor: "pointer", paddingBottom: "5px", borderBottom: activeSection === "financials" ? "3px solid #2ecc71" : "3px solid transparent" }}>💰 Assessment Ledger</button>
@@ -1096,21 +1096,73 @@ export default function BoardPortal({ user }) {
 ==================================================
 FILE: ./frontend/src/components/BoardPortal/subcomponents/DocumentManager.jsx
 ==================================================
-// File: ./frontend/src/components/BoardPortal/subcomponents/DocumentManager.jsx
-import { useState } from "react";
-import styles from "../../BoardPortal.module.css";
+import { useState, useEffect } from "react";
+import styles from "../BoardPortal.module.css";
 
 export default function DocumentManager({ user }) {
+  const [categories, setCategories] = useState([]);
   const [docForm, setDocForm] = useState({ 
     title: "", 
     file_url: "", 
+    category_id: "", 
     is_private: false, 
     requires_board_key: false 
   });
-  const API_BASE = "https://town-central-hoa-platform-469564564131.us-central1.run.app";
+  
+  // States for the inline "Create Category" tool
+  const [showNewCategory, setShowNewCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [creating, setCreating] = useState(false);
 
+  const API_BASE = import.meta.env.VITE_API_URL || "https://town-central-hoa-platform-469564564131.us-central1.run.app";
+
+  // 1. Fetch existing categories on load
+  useEffect(() => {
+    fetch(`${API_BASE}/api/documents/categories`)
+      .then(res => res.json())
+      .then(data => setCategories(data))
+      .catch(err => console.error("Error fetching categories:", err));
+  }, [API_BASE]);
+
+  // 2. Handle creating a brand new category
+  const handleCreateCategory = async () => {
+    if (!newCategoryName.trim()) return;
+    setCreating(true);
+
+    try {
+      const response = await fetch(`${API_BASE}/api/documents/categories`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newCategoryName }),
+      });
+
+      if (response.ok) {
+        const newCat = await response.json();
+        setCategories([...categories, newCat]);
+        setDocForm({ ...docForm, category_id: newCat.id });
+        setNewCategoryName("");
+        setShowNewCategory(false);
+      } else {
+        // THIS IS THE NEW PART: Catch backend errors!
+        const errorData = await response.json();
+        alert(`Failed to save category: ${errorData.error || "Unknown server error"}`);
+      }
+    } catch (err) {
+      console.error("Error creating category:", err);
+      alert("Failed to reach the server.");
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  // 3. Handle submitting the actual document
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!docForm.category_id) {
+      alert("Please select or create a category for this document.");
+      return;
+    }
+
     try {
       const response = await fetch(`${API_BASE}/api/documents`, {
         method: "POST",
@@ -1120,7 +1172,9 @@ export default function DocumentManager({ user }) {
 
       if (response.ok) {
         alert("Document added to repository!");
-        setDocForm({ title: "", file_url: "", is_private: false, requires_board_key: false });
+        setDocForm({ title: "", file_url: "", category_id: "", is_private: false, requires_board_key: false });
+      } else {
+        alert("Failed to upload document.");
       }
     } catch (err) {
       console.error("Upload error:", err);
@@ -1130,30 +1184,77 @@ export default function DocumentManager({ user }) {
   return (
     <div className={styles.formCard} style={{ marginTop: "10px" }}>
       <h3>Upload Community Document</h3>
-      <form onSubmit={handleSubmit} className={styles.announcementForm}>
+      
+      {/* INLINE CATEGORY CREATOR */}
+      <div style={{ background: "#f8fafc", padding: "15px", borderRadius: "10px", marginBottom: "20px", border: "1px solid #e2e8f0" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: showNewCategory ? "10px" : "0" }}>
+          <label style={{ fontSize: "0.85rem", fontWeight: "700", color: "#475569", textTransform: "uppercase" }}>Document Category</label>
+          <button 
+            type="button" 
+            onClick={() => setShowNewCategory(!showNewCategory)}
+            style={{ background: "none", border: "none", color: "#3b82f6", fontWeight: "600", cursor: "pointer", fontSize: "0.85rem" }}
+          >
+            {showNewCategory ? "Cancel" : "+ Create New Category"}
+          </button>
+        </div>
+
+        {showNewCategory ? (
+          <div style={{ display: "flex", gap: "10px" }}>
+            <input 
+              type="text" 
+              placeholder="e.g., 2026 Financials, Meeting Minutes" 
+              value={newCategoryName}
+              onChange={(e) => setNewCategoryName(e.target.value)}
+              style={{ flex: 1, padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+            />
+            <button 
+              type="button" 
+              onClick={handleCreateCategory}
+              disabled={creating}
+              style={{ background: "#2ecc71", color: "white", border: "none", padding: "0 20px", borderRadius: "8px", fontWeight: "700", cursor: "pointer" }}
+            >
+              {creating ? "Saving..." : "Save"}
+            </button>
+          </div>
+        ) : (
+          <select 
+            value={docForm.category_id} 
+            onChange={(e) => setDocForm({...docForm, category_id: e.target.value})}
+            style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "1rem", backgroundColor: "white" }}
+          >
+            <option value="">-- Select a Category --</option>
+            {categories.map(cat => (
+              <option key={cat.id} value={cat.id}>{cat.name}</option>
+            ))}
+          </select>
+        )}
+      </div>
+
+      {/* DOCUMENT UPLOAD FORM */}
+      <form onSubmit={handleSubmit} className={styles.announcementForm} style={{ marginTop: 0 }}>
         <input 
-          type="text" placeholder="Document Title" 
+          type="text" placeholder="Document Title (e.g., Q1 Budget Report)" 
           value={docForm.title} 
           onChange={(e) => setDocForm({...docForm, title: e.target.value})} required 
         />
         <input 
-          type="url" placeholder="File URL (e.g., Google Drive link)" 
+          type="url" placeholder="File URL (e.g., Google Drive or Dropbox link)" 
           value={docForm.file_url} 
           onChange={(e) => setDocForm({...docForm, file_url: e.target.value})} required 
         />
         
         <div style={{ display: "flex", gap: "20px", margin: "10px 0" }}>
-          <label style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <label style={{ display: "flex", alignItems: "center", gap: "8px", color: "#475569", fontSize: "0.9rem" }}>
             <input type="checkbox" checked={docForm.is_private} onChange={(e) => setDocForm({...docForm, is_private: e.target.checked})} />
-            Private Record
+            Private Record (Hidden from search engines)
           </label>
-          <label style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <label style={{ display: "flex", alignItems: "center", gap: "8px", color: "#475569", fontSize: "0.9rem" }}>
             <input type="checkbox" checked={docForm.requires_board_key} onChange={(e) => setDocForm({...docForm, requires_board_key: e.target.checked})} />
             Board Access Only
           </label>
         </div>
         
-        <button type="submit" className={styles.submitBtn}>Upload Document</button>
+        <button type="submit" className={styles.submitBtn}>Upload & Publish Document</button>
       </form>
     </div>
   );
@@ -1717,9 +1818,22 @@ export default function RosterDirectory({
 ==================================================
 FILE: ./frontend/src/components/DocumentCenter/DocumentCenter.module.css
 ==================================================
+/* --- BASE LAYOUT --- */
 .container {
     padding: 10px 0;
     animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .header h2 {
@@ -1736,42 +1850,93 @@ FILE: ./frontend/src/components/DocumentCenter/DocumentCenter.module.css
     line-height: 1.5;
 }
 
-.grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: 25px;
-}
-
-.categoryCard {
-    background: white;
-    border-radius: 18px;
-    border: 1px solid #e2e8f0;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-    overflow: hidden;
+/* --- ACCORDION LAYOUT --- */
+.accordionContainer {
     display: flex;
     flex-direction: column;
+    gap: 16px;
+    max-width: 900px;
 }
 
-.categoryHeader {
+.accordionItem {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+    overflow: hidden;
+    transition: all 0.2s ease;
+}
+
+.accordionHeader {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     padding: 20px;
     background: #f8fafc;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.2s;
+}
+
+.accordionHeader:hover {
+    background: #f1f5f9;
+}
+
+.accordionHeader.expanded {
+    background: #eff6ff;
+    /* Soft blue highlight when open */
     border-bottom: 1px solid #e2e8f0;
 }
 
-.categoryHeader h3 {
-    margin: 0 0 4px 0;
-    color: #1e293b;
+.headerContent {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.headerContent h3 {
+    margin: 0;
     font-size: 1.15rem;
+    color: #1e293b;
     font-weight: 700;
 }
 
-.categoryHeader p {
-    margin: 0;
-    color: #64748b;
-    font-size: 0.85rem;
-    line-height: 1.4;
+.categoryIcon {
+    font-size: 1.4rem;
 }
 
+.docCount {
+    color: #64748b;
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.chevron {
+    color: #94a3b8;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.accordionContent {
+    background: white;
+    animation: slideDown 0.25s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* --- FILE ROWS & BUTTONS (Restored from Original) --- */
 .fileList {
     list-style: none;
     padding: 0;
@@ -1840,6 +2005,7 @@ FILE: ./frontend/src/components/DocumentCenter/DocumentCenter.module.css
     color: white;
 }
 
+/* --- RESPONSIVE ADJUSTMENTS --- */
 @media (max-width: 480px) {
     .btnText {
         display: none;
@@ -1858,58 +2024,95 @@ import styles from "./DocumentCenter.module.css";
 
 export default function DocumentCenter({ user }) {
   const [documents, setDocuments] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [expandedCategory, setExpandedCategory] = useState(null);
   const [loading, setLoading] = useState(true);
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
   useEffect(() => {
-    fetch(`${API_URL}/api/documents`)
-      .then((res) => res.json())
-      .then((data) => {
-        setDocuments(data);
-        setLoading(false);
-      })
-      .catch((err) => console.error("Error fetching documents:", err));
+    // Fetch both tables simultaneously
+    Promise.all([
+      fetch(`${API_URL}/api/documents/categories`).then(res => res.json()),
+      fetch(`${API_URL}/api/documents`).then(res => res.json())
+    ])
+    .then(([catsData, docsData]) => {
+      setCategories(catsData);
+      setDocuments(docsData);
+      setLoading(false);
+    })
+    .catch(err => console.error("Error fetching repository data:", err));
   }, [API_URL]);
+
+  const toggleCategory = (categoryId) => {
+    // If clicking the already open category, close it. Otherwise, open the new one.
+    setExpandedCategory(expandedCategory === categoryId ? null : categoryId);
+  };
 
   const handleDownload = (file) => {
     window.open(file.file_url, "_blank");
   };
 
-  if (loading) return <p>Loading documents...</p>;
+  if (loading) return <p>Loading document repository...</p>;
+
+  // Security gate: Filter documents based on user role
+  const visibleDocuments = documents.filter(doc => 
+    !doc.requires_board_key || 
+    (user?.role === "board_member" || user?.role === "super_admin")
+  );
 
   return (
     <div className={styles.container}>
       <header className={styles.header}>
         <h2>Community Document Repository</h2>
-        <p>Access official neighborhood files and governance covenants.</p>
+        <p>Access official neighborhood files, categorized by the Executive Board.</p>
       </header>
 
-      <div className={styles.grid}>
-        {/* Logic: If it requires board key, only show if user is board/admin */}
-        {documents
-          .filter((doc) => 
-            !doc.requires_board_key || 
-            (user?.role === "board_member" || user?.role === "super_admin")
-          )
-          .map((doc) => (
-            <div key={doc.id} className={styles.categoryCard}>
-              <div className={styles.categoryHeader}>
-                <h3>{doc.title}</h3>
-              </div>
-              
-              <ul className={styles.fileList}>
-                <li className={styles.fileRow} onClick={() => handleDownload(doc)}>
-                  <div className={styles.fileInfo}>
-                    <span className={styles.fileName}>{doc.title}</span>
-                    <span className={styles.fileSize}>Added: {new Date(doc.created_at).toLocaleDateString()}</span>
-                  </div>
-                  <button className={styles.downloadBtn}>
-                    📥 <span className={styles.btnText}>Download</span>
-                  </button>
-                </li>
-              </ul>
+      <div className={styles.accordionContainer}>
+        {categories.map(category => {
+          // Find all documents that belong to this specific category loop
+          const categoryDocs = visibleDocuments.filter(doc => doc.category_id === category.id);
+          
+          // Clean UX: Hide the category entirely if it has zero visible documents
+          if (categoryDocs.length === 0) return null;
+
+          const isExpanded = expandedCategory === category.id;
+
+          return (
+            <div key={category.id} className={styles.accordionItem}>
+              {/* Accordion Header */}
+              <button 
+                className={`${styles.accordionHeader} ${isExpanded ? styles.expanded : ""}`}
+                onClick={() => toggleCategory(category.id)}
+              >
+                <div className={styles.headerContent}>
+                  <span className={styles.categoryIcon}>📁</span>
+                  <h3>{category.name}</h3>
+                  <span className={styles.docCount}>({categoryDocs.length})</span>
+                </div>
+                <span className={styles.chevron}>{isExpanded ? "▲" : "▼"}</span>
+              </button>
+
+              {/* Accordion Body (Files) */}
+              {isExpanded && (
+                <div className={styles.accordionContent}>
+                  <ul className={styles.fileList}>
+                    {categoryDocs.map(doc => (
+                      <li key={doc.id} className={styles.fileRow} onClick={() => handleDownload(doc)}>
+                        <div className={styles.fileInfo}>
+                          <span className={styles.fileName}>📄 {doc.title}</span>
+                          <span className={styles.fileSize}>Added: {new Date(doc.created_at).toLocaleDateString()}</span>
+                        </div>
+                        <button className={styles.downloadBtn}>
+                          📥 <span className={styles.btnText}>Download</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
-          ))}
+          );
+        })}
       </div>
     </div>
   );
