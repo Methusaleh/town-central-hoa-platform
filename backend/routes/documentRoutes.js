@@ -4,6 +4,7 @@ const multer = require("multer");
 const db = require("../db");
 const { uploadToR2 } = require("../utils/s3Storage");
 const { S3Client, PutObjectCommand, DeleteObjectCommand } = require("@aws-sdk/client-s3");
+const { s3, uploadToR2 } = require("../utils/s3Storage");
 
 // Tell multer to hold the incoming file in memory temporarily (max 5MB)
 const storage = multer.memoryStorage();

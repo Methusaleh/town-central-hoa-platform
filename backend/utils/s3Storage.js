@@ -36,4 +36,4 @@ const uploadToR2 = async (fileBuffer, originalName, mimeType) => {
   return `${process.env.CLOUDFLARE_R2_PUBLIC_URL}/${fileName}`;
 };
 
-module.exports = { uploadToR2 };
+module.exports = { s3, uploadToR2 };
