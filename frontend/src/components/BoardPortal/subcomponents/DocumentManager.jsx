@@ -47,8 +47,20 @@ export default function DocumentManager({ user }) {
   const handleDelete = async (id) => {
     if (!confirm("Are you sure? This will delete the file from storage forever.")) return;
     
-    await fetch(`${API_BASE}/api/documents/${id}`, { method: "DELETE" });
-    setDocuments(documents.filter(d => d.id !== id));
+    try {
+      const response = await fetch(`${API_BASE}/api/documents/${id}`, { method: "DELETE" });
+      
+      if (response.ok) {
+        // Success! Now remove it from the UI
+        setDocuments(documents.filter(d => d.id !== id));
+      } else {
+        const errorData = await response.json();
+        alert(`Delete failed: ${errorData.error}`);
+      }
+    } catch (err) {
+      console.error("Delete network error:", err);
+      alert("Could not connect to the server to delete.");
+    }
   };
 
   const handleCreateCategory = async () => {
