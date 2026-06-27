@@ -66,21 +66,36 @@ export default function BoardPortal({ user }) {
 
   // Google Calendar Auto-link triggers
   useEffect(() => {
-    if (showEventForm && locationInputRef.current) {
-      // Check if the script has loaded yet
-      if (window.google && window.google.maps) {
+    // 1. Define the initialization function
+    const initAutocomplete = () => {
+      if (locationInputRef.current && window.google?.maps?.places) {
         const autocomplete = new window.google.maps.places.Autocomplete(locationInputRef.current, {
           componentRestrictions: { country: "us" },
           fields: ["formatted_address", "name"],
         });
+        
         autocomplete.addListener("place_changed", () => {
           const place = autocomplete.getPlace();
-          setNewEvent((prev) => ({ ...prev, location: place.formatted_address || place.name }));
+          setNewEvent((prev) => ({ 
+            ...prev, 
+            location: place.formatted_address || place.name 
+          }));
         });
-      } else {
-        console.warn("Google Maps script not loaded yet.");
       }
+    };
+
+    // 2. Try initializing immediately
+    initAutocomplete();
+
+    // 3. Fallback: If script wasn't ready, listen for the window load event
+    if (!window.google?.maps) {
+      window.addEventListener("load", initAutocomplete);
     }
+
+    // Cleanup listener on unmount
+    return () => {
+      window.removeEventListener("load", initAutocomplete);
+    };
   }, [showEventForm]);
 
   const handlePostAnnouncement = async (e) => {
