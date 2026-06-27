@@ -168,3 +168,8 @@
   /* Subtle blue border */
   font-weight: 600;
 }
+
+/* Round the corners of the hover effect */
+.customCalendar :global(.react-calendar__tile:enabled:hover) {
+  border-radius: 8px !important;
+}
