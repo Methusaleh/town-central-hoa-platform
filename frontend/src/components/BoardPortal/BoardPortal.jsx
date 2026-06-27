@@ -67,14 +67,19 @@ export default function BoardPortal({ user }) {
   // Google Calendar Auto-link triggers
   useEffect(() => {
     if (showEventForm && locationInputRef.current) {
-      const autocomplete = new window.google.maps.places.Autocomplete(locationInputRef.current, {
-        componentRestrictions: { country: "us" },
-        fields: ["formatted_address", "name"],
-      });
-      autocomplete.addListener("place_changed", () => {
-        const place = autocomplete.getPlace();
-        setNewEvent((prev) => ({ ...prev, location: place.formatted_address || place.name }));
-      });
+      // Check if the script has loaded yet
+      if (window.google && window.google.maps) {
+        const autocomplete = new window.google.maps.places.Autocomplete(locationInputRef.current, {
+          componentRestrictions: { country: "us" },
+          fields: ["formatted_address", "name"],
+        });
+        autocomplete.addListener("place_changed", () => {
+          const place = autocomplete.getPlace();
+          setNewEvent((prev) => ({ ...prev, location: place.formatted_address || place.name }));
+        });
+      } else {
+        console.warn("Google Maps script not loaded yet.");
+      }
     }
   }, [showEventForm]);
 
