@@ -34,12 +34,9 @@
 
 /* 3. Event Day Visualization (Green Glow Dots) */
 .eventDay {
-  background-color: #e6f6ed !important;
-  /* Soft green, not dark */
-  border-radius: 50%;
-  /* Makes it circular/soft */
-  color: #2ecc71 !important;
-  font-weight: bold;
+  background-color: transparent !important;
+  color: inherit !important;
+  position: relative;
 }
 
 .eventDay::after {
@@ -50,9 +47,10 @@
   transform: translateX(-50%);
   width: 6px;
   height: 6px;
-  background: #2ecc71;
+  background: #3b82f6;
+  /* Blue dot color */
   border-radius: 50%;
-  box-shadow: 0 0 8px rgba(46, 204, 113, 0.6);
+  box-shadow: 0 0 4px rgba(59, 130, 246, 0.4);
 }
 
 /* --- EVENT DETAILS PANEL (RIGHT SIDE) --- */
@@ -158,9 +156,15 @@
   line-height: 1.4;
 }
 
-/* 4. Soft Active Date Highlight */
+/* 4. Soft Active Date Highlight (Rounded Square) */
 .customCalendar :global(.react-calendar__tile--active) {
-  background: #2ecc71 !important;
-  border-radius: 50% !important;
-  color: white !important;
+  background: #eff6ff !important;
+  /* Very soft light blue */
+  color: #2563eb !important;
+  /* Slightly darker blue text */
+  border-radius: 8px !important;
+  /* Rounded corners, not fully circular */
+  border: 1px solid #bfdbfe !important;
+  /* Subtle blue border */
+  font-weight: 600;
 }
