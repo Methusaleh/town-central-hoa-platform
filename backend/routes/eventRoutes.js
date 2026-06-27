@@ -2,11 +2,12 @@ const express = require("express");
 const router = express.Router();
 const db = require("../db");
 
-// GET all events (Sorted by upcoming date)
+// GET all events (Sorted by date - past and future)
 router.get("/", async (req, res) => {
   try {
+    // Removed the WHERE event_date >= CURRENT_DATE filter
     const { rows } = await db.query(
-      "SELECT * FROM neighborhood_events WHERE event_date >= CURRENT_DATE ORDER BY event_date ASC",
+      "SELECT * FROM neighborhood_events ORDER BY event_date ASC",
     );
     res.json(rows);
   } catch (err) {
