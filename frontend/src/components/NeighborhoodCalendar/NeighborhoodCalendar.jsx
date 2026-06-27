@@ -8,14 +8,22 @@ export default function NeighborhoodCalendar() {
   const [selectedEvents, setSelectedEvents] = useState([]);
   const [events, setEvents] = useState([]);
 
-  // Fetch live events from your Cloud Run API
+  // 1. Fetch live events AND trigger today's selection
   useEffect(() => {
-    fetch(
-      "https://town-central-hoa-platform-469564564131.us-central1.run.app/api/events",
-    )
+    fetch("https://town-central-hoa-platform-469564564131.us-central1.run.app/api/events")
       .then((res) => res.json())
       .then((data) => {
         setEvents(data);
+        
+        // --- AUTO-SELECT TODAY'S EVENTS ON LOAD ---
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, "0");
+        const day = String(today.getDate()).padStart(2, "0");
+        const todayStr = `${year}-${month}-${day}`;
+        
+        const todaysEvents = data.filter((e) => formatDate(e.event_date) === todayStr);
+        setSelectedEvents(todaysEvents);
       })
       .catch((err) => console.error("Calendar fetch error:", err));
   }, []);

@@ -34,8 +34,12 @@
 
 /* 3. Event Day Visualization (Green Glow Dots) */
 .eventDay {
-  position: relative;
-  font-weight: 700 !important;
+  background-color: #e6f6ed !important;
+  /* Soft green, not dark */
+  border-radius: 50%;
+  /* Makes it circular/soft */
+  color: #2ecc71 !important;
+  font-weight: bold;
 }
 
 .eventDay::after {
@@ -152,4 +156,11 @@
   color: #475569;
   margin-top: 8px;
   line-height: 1.4;
+}
+
+/* 4. Soft Active Date Highlight */
+.customCalendar :global(.react-calendar__tile--active) {
+  background: #2ecc71 !important;
+  border-radius: 50% !important;
+  color: white !important;
 }
