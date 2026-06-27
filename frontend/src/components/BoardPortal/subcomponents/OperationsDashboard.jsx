@@ -122,23 +122,36 @@ export default function OperationsDashboard({
               onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })} 
               required 
             />
-            <div className={styles.inlineGroup}>
-              <div>
-                <label>Attachment URL</label>
+            <div>
+              <label>Event Attachment</label>
+              <div 
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  if (e.dataTransfer.files.length > 0) {
+                    // You'll need to handle the upload here or store the file object
+                    setNewEvent({ ...newEvent, attachment_name: e.dataTransfer.files[0].name });
+                    // NOTE: To actually upload, you'd trigger your uploadToR2 function here!
+                  }
+                }}
+                style={{ 
+                  border: "2px dashed #cbd5e1", 
+                  borderRadius: "8px", 
+                  padding: "20px", 
+                  textAlign: "center", 
+                  background: "#f8fafc",
+                  cursor: "pointer"
+                }}
+                onClick={() => document.getElementById("event-file-input").click()}
+              >
+                <p style={{ margin: 0, fontSize: "0.9rem", color: "#64748b" }}>
+                  {newEvent.attachment_name ? `File: ${newEvent.attachment_name}` : "Drop file here or click to browse"}
+                </p>
                 <input 
-                  type="url" 
-                  placeholder="https://drive.google.com/..." 
-                  value={newEvent.attachment_url} 
-                  onChange={(e) => setNewEvent({ ...newEvent, attachment_url: e.target.value })} 
-                />
-              </div>
-              <div>
-                <label>Friendly File Label</label>
-                <input 
-                  type="text" 
-                  placeholder="Meeting_Agenda.pdf" 
-                  value={newEvent.attachment_name} 
-                  onChange={(e) => setNewEvent({ ...newEvent, attachment_name: e.target.value })} 
+                  id="event-file-input"
+                  type="file" 
+                  hidden 
+                  onChange={(e) => setNewEvent({ ...newEvent, attachment_name: e.target.files[0].name })} 
                 />
               </div>
             </div>
