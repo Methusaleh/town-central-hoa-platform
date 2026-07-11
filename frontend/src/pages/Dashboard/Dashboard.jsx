@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from "react";
+import MissionControl from "../../components/BoardPortal/subcomponents/MissionControl";
+import RosterDirectory from "../../components/BoardPortal/subcomponents/RosterDirectory";
+import OperationsDashboard from "../../components/BoardPortal/subcomponents/OperationsDashboard";
 import AnnouncementFeed from "../../components/AnnouncementFeed/AnnouncementFeed";
 import DuesCard from "../../components/DuesCard/DuesCard";
 import NeighborhoodCalendar from "../../components/NeighborhoodCalendar/NeighborhoodCalendar";
 import RequestForm from "../../components/RequestForm/RequestForm";
-import BoardPortal from "../../components/BoardPortal/BoardPortal";
 import VendorDirectory from "../../components/VendorDirectory/VendorDirectory";
 import DocumentCenter from "../../components/DocumentCenter/DocumentCenter";
 import styles from "./Dashboard.module.css";
@@ -11,6 +13,14 @@ import styles from "./Dashboard.module.css";
 export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
   // Tabs: 'feed', 'maintenance', 'dues', 'board', 'vendors'
   const [activeTab, setActiveTab] = useState("feed");
+  // Add these with your existing 'requests' state
+  const [viewMode, setViewMode] = useState("active");
+  const [showForm, setShowForm] = useState(false);
+  const [showEventForm, setShowEventForm] = useState(false);
+
+  // If you need these for the OperationsDashboard as well:
+  const [announcement, setAnnouncement] = useState({ title: "", content: "", priority: "normal", channel_type: "general" });
+  const [newEvent, setNewEvent] = useState({ title: "", event_date: "", event_time: "", location: "", description: "", attachment_url: "", attachment_name: "" });
   
   // New States for Contact Modal
   const [showContactModal, setShowContactModal] = useState(false);
@@ -18,6 +28,9 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
   const [sending, setSending] = useState(false);
 
   const [showSettings, setShowSettings] = useState(false);
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const API_BASE = "https://town-central-hoa-platform-469564564131.us-central1.run.app";
 
   const settingsRef = useRef(null);
 
@@ -64,6 +77,27 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
     } finally {
       setSending(false);
     }
+  };
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/requests/admin/all`)
+      .then((res) => res.json())
+      .then((data) => { setRequests(data); setLoading(false); })
+      .catch((err) => console.error("Admin fetch error:", err));
+  }, []);
+
+  // Define your handleResolve here too
+  const handleResolve = async (requestId) => {
+    try {
+      const response = await fetch(`${API_BASE}/api/requests/${requestId}/resolve`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ adminName: user?.first_name || "Admin" }),
+      });
+      if (response.ok) {
+        setRequests(requests.map((req) => req.id === requestId ? { ...req, status: "Resolved" } : req));
+      }
+    } catch (err) { console.error(err); }
   };
 
   return (
@@ -153,10 +187,10 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
           {/* Executive Board View Toggle */}
           {(user?.role === "board_member" || user?.role === "super_admin") && (
             <button
-              className={`${styles.boardItem} ${activeTab === "board" ? styles.activeBoard : ""}`}
-              onClick={() => setActiveTab("board")}
+              className={`${styles.navItem} ${activeTab === "mission-control" ? styles.activeNav : ""}`}
+              onClick={() => setActiveTab("mission-control")}
             >
-              Board Executive Portal
+              Admin Tools
             </button>
           )}
         </nav>
@@ -207,17 +241,37 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
           </div>
         )}
 
-        {/* VIEW 4: BOARD EXECUTIVE PORTAL */}
-        {activeTab === "board" && (
-          <div className={styles.fadeContent}>
-            <BoardPortal user={user} />
-          </div>
-        )}
-
-        {/* VIEW 5: TRUSTED VENDORS */}
+        {/* VIEW 4: TRUSTED VENDORS */}
         {activeTab === "vendors" && (
           <div className={styles.fadeContent}>
             <VendorDirectory />
+          </div>
+        )}
+
+        {/* VIEW 5: MISSION CONTROL */}
+        {activeTab === "mission-control" && (
+          <div className={styles.fadeContent}>
+            <MissionControl 
+              onNavigate={(section) => setActiveTab(section)} 
+            />
+          </div>
+        )}
+
+        {/* VIEW: OPERATIONS & TICKETS (ADMIN ONLY) */}
+        {activeTab === "requests" && (
+          <div className={styles.fadeContent}>
+            <OperationsDashboard 
+              requests={requests} 
+              loading={loading} 
+              handleResolve={handleResolve}
+              // Add these if you want to keep the UI state clean
+              viewMode={viewMode} 
+              setViewMode={setViewMode}
+              showForm={showForm}
+              setShowForm={setShowForm}
+              showEventForm={showEventForm}
+              setShowEventForm={setShowEventForm}
+            />
           </div>
         )}
 

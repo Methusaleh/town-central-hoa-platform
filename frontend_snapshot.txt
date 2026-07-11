@@ -908,16 +908,36 @@ export default function BoardPortal({ user }) {
 
   // Google Calendar Auto-link triggers
   useEffect(() => {
-    if (showEventForm && locationInputRef.current) {
-      const autocomplete = new window.google.maps.places.Autocomplete(locationInputRef.current, {
-        componentRestrictions: { country: "us" },
-        fields: ["formatted_address", "name"],
-      });
-      autocomplete.addListener("place_changed", () => {
-        const place = autocomplete.getPlace();
-        setNewEvent((prev) => ({ ...prev, location: place.formatted_address || place.name }));
-      });
+    // 1. Define the initialization function
+    const initAutocomplete = () => {
+      if (locationInputRef.current && window.google?.maps?.places) {
+        const autocomplete = new window.google.maps.places.Autocomplete(locationInputRef.current, {
+          componentRestrictions: { country: "us" },
+          fields: ["formatted_address", "name"],
+        });
+        
+        autocomplete.addListener("place_changed", () => {
+          const place = autocomplete.getPlace();
+          setNewEvent((prev) => ({ 
+            ...prev, 
+            location: place.formatted_address || place.name 
+          }));
+        });
+      }
+    };
+
+    // 2. Try initializing immediately
+    initAutocomplete();
+
+    // 3. Fallback: If script wasn't ready, listen for the window load event
+    if (!window.google?.maps) {
+      window.addEventListener("load", initAutocomplete);
     }
+
+    // Cleanup listener on unmount
+    return () => {
+      window.removeEventListener("load", initAutocomplete);
+    };
   }, [showEventForm]);
 
   const handlePostAnnouncement = async (e) => {
@@ -1475,23 +1495,36 @@ export default function OperationsDashboard({
               onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })} 
               required 
             />
-            <div className={styles.inlineGroup}>
-              <div>
-                <label>Attachment URL</label>
+            <div>
+              <label>Event Attachment</label>
+              <div 
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  if (e.dataTransfer.files.length > 0) {
+                    // You'll need to handle the upload here or store the file object
+                    setNewEvent({ ...newEvent, attachment_name: e.dataTransfer.files[0].name });
+                    // NOTE: To actually upload, you'd trigger your uploadToR2 function here!
+                  }
+                }}
+                style={{ 
+                  border: "2px dashed #cbd5e1", 
+                  borderRadius: "8px", 
+                  padding: "20px", 
+                  textAlign: "center", 
+                  background: "#f8fafc",
+                  cursor: "pointer"
+                }}
+                onClick={() => document.getElementById("event-file-input").click()}
+              >
+                <p style={{ margin: 0, fontSize: "0.9rem", color: "#64748b" }}>
+                  {newEvent.attachment_name ? `File: ${newEvent.attachment_name}` : "Drop file here or click to browse"}
+                </p>
                 <input 
-                  type="url" 
-                  placeholder="https://drive.google.com/..." 
-                  value={newEvent.attachment_url} 
-                  onChange={(e) => setNewEvent({ ...newEvent, attachment_url: e.target.value })} 
-                />
-              </div>
-              <div>
-                <label>Friendly File Label</label>
-                <input 
-                  type="text" 
-                  placeholder="Meeting_Agenda.pdf" 
-                  value={newEvent.attachment_name} 
-                  onChange={(e) => setNewEvent({ ...newEvent, attachment_name: e.target.value })} 
+                  id="event-file-input"
+                  type="file" 
+                  hidden 
+                  onChange={(e) => setNewEvent({ ...newEvent, attachment_name: e.target.files[0].name })} 
                 />
               </div>
             </div>
@@ -1905,6 +1938,55 @@ export default function RosterDirectory({
   );
 }
 ==================================================
+FILE: ./frontend/src/components/BoardPortal/subcomponents/MissionControl.jsx
+==================================================
+// ./frontend/src/components/BoardPortal/subcomponents/MissionControl.jsx
+import styles from "../BoardPortal.module.css";
+
+export default function MissionControl({ onNavigate }) {
+  const adminTools = [
+    { id: "requests", label: "Operations & Tickets", icon: "📋" },
+    { id: "roster", label: "Master Roster", icon: "👥" },
+    { id: "financials", label: "Assessment Ledger", icon: "💰" },
+    { id: "vendors", label: "Verified Vendors", icon: "🏢" },
+    { id: "documents", label: "Document Manager", icon: "📄" },
+  ];
+
+  return (
+    <div className={styles.container}>
+      <header className={styles.header}>
+        <h2>Mission Control</h2>
+        <button className={styles.cancelBtn} onClick={() => onNavigate("feed")}>
+          ← Back to Resident Portal
+        </button>
+      </header>
+      
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "20px" }}>
+        {adminTools.map((tool) => (
+          <button 
+            key={tool.id}
+            onClick={() => onNavigate(tool.id)}
+            style={{ 
+              padding: "30px", 
+              borderRadius: "20px", 
+              border: "1px solid #e2e8f0", 
+              background: "white", 
+              cursor: "pointer", 
+              textAlign: "left",
+              display: "flex", 
+              flexDirection: "column", 
+              gap: "10px" 
+            }}
+          >
+            <span style={{ fontSize: "2rem" }}>{tool.icon}</span>
+            <span style={{ fontWeight: "700", fontSize: "1.1rem" }}>{tool.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+==================================================
 FILE: ./frontend/src/components/DocumentCenter/DocumentCenter.module.css
 ==================================================
 /* --- BASE LAYOUT --- */
@@ -2226,14 +2308,22 @@ export default function NeighborhoodCalendar() {
   const [selectedEvents, setSelectedEvents] = useState([]);
   const [events, setEvents] = useState([]);
 
-  // Fetch live events from your Cloud Run API
+  // 1. Fetch live events AND trigger today's selection
   useEffect(() => {
-    fetch(
-      "https://town-central-hoa-platform-469564564131.us-central1.run.app/api/events",
-    )
+    fetch("https://town-central-hoa-platform-469564564131.us-central1.run.app/api/events")
       .then((res) => res.json())
       .then((data) => {
         setEvents(data);
+        
+        // --- AUTO-SELECT TODAY'S EVENTS ON LOAD ---
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, "0");
+        const day = String(today.getDate()).padStart(2, "0");
+        const todayStr = `${year}-${month}-${day}`;
+        
+        const todaysEvents = data.filter((e) => formatDate(e.event_date) === todayStr);
+        setSelectedEvents(todaysEvents);
       })
       .catch((err) => console.error("Calendar fetch error:", err));
   }, []);
@@ -2444,8 +2534,9 @@ FILE: ./frontend/src/components/NeighborhoodCalendar/NeighborhoodCalendar.module
 
 /* 3. Event Day Visualization (Green Glow Dots) */
 .eventDay {
+  background-color: transparent !important;
+  color: inherit !important;
   position: relative;
-  font-weight: 700 !important;
 }
 
 .eventDay::after {
@@ -2456,9 +2547,10 @@ FILE: ./frontend/src/components/NeighborhoodCalendar/NeighborhoodCalendar.module
   transform: translateX(-50%);
   width: 6px;
   height: 6px;
-  background: #2ecc71;
+  background: #3b82f6;
+  /* Blue dot color */
   border-radius: 50%;
-  box-shadow: 0 0 8px rgba(46, 204, 113, 0.6);
+  box-shadow: 0 0 4px rgba(59, 130, 246, 0.4);
 }
 
 /* --- EVENT DETAILS PANEL (RIGHT SIDE) --- */
@@ -2564,6 +2656,23 @@ FILE: ./frontend/src/components/NeighborhoodCalendar/NeighborhoodCalendar.module
   line-height: 1.4;
 }
 
+/* 4. Soft Active Date Highlight (Rounded Square) */
+.customCalendar :global(.react-calendar__tile--active) {
+  background: #eff6ff !important;
+  /* Very soft light blue */
+  color: #2563eb !important;
+  /* Slightly darker blue text */
+  border-radius: 8px !important;
+  /* Rounded corners, not fully circular */
+  border: 1px solid #bfdbfe !important;
+  /* Subtle blue border */
+  font-weight: 600;
+}
+
+/* Round the corners of the hover effect */
+.customCalendar :global(.react-calendar__tile:enabled:hover) {
+  border-radius: 8px !important;
+}
 ==================================================
 FILE: ./frontend/src/components/RequestForm/RequestForm.module.css
 ==================================================
@@ -3827,11 +3936,13 @@ FILE: ./frontend/src/pages/Dashboard/Dashboard.module.css
 FILE: ./frontend/src/pages/Dashboard/Dashboard.jsx
 ==================================================
 import { useState, useEffect, useRef } from "react";
+import MissionControl from "../../components/BoardPortal/subcomponents/MissionControl";
+import RosterDirectory from "../../components/BoardPortal/subcomponents/RosterDirectory";
+import OperationsDashboard from "../../components/BoardPortal/subcomponents/OperationsDashboard";
 import AnnouncementFeed from "../../components/AnnouncementFeed/AnnouncementFeed";
 import DuesCard from "../../components/DuesCard/DuesCard";
 import NeighborhoodCalendar from "../../components/NeighborhoodCalendar/NeighborhoodCalendar";
 import RequestForm from "../../components/RequestForm/RequestForm";
-import BoardPortal from "../../components/BoardPortal/BoardPortal";
 import VendorDirectory from "../../components/VendorDirectory/VendorDirectory";
 import DocumentCenter from "../../components/DocumentCenter/DocumentCenter";
 import styles from "./Dashboard.module.css";
@@ -3839,6 +3950,14 @@ import styles from "./Dashboard.module.css";
 export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
   // Tabs: 'feed', 'maintenance', 'dues', 'board', 'vendors'
   const [activeTab, setActiveTab] = useState("feed");
+  // Add these with your existing 'requests' state
+  const [viewMode, setViewMode] = useState("active");
+  const [showForm, setShowForm] = useState(false);
+  const [showEventForm, setShowEventForm] = useState(false);
+
+  // If you need these for the OperationsDashboard as well:
+  const [announcement, setAnnouncement] = useState({ title: "", content: "", priority: "normal", channel_type: "general" });
+  const [newEvent, setNewEvent] = useState({ title: "", event_date: "", event_time: "", location: "", description: "", attachment_url: "", attachment_name: "" });
   
   // New States for Contact Modal
   const [showContactModal, setShowContactModal] = useState(false);
@@ -3846,6 +3965,9 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
   const [sending, setSending] = useState(false);
 
   const [showSettings, setShowSettings] = useState(false);
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const API_BASE = "https://town-central-hoa-platform-469564564131.us-central1.run.app";
 
   const settingsRef = useRef(null);
 
@@ -3892,6 +4014,27 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
     } finally {
       setSending(false);
     }
+  };
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/requests/admin/all`)
+      .then((res) => res.json())
+      .then((data) => { setRequests(data); setLoading(false); })
+      .catch((err) => console.error("Admin fetch error:", err));
+  }, []);
+
+  // Define your handleResolve here too
+  const handleResolve = async (requestId) => {
+    try {
+      const response = await fetch(`${API_BASE}/api/requests/${requestId}/resolve`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ adminName: user?.first_name || "Admin" }),
+      });
+      if (response.ok) {
+        setRequests(requests.map((req) => req.id === requestId ? { ...req, status: "Resolved" } : req));
+      }
+    } catch (err) { console.error(err); }
   };
 
   return (
@@ -3981,10 +4124,10 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
           {/* Executive Board View Toggle */}
           {(user?.role === "board_member" || user?.role === "super_admin") && (
             <button
-              className={`${styles.boardItem} ${activeTab === "board" ? styles.activeBoard : ""}`}
-              onClick={() => setActiveTab("board")}
+              className={`${styles.navItem} ${activeTab === "mission-control" ? styles.activeNav : ""}`}
+              onClick={() => setActiveTab("mission-control")}
             >
-              Board Executive Portal
+              Admin Tools
             </button>
           )}
         </nav>
@@ -4035,17 +4178,37 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
           </div>
         )}
 
-        {/* VIEW 4: BOARD EXECUTIVE PORTAL */}
-        {activeTab === "board" && (
-          <div className={styles.fadeContent}>
-            <BoardPortal user={user} />
-          </div>
-        )}
-
-        {/* VIEW 5: TRUSTED VENDORS */}
+        {/* VIEW 4: TRUSTED VENDORS */}
         {activeTab === "vendors" && (
           <div className={styles.fadeContent}>
             <VendorDirectory />
+          </div>
+        )}
+
+        {/* VIEW 5: MISSION CONTROL */}
+        {activeTab === "mission-control" && (
+          <div className={styles.fadeContent}>
+            <MissionControl 
+              onNavigate={(section) => setActiveTab(section)} 
+            />
+          </div>
+        )}
+
+        {/* VIEW: OPERATIONS & TICKETS (ADMIN ONLY) */}
+        {activeTab === "requests" && (
+          <div className={styles.fadeContent}>
+            <OperationsDashboard 
+              requests={requests} 
+              loading={loading} 
+              handleResolve={handleResolve}
+              // Add these if you want to keep the UI state clean
+              viewMode={viewMode} 
+              setViewMode={setViewMode}
+              showForm={showForm}
+              setShowForm={setShowForm}
+              showEventForm={showEventForm}
+              setShowEventForm={setShowEventForm}
+            />
           </div>
         )}
 
