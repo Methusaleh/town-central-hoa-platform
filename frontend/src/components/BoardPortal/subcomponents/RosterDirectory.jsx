@@ -8,22 +8,26 @@ export default function RosterDirectory({
   rosterForm, 
   setRosterForm, 
   rosterStatus, 
-  handleOnboardResident 
+  handleOnboardResident,
+  onBack // Added prop for navigation
 }) {
-  // ✅ FIXED: Hooks must live inside the component function body
   const [sendWelcomePacket, setSendWelcomePacket] = useState(false);
 
-  // ✅ FIXED: Intercept submit to append our checkbox state to the parent's function call
   const handleSubmit = (e) => {
     e.preventDefault();
-    // We pass both the current form inputs and our new checkbox state upwards
     handleOnboardResident(e, sendWelcomePacket);
-    // Reset checkbox state after submission
     setSendWelcomePacket(false);
   };
 
   return (
     <div className={styles.tableCard} style={{ marginTop: "10px" }}>
+      {/* Navigation Header */}
+      <div style={{ marginBottom: "20px" }}>
+        <button className={styles.cancelBtn} onClick={onBack}>
+          ← Back to Mission Control
+        </button>
+      </div>
+
       <div className={styles.tableHeader}>
         <div>
           <h3 style={{ margin: 0 }}>Roster Security Directory</h3>
@@ -44,7 +48,6 @@ export default function RosterDirectory({
               {rosterStatus.text}
             </div>
           )}
-          {/* ✅ FIXED: Point onSubmit to our local interceptor */}
           <form onSubmit={handleSubmit} className={styles.announcementForm}>
             <div className={styles.inlineGroup}>
               <div>

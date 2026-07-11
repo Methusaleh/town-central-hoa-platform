@@ -17,7 +17,8 @@ export default function OperationsDashboard({
   handlePostAnnouncement,
   handlePostEvent,
   handleResolve,
-  locationInputRef
+  locationInputRef,
+  onBack // Added prop for navigation
 }) {
   const filteredRequests = requests.filter((req) =>
     viewMode === "active" ? req.status === "Open" : req.status === "Resolved"
@@ -25,6 +26,13 @@ export default function OperationsDashboard({
 
   return (
     <>
+      {/* Navigation Header */}
+      <div style={{ marginBottom: "20px" }}>
+        <button className={styles.cancelBtn} onClick={onBack}>
+          ← Back to Mission Control
+        </button>
+      </div>
+
       <header className={styles.header} style={{ marginTop: "10px" }}>
         <h2>Executive Operations Dashboard</h2>
         <div className={styles.buttonGroup}>
@@ -129,9 +137,7 @@ export default function OperationsDashboard({
                 onDrop={(e) => {
                   e.preventDefault();
                   if (e.dataTransfer.files.length > 0) {
-                    // You'll need to handle the upload here or store the file object
                     setNewEvent({ ...newEvent, attachment_name: e.dataTransfer.files[0].name });
-                    // NOTE: To actually upload, you'd trigger your uploadToR2 function here!
                   }
                 }}
                 style={{ 

@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react";
 import styles from "../BoardPortal.module.css";
 
-export default function DocumentManager({ user }) {
+export default function DocumentManager({ user, onBack }) { // Added onBack prop
   const [categories, setCategories] = useState([]);
   
-  // 1. Removed file_url and added dedicated file state
   const [docForm, setDocForm] = useState({ 
     title: "", 
     category_id: "", 
@@ -37,13 +36,11 @@ export default function DocumentManager({ user }) {
       .then(data => setDocuments(data));
   }, [API_BASE]);
 
-  // 2. Filtered document list logic
   const filteredDocs = documents.filter(doc => 
     doc.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
     (filterCategory === "" || doc.category_id.toString() === filterCategory)
   );
 
-  // 3. Delete Handler
   const handleDelete = async (id) => {
     if (!confirm("Are you sure? This will delete the file from storage forever.")) return;
     
@@ -51,7 +48,6 @@ export default function DocumentManager({ user }) {
       const response = await fetch(`${API_BASE}/api/documents/${id}`, { method: "DELETE" });
       
       if (response.ok) {
-        // Success! Now remove it from the UI
         setDocuments(documents.filter(d => d.id !== id));
       } else {
         const errorData = await response.json();
@@ -118,18 +114,13 @@ export default function DocumentManager({ user }) {
           throw new Error(errorData.error || "Upload failed");
       }
 
-      // Success Block
       alert("Document securely uploaded and published!");
-      
-      // Clear state
       setDocForm({ title: "", category_id: "", is_private: false, requires_board_key: false });
       setSelectedFile(null);
       
-      // Reset file input safely
-      const fileInput = document.getElementById("file-upload");
+      const fileInput = document.getElementById("hidden-file-input");
       if (fileInput) fileInput.value = "";
       
-      // Refresh the document list so the new file shows up immediately
       const refreshResponse = await fetch(`${API_BASE}/api/documents`);
       const data = await refreshResponse.json();
       setDocuments(data);
@@ -144,9 +135,15 @@ export default function DocumentManager({ user }) {
 
   return (
     <div className={styles.formCard} style={{ marginTop: "10px" }}>
+      {/* Navigation Header */}
+      <div style={{ marginBottom: "20px" }}>
+        <button className={styles.cancelBtn} onClick={onBack}>
+          ← Back to Mission Control
+        </button>
+      </div>
+
       <h3>Upload Community Document</h3>
       
-      {/* --- CATEGORY CREATOR --- */}
       <div style={{ background: "#f8fafc", padding: "15px", borderRadius: "10px", marginBottom: "20px", border: "1px solid #e2e8f0" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: showNewCategory ? "10px" : "0" }}>
           <label style={{ fontSize: "0.85rem", fontWeight: "700", color: "#475569", textTransform: "uppercase" }}>Document Category</label>
@@ -167,7 +164,6 @@ export default function DocumentManager({ user }) {
         )}
       </div>
 
-      {/* --- UPLOAD FORM WITH BOARD TOGGLE --- */}
       <form onSubmit={handleSubmit} className={styles.announcementForm}>
         <input 
           type="text" 
@@ -205,7 +201,6 @@ export default function DocumentManager({ user }) {
           />
         </div>
 
-        {/* Restore the Board-Only Toggle */}
         <div style={{ display: "flex", alignItems: "center", gap: "10px", margin: "15px 0" }}>
           <input 
             type="checkbox" 
@@ -226,7 +221,6 @@ export default function DocumentManager({ user }) {
       
       <hr style={{ margin: "30px 0" }} />
 
-      {/* --- SEARCH, FILTER & LIST (The code you already have) --- */}
       <h3>Community Documents</h3>
       <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
         <input placeholder="Search documents..." onChange={(e) => setSearchTerm(e.target.value)} style={{ flex: 2, padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1" }} />
