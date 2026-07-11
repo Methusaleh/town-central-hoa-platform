@@ -10,10 +10,18 @@ export default function VendorControls({
   vendorsList,
   handleVendorSubmit,
   startEditVendor,
-  handleDeleteVendor
+  handleDeleteVendor,
+  onBack // Added prop for navigation
 }) {
   return (
     <div className={styles.tableCard} style={{ marginTop: "10px" }}>
+      {/* Navigation Header */}
+      <div style={{ marginBottom: "20px" }}>
+        <button className={styles.cancelBtn} onClick={onBack}>
+          ← Back to Mission Control
+        </button>
+      </div>
+
       <div className={styles.tableHeader}>
         <div>
           <h3 style={{ margin: 0 }}>Trusted Companies Directory Control</h3>

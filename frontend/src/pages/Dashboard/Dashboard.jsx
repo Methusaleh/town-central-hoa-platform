@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import MissionControl from "../../components/BoardPortal/subcomponents/MissionControl";
 import RosterDirectory from "../../components/BoardPortal/subcomponents/RosterDirectory";
+import FinancialLedger from "../../components/BoardPortal/subcomponents/FinancialLedger";
+import VendorControls from "../../components/BoardPortal/subcomponents/VendorControls";
 import OperationsDashboard from "../../components/BoardPortal/subcomponents/OperationsDashboard";
 import AnnouncementFeed from "../../components/AnnouncementFeed/AnnouncementFeed";
 import DuesCard from "../../components/DuesCard/DuesCard";
@@ -8,6 +10,7 @@ import NeighborhoodCalendar from "../../components/NeighborhoodCalendar/Neighbor
 import RequestForm from "../../components/RequestForm/RequestForm";
 import VendorDirectory from "../../components/VendorDirectory/VendorDirectory";
 import DocumentCenter from "../../components/DocumentCenter/DocumentCenter";
+import DocumentManager from "../../components/BoardPortal/subcomponents/DocumentManager"; // Admin view
 import styles from "./Dashboard.module.css";
 
 export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
@@ -196,7 +199,7 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
         {activeTab === "requests" && (
           <div className={styles.fadeContent}>
             <OperationsDashboard 
-              onBack={() => setActiveTab("mission-control")} // <-- ADD THIS
+              onBack={() => setActiveTab("mission-control")} 
               requests={requests} 
               loading={loading} 
               handleResolve={handleResolve}
@@ -206,7 +209,6 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
               setShowForm={setShowForm}
               showEventForm={showEventForm}
               setShowEventForm={setShowEventForm}
-              // ... (ensure other props like announcement/newEvent are here)
             />
           </div>
         )}
@@ -216,12 +218,35 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
             <RosterDirectory 
               onBack={() => setActiveTab("mission-control")} 
               masterRoster={masterRoster}
-              // ... pass remaining props here
             />
           </div>
         )}
 
-        {activeSection === "documents" && <DocumentManager user={user} onBack={() => setActiveSection("requests")} />}
+        {activeTab === "financials" && (
+          <div className={styles.fadeContent}>
+            <FinancialLedger 
+              onBack={() => setActiveTab("mission-control")} 
+              masterRoster={masterRoster}
+              // Ensure you pass the finance form states from your Dashboard state
+            />
+          </div>
+        )}
+
+        {activeTab === "vendors" && (
+          <div className={styles.fadeContent}>
+            <VendorDirectory 
+              onBack={() => setActiveTab("mission-control")} 
+              vendorsList={vendorsList}
+              // Ensure you pass the vendor form states from your Dashboard state
+            />
+          </div>
+        )}
+
+        {activeTab === "documents" && (
+          <div className={styles.fadeContent}>
+            <DocumentCenter user={user} onBack={() => setActiveTab("mission-control")} />
+          </div>
+        )}
       </main>
 
       {/* --- INLINE CONTACT BOARD OVERLAY MODAL LAYER --- */}

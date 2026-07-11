@@ -6,12 +6,12 @@ export default function FinancialLedger({
   financeForm, 
   setFinanceForm, 
   financeStatus, 
-  handleUpdateFinanceLedger 
+  handleUpdateFinanceLedger,
+  onBack // Added prop for navigation
 }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
 
-  // Computes suggestion index parameters fluidly based on query values
   const autocompleteSuggestions = masterRoster.filter(r => {
     const query = searchQuery.toLowerCase();
     return (
@@ -23,6 +23,13 @@ export default function FinancialLedger({
 
   return (
     <div className={styles.tableCard} style={{ marginTop: "10px" }}>
+      {/* Navigation Header */}
+      <div style={{ marginBottom: "20px" }}>
+        <button className={styles.cancelBtn} onClick={onBack}>
+          ← Back to Mission Control
+        </button>
+      </div>
+
       <div className={styles.tableHeader}>
         <div>
           <h3 style={{ margin: 0 }}>Resident Assessment Ledger</h3>
@@ -41,10 +48,9 @@ export default function FinancialLedger({
         )}
         <form onSubmit={(e) => {
           handleUpdateFinanceLedger(e);
-          setSearchQuery(""); // clear state after submission package leaves
+          setSearchQuery("");
         }} className={styles.announcementForm}>
           
-          {/* THE FIXED FIXED INPUT CONTAINER */}
           <div style={{ position: "relative" }}>
             <label>Search Resident Name or Street Address *</label>
             <input 
@@ -67,9 +73,7 @@ export default function FinancialLedger({
                   <div
                     key={lot.id}
                     onMouseDown={() => {
-                      // Locks in the physical street address string to state
                       setFinanceForm({ ...financeForm, street_address: lot.street_address });
-                      // decoupled string keeps next query operations clean
                       setSearchQuery(`${lot.first_name} ${lot.last_name} (${lot.street_address})`);
                       setShowSuggestions(false);
                     }}
