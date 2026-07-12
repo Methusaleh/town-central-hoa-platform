@@ -2,14 +2,14 @@ import { useState } from "react";
 import styles from "../BoardPortal.module.css";
 
 export default function RosterDirectory({ 
-  masterRoster, 
+  masterRoster = [], 
   showRosterModal, 
   setShowRosterModal, 
-  rosterForm, 
+  rosterForm = {}, 
   setRosterForm, 
-  rosterStatus, 
+  rosterStatus = {}, 
   handleOnboardResident,
-  onBack // Added prop for navigation
+  onBack 
 }) {
   const [sendWelcomePacket, setSendWelcomePacket] = useState(false);
 
@@ -43,8 +43,8 @@ export default function RosterDirectory({
       {showRosterModal && (
         <div className={styles.formCard} style={{ marginBottom: "25px", border: "1px solid #e2e8f0" }}>
           <h4>Register New Neighborhood Lot Row</h4>
-          {rosterStatus.text && (
-            <div style={{ padding: "10px", borderRadius: "6px", marginBottom: "15px", backgroundColor: rosterStatus.type === "success" ? "#d4edda" : "#f8d7da", color: rosterStatus.type === "success" ? "#155724" : "#721c24" }}>
+          {rosterStatus?.text && (
+            <div style={{ padding: "10px", borderRadius: "6px", marginBottom: "15px", backgroundColor: rosterStatus?.type === "success" ? "#d4edda" : "#f8d7da", color: rosterStatus?.type === "success" ? "#155724" : "#721c24" }}>
               {rosterStatus.text}
             </div>
           )}
@@ -54,7 +54,7 @@ export default function RosterDirectory({
                 <label>First Name *</label>
                 <input 
                   type="text" 
-                  value={rosterForm.first_name} 
+                  value={rosterForm?.first_name || ""} 
                   onChange={(e) => setRosterForm({...rosterForm, first_name: e.target.value})} 
                   required 
                 />
@@ -63,7 +63,7 @@ export default function RosterDirectory({
                 <label>Last Name *</label>
                 <input 
                   type="text" 
-                  value={rosterForm.last_name} 
+                  value={rosterForm?.last_name || ""} 
                   onChange={(e) => setRosterForm({...rosterForm, last_name: e.target.value})} 
                   required 
                 />
@@ -74,7 +74,7 @@ export default function RosterDirectory({
               <input 
                 type="email" 
                 placeholder="Optional until user claims account" 
-                value={rosterForm.email} 
+                value={rosterForm?.email || ""} 
                 onChange={(e) => setRosterForm({...rosterForm, email: e.target.value})} 
               />
             </div>
@@ -83,7 +83,7 @@ export default function RosterDirectory({
               <input 
                 type="text" 
                 placeholder="e.g. 742 Evergreen Terrace" 
-                value={rosterForm.street_address} 
+                value={rosterForm?.street_address || ""} 
                 onChange={(e) => setRosterForm({...rosterForm, street_address: e.target.value})} 
                 required 
               />
@@ -116,7 +116,7 @@ export default function RosterDirectory({
           </tr>
         </thead>
         <tbody>
-          {masterRoster.map((res) => (
+          {(masterRoster || []).map((res) => (
             <tr key={res.id}>
               <td style={{ fontWeight: "700", color: "#64748b" }}>{res.lot_number || `LOT-${100 + res.id}`}</td>
               <td style={{ fontWeight: "600" }}>{res.first_name} {res.last_name}</td>

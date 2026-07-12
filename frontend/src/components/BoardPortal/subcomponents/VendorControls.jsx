@@ -5,13 +5,13 @@ export default function VendorControls({
   setShowVendorForm,
   editingVendorId,
   setEditingVendorId,
-  vendorForm,
+  vendorForm = {}, // Default empty object to prevent crashes
   setVendorForm,
-  vendorsList,
+  vendorsList = [], // Default empty array to prevent map() crashes
   handleVendorSubmit,
   startEditVendor,
   handleDeleteVendor,
-  onBack // Added prop for navigation
+  onBack,
 }) {
   return (
     <div className={styles.tableCard} style={{ marginTop: "10px" }}>
@@ -48,15 +48,15 @@ export default function VendorControls({
           <h4>{editingVendorId !== null ? "📝 Edit Vetted Contractor Records" : "🏢 Onboard Recommended Business Card"}</h4>
           <form onSubmit={handleVendorSubmit} className={styles.announcementForm}>
             <div className={styles.inlineGroup}>
-              <div><label>Company Name *</label><input type="text" placeholder="e.g. Piedmont Roofing LLC" value={vendorForm.company_name} onChange={(e) => setVendorForm({...vendorForm, company_name: e.target.value})} required /></div>
-              <div><label>Service Type Category *</label><input type="text" placeholder="e.g. Plumbing, Landscaping" value={vendorForm.service_type} onChange={(e) => setVendorForm({...vendorForm, service_type: e.target.value})} required /></div>
+              <div><label>Company Name *</label><input type="text" placeholder="e.g. Piedmont Roofing LLC" value={vendorForm?.company_name || ""} onChange={(e) => setVendorForm({...vendorForm, company_name: e.target.value})} required /></div>
+              <div><label>Service Type Category *</label><input type="text" placeholder="e.g. Plumbing, Landscaping" value={vendorForm?.service_type || ""} onChange={(e) => setVendorForm({...vendorForm, service_type: e.target.value})} required /></div>
             </div>
             <div className={styles.inlineGroup}>
-              <div><label>Contact Phone</label><input type="tel" placeholder="e.g. (405) 555-0199" value={vendorForm.contact_phone} onChange={(e) => setVendorForm({...vendorForm, contact_phone: e.target.value})} /></div>
-              <div><label>Contact Email</label><input type="email" placeholder="e.g. bids@contractor.com" value={vendorForm.contact_email} onChange={(e) => setVendorForm({...vendorForm, contact_email: e.target.value})} /></div>
+              <div><label>Contact Phone</label><input type="tel" placeholder="e.g. (405) 555-0199" value={vendorForm?.contact_phone || ""} onChange={(e) => setVendorForm({...vendorForm, contact_phone: e.target.value})} /></div>
+              <div><label>Contact Email</label><input type="email" placeholder="e.g. bids@contractor.com" value={vendorForm?.contact_email || ""} onChange={(e) => setVendorForm({...vendorForm, contact_email: e.target.value})} /></div>
             </div>
-            <div><label>Official Website URL</label><input type="url" placeholder="https://www.example.com" value={vendorForm.website_url} onChange={(e) => setVendorForm({...vendorForm, website_url: e.target.value})} /></div>
-            <div><label>Board Recommendation Note</label><textarea placeholder="Board notes..." value={vendorForm.notes} onChange={(e) => setVendorForm({...vendorForm, notes: e.target.value})} style={{ minHeight: "80px" }} /></div>
+            <div><label>Official Website URL</label><input type="url" placeholder="https://www.example.com" value={vendorForm?.website_url || ""} onChange={(e) => setVendorForm({...vendorForm, website_url: e.target.value})} /></div>
+            <div><label>Board Recommendation Note</label><textarea placeholder="Board notes..." value={vendorForm?.notes || ""} onChange={(e) => setVendorForm({...vendorForm, notes: e.target.value})} style={{ minHeight: "80px" }} /></div>
             <button type="submit" className={styles.submitBtn}>{editingVendorId !== null ? "Save Contractor Adjustments" : "Publish to Resident Directory"}</button>
           </form>
         </div>
@@ -68,7 +68,7 @@ export default function VendorControls({
             <th>Company Profile Name</th>
             <th>Classification Tag</th>
             <th>Contact Access Channels</th>
-            <th style={{ textAlign: "right" }}>Administrative Operations Operations</th>
+            <th style={{ textAlign: "right" }}>Administrative Operations</th>
           </tr>
         </thead>
         <tbody>
