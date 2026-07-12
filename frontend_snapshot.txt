@@ -38,13 +38,12 @@ import Landing from "./pages/Landing/Landing";
 import Dashboard from "./pages/Dashboard/Dashboard";
 import ContactPage from "./pages/Contact/ContactPage";
 import Profile from "./pages/Profile/Profile";
-import Register from "./pages/Register/Register"; // 1. Import the new page
+import Claim from "./pages/Claim/Claim"; // Import the new Claim component
 
 export default function App() {
-  // 'view' can be "landing", "dashboard", "contact", or "register"
+  // 'view' can now be "landing", "dashboard", "contact", or "claim"
   const [view, setView] = useState("landing");
 
-  // Test user state
   const [user, setUser] = useState({
     first_name: "Aaron",
     email: "samplethis84@gmail.com",
@@ -54,45 +53,35 @@ export default function App() {
   const goToLanding = () => setView("landing");
   const goToProfile = () => setView("profile");
   const goToDashboard = (loggedInUser) => {
-    // If no user is passed, or if the user is missing a first_name, 
-    // provide a structured default to ensure the UI stays populated.
     const activeUser = (loggedInUser && loggedInUser.first_name) 
       ? loggedInUser 
-      : {
-          first_name: "Aaron",
-          email: "samplethis84@gmail.com",
-          role: "super_admin",
-        };
-
+      : { first_name: "Aaron", email: "samplethis84@gmail.com", role: "super_admin" };
     setUser(activeUser);
     setView("dashboard");
   };
   const goToContact = () => setView("contact");
-  const goToRegister = () => setView("register"); // 2. Add the navigation handler
+  const goToClaim = () => setView("claim"); // Updated handler name
 
   return (
     <div className="app-container">
       {view === "landing" && (
         <Landing 
           onLogin={goToDashboard} 
-          onRegisterClick={goToRegister} // 3. Pass register handler to landing
+          onRegisterClick={goToClaim} // Updated to call goToClaim
           onContactClick={goToContact} 
         />
       )}
 
-      {view === "register" && (
-        <Register onBack={goToLanding} onRegisterSuccess={goToDashboard} />
+      {/* Updated view from "register" to "claim" */}
+      {view === "claim" && (
+        <Claim onBack={goToLanding} onClaimSuccess={goToDashboard} />
       )}
 
       {view === "dashboard" && (
         <Dashboard 
           user={user} 
           onNavigateToProfile={() => setView("profile")} 
-          onLogout={() => {
-            // Optional: clear user state on logout
-            setUser(null);
-            setView("landing");
-          }}
+          onLogout={() => { setUser(null); setView("landing"); }}
         />
       )}
 
@@ -102,7 +91,7 @@ export default function App() {
         <Profile 
           user={user} 
           onBack={() => setView("dashboard")} 
-          onUserUpdate={(updatedUser) => setUser(updatedUser)} // Injected real-time state bridge link
+          onUserUpdate={(updatedUser) => setUser(updatedUser)} 
         />
       )}
     </div>
@@ -843,8 +832,9 @@ FILE: ./frontend/src/components/BoardPortal/subcomponents/DocumentManager.jsx
 import { useState, useEffect } from "react";
 import styles from "../BoardPortal.module.css";
 
-export default function DocumentManager({ user, onBack }) { // Added onBack prop
+export default function DocumentManager({ user, onBack }) {
   const [categories, setCategories] = useState([]);
+  const [documents, setDocuments] = useState([]);
   
   const [docForm, setDocForm] = useState({ 
     title: "", 
@@ -852,35 +842,35 @@ export default function DocumentManager({ user, onBack }) { // Added onBack prop
     is_private: false, 
     requires_board_key: false 
   });
-  const [selectedFile, setSelectedFile] = useState(null);
   
-  // UI States
+  const [selectedFile, setSelectedFile] = useState(null);
   const [showNewCategory, setShowNewCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [creating, setCreating] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState("");
-  const [documents, setDocuments] = useState([]);
 
   const API_BASE = import.meta.env.VITE_API_URL || "https://town-central-hoa-platform-469564564131.us-central1.run.app";
 
   useEffect(() => {
     fetch(`${API_BASE}/api/documents/categories`)
       .then(res => res.json())
-      .then(data => setCategories(data))
+      .then(data => setCategories(data || []))
       .catch(err => console.error("Error fetching categories:", err));
   }, [API_BASE]);
 
   useEffect(() => {
     fetch(`${API_BASE}/api/documents`)
       .then(res => res.json())
-      .then(data => setDocuments(data));
+      .then(data => setDocuments(data || []))
+      .catch(err => console.error("Error fetching docs:", err));
   }, [API_BASE]);
 
-  const filteredDocs = documents.filter(doc => 
-    doc.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
-    (filterCategory === "" || doc.category_id.toString() === filterCategory)
+  // Safe filter logic using optional chaining
+  const filteredDocs = (documents || []).filter(doc => 
+    doc?.title?.toLowerCase().includes(searchTerm.toLowerCase()) &&
+    (filterCategory === "" || doc?.category_id?.toString() === filterCategory)
   );
 
   const handleDelete = async (id) => {
@@ -888,12 +878,11 @@ export default function DocumentManager({ user, onBack }) { // Added onBack prop
     
     try {
       const response = await fetch(`${API_BASE}/api/documents/${id}`, { method: "DELETE" });
-      
       if (response.ok) {
         setDocuments(documents.filter(d => d.id !== id));
       } else {
         const errorData = await response.json();
-        alert(`Delete failed: ${errorData.error}`);
+        alert(`Delete failed: ${errorData?.error || "Unknown error"}`);
       }
     } catch (err) {
       console.error("Delete network error:", err);
@@ -904,7 +893,6 @@ export default function DocumentManager({ user, onBack }) { // Added onBack prop
   const handleCreateCategory = async () => {
     if (!newCategoryName.trim()) return;
     setCreating(true);
-
     try {
       const response = await fetch(`${API_BASE}/api/documents/categories`, {
         method: "POST",
@@ -918,13 +906,9 @@ export default function DocumentManager({ user, onBack }) { // Added onBack prop
         setDocForm({ ...docForm, category_id: newCat.id });
         setNewCategoryName("");
         setShowNewCategory(false);
-      } else {
-        const errorData = await response.json();
-        alert(`Failed to save category: ${errorData.error || "Unknown server error"}`);
       }
     } catch (err) {
       console.error("Error creating category:", err);
-      alert("Failed to reach the server.");
     } finally {
       setCreating(false);
     }
@@ -932,11 +916,10 @@ export default function DocumentManager({ user, onBack }) { // Added onBack prop
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!docForm.category_id) return alert("Please select or create a category.");
+    if (!docForm?.category_id) return alert("Please select or create a category.");
     if (!selectedFile) return alert("Please select a file to upload.");
 
     setUploading(true);
-
     try {
       const formData = new FormData();
       formData.append("title", docForm.title);
@@ -946,30 +929,19 @@ export default function DocumentManager({ user, onBack }) { // Added onBack prop
       if (user?.id) formData.append("uploaded_by", user.id);
       formData.append("file", selectedFile);
 
-      const response = await fetch(`${API_BASE}/api/documents`, {
-        method: "POST",
-        body: formData,
-      });
+      const response = await fetch(`${API_BASE}/api/documents`, { method: "POST", body: formData });
 
-      if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || "Upload failed");
-      }
+      if (!response.ok) throw new Error("Upload failed");
 
-      alert("Document securely uploaded and published!");
+      alert("Document securely uploaded!");
       setDocForm({ title: "", category_id: "", is_private: false, requires_board_key: false });
       setSelectedFile(null);
       
-      const fileInput = document.getElementById("hidden-file-input");
-      if (fileInput) fileInput.value = "";
-      
-      const refreshResponse = await fetch(`${API_BASE}/api/documents`);
-      const data = await refreshResponse.json();
-      setDocuments(data);
-
+      const refresh = await fetch(`${API_BASE}/api/documents`);
+      const data = await refresh.json();
+      setDocuments(data || []);
     } catch (err) {
-      console.error("Upload error:", err);
-      alert(err.message || "A network error occurred during upload.");
+      alert(err.message);
     } finally {
       setUploading(false);
     }
@@ -977,15 +949,13 @@ export default function DocumentManager({ user, onBack }) { // Added onBack prop
 
   return (
     <div className={styles.formCard} style={{ marginTop: "10px" }}>
-      {/* Navigation Header */}
       <div style={{ marginBottom: "20px" }}>
-        <button className={styles.cancelBtn} onClick={onBack}>
-          ← Back to Mission Control
-        </button>
+        <button className={styles.cancelBtn} onClick={onBack}>← Back to Mission Control</button>
       </div>
 
       <h3>Upload Community Document</h3>
       
+      {/* Category Selection Block */}
       <div style={{ background: "#f8fafc", padding: "15px", borderRadius: "10px", marginBottom: "20px", border: "1px solid #e2e8f0" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: showNewCategory ? "10px" : "0" }}>
           <label style={{ fontSize: "0.85rem", fontWeight: "700", color: "#475569", textTransform: "uppercase" }}>Document Category</label>
@@ -999,79 +969,33 @@ export default function DocumentManager({ user, onBack }) { // Added onBack prop
             <button type="button" onClick={handleCreateCategory} disabled={creating} style={{ background: "#2ecc71", color: "white", border: "none", padding: "0 20px", borderRadius: "8px", fontWeight: "700", cursor: "pointer" }}>{creating ? "..." : "Save"}</button>
           </div>
         ) : (
-          <select value={docForm.category_id} onChange={(e) => setDocForm({...docForm, category_id: e.target.value})} style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #cbd5e1", backgroundColor: "white" }}>
+          <select value={docForm?.category_id || ""} onChange={(e) => setDocForm({...docForm, category_id: e.target.value})} style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #cbd5e1", backgroundColor: "white" }}>
             <option value="">-- Select a Category --</option>
             {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
           </select>
         )}
       </div>
 
+      {/* Upload Form */}
       <form onSubmit={handleSubmit} className={styles.announcementForm}>
-        <input 
-          type="text" 
-          placeholder="Document Title" 
-          value={docForm.title} 
-          onChange={(e) => setDocForm({...docForm, title: e.target.value})} 
-          required 
-        />
-
+        <input type="text" placeholder="Document Title" value={docForm?.title || ""} onChange={(e) => setDocForm({...docForm, title: e.target.value})} required />
         <div 
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={(e) => {
-            e.preventDefault();
-            if (e.dataTransfer.files.length > 0) setSelectedFile(e.dataTransfer.files[0]);
-          }}
-          style={{ 
-            border: "2px dashed #cbd5e1", 
-            borderRadius: "12px", 
-            padding: "30px", 
-            textAlign: "center", 
-            background: selectedFile ? "#f0fdf4" : "#f8fafc",
-            cursor: "pointer",
-            transition: "0.2s"
-          }}
-          onClick={() => document.getElementById("hidden-file-input").click()}
+          onClick={() => document.getElementById("hidden-file-input")?.click()}
+          style={{ border: "2px dashed #cbd5e1", borderRadius: "12px", padding: "30px", textAlign: "center", background: selectedFile ? "#f0fdf4" : "#f8fafc", cursor: "pointer" }}
         >
-          <p style={{ margin: 0, fontWeight: "600", color: "#475569" }}>
-            {selectedFile ? `Selected: ${selectedFile.name}` : "Drag & Drop file here, or click to browse"}
-          </p>
-          <input 
-            id="hidden-file-input"
-            type="file" 
-            hidden 
-            onChange={(e) => setSelectedFile(e.target.files[0])} 
-          />
+          <p style={{ margin: 0, fontWeight: "600", color: "#475569" }}>{selectedFile ? `Selected: ${selectedFile.name}` : "Drag & Drop file here, or click to browse"}</p>
+          <input id="hidden-file-input" type="file" hidden onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} />
         </div>
-
         <div style={{ display: "flex", alignItems: "center", gap: "10px", margin: "15px 0" }}>
-          <input 
-            type="checkbox" 
-            id="boardKey"
-            checked={docForm.requires_board_key} 
-            onChange={(e) => setDocForm({...docForm, requires_board_key: e.target.checked})} 
-            style={{ cursor: "pointer", width: "18px", height: "18px" }}
-          />
-          <label htmlFor="boardKey" style={{ cursor: "pointer", fontSize: "0.9rem", color: "#334155", fontWeight: "600" }}>
-            Board Access Only (Hide from residents)
-          </label>
+          <input type="checkbox" id="boardKey" checked={!!docForm?.requires_board_key} onChange={(e) => setDocForm({...docForm, requires_board_key: e.target.checked})} />
+          <label htmlFor="boardKey" style={{ cursor: "pointer", fontSize: "0.9rem", color: "#334155", fontWeight: "600" }}>Board Access Only</label>
         </div>
-
-        <button type="submit" className={styles.submitBtn} disabled={uploading}>
-          {uploading ? "Uploading..." : "Upload & Publish"}
-        </button>
+        <button type="submit" className={styles.submitBtn} disabled={uploading}>{uploading ? "Uploading..." : "Upload & Publish"}</button>
       </form>
       
       <hr style={{ margin: "30px 0" }} />
 
-      <h3>Community Documents</h3>
-      <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
-        <input placeholder="Search documents..." onChange={(e) => setSearchTerm(e.target.value)} style={{ flex: 2, padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1" }} />
-        <select onChange={(e) => setFilterCategory(e.target.value)} style={{ flex: 1, padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1" }}>
-          <option value="">All Categories</option>
-          {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
-      </div>
-
+      <h3>Community Documents List</h3>
       <div className={styles.documentList}>
         {filteredDocs.map(doc => (
           <div key={doc.id} style={{ display: "flex", justifyContent: "space-between", padding: "10px", borderBottom: "1px solid #eee" }}>
@@ -1320,12 +1244,12 @@ import { useState } from "react";
 import styles from "../BoardPortal.module.css";
 
 export default function FinancialLedger({ 
-  masterRoster, 
-  financeForm, 
+  masterRoster = [], // Default to empty array for safety
+  financeForm = {},  // Default to empty object for safety
   setFinanceForm, 
-  financeStatus, 
+  financeStatus = {}, // Default to empty object for safety
   handleUpdateFinanceLedger,
-  onBack // Added prop for navigation
+  onBack 
 }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -1341,7 +1265,6 @@ export default function FinancialLedger({
 
   return (
     <div className={styles.tableCard} style={{ marginTop: "10px" }}>
-      {/* Navigation Header */}
       <div style={{ marginBottom: "20px" }}>
         <button className={styles.cancelBtn} onClick={onBack}>
           ← Back to Mission Control
@@ -1359,8 +1282,14 @@ export default function FinancialLedger({
 
       <div className={styles.formCard} style={{ border: "1px solid #e2e8f0", maxWidth: "600px" }}>
         <h4>Update Ledger Statement</h4>
-        {financeStatus.text && (
-          <div style={{ padding: "10px", borderRadius: "6px", marginBottom: "15px", backgroundColor: financeStatus.type === "success" ? "#d4edda" : "#f8d7da", color: financeStatus.type === "success" ? "#155724" : "#721c24" }}>
+        {financeStatus?.text && (
+          <div style={{ 
+            padding: "10px", 
+            borderRadius: "6px", 
+            marginBottom: "15px", 
+            backgroundColor: financeStatus?.type === "success" ? "#d4edda" : "#f8d7da", 
+            color: financeStatus?.type === "success" ? "#155724" : "#721c24" 
+          }}>
             {financeStatus.text}
           </div>
         )}
@@ -1381,7 +1310,7 @@ export default function FinancialLedger({
               }}
               onFocus={() => setShowSuggestions(true)}
               onBlur={() => setTimeout(() => setShowSuggestions(false), 250)}
-              required={!financeForm.street_address} 
+              required={!financeForm?.street_address} 
               autoComplete="off"
             />
             
@@ -1396,8 +1325,6 @@ export default function FinancialLedger({
                       setShowSuggestions(false);
                     }}
                     style={{ padding: "10px 14px", cursor: "pointer", borderBottom: "1px solid #f1f5f9", fontSize: "0.9rem" }}
-                    onMouseEnter={(e) => e.target.style.backgroundColor = "#f8fafc"}
-                    onMouseLeave={(e) => e.target.style.backgroundColor = "transparent"}
                   >
                     👤 <strong>{lot.first_name} {lot.last_name}</strong> — 📍 {lot.street_address}
                   </div>
@@ -1413,7 +1340,7 @@ export default function FinancialLedger({
                 type="number" 
                 step="0.01" 
                 placeholder="0.00" 
-                value={financeForm.balance} 
+                value={financeForm?.balance || ""} 
                 onChange={(e) => setFinanceForm({...financeForm, balance: e.target.value})} 
                 required 
               />
@@ -1421,7 +1348,7 @@ export default function FinancialLedger({
             <div>
               <label>Payment Status Assignment</label>
               <select 
-                value={financeForm.status} 
+                value={financeForm?.status || "Pending"} 
                 onChange={(e) => setFinanceForm({...financeForm, status: e.target.value})} 
                 className={styles.prioritySelect}
               >
@@ -1449,13 +1376,13 @@ export default function VendorControls({
   setShowVendorForm,
   editingVendorId,
   setEditingVendorId,
-  vendorForm,
+  vendorForm = {}, // Default empty object to prevent crashes
   setVendorForm,
-  vendorsList,
+  vendorsList = [], // Default empty array to prevent map() crashes
   handleVendorSubmit,
   startEditVendor,
   handleDeleteVendor,
-  onBack // Added prop for navigation
+  onBack,
 }) {
   return (
     <div className={styles.tableCard} style={{ marginTop: "10px" }}>
@@ -1492,15 +1419,15 @@ export default function VendorControls({
           <h4>{editingVendorId !== null ? "📝 Edit Vetted Contractor Records" : "🏢 Onboard Recommended Business Card"}</h4>
           <form onSubmit={handleVendorSubmit} className={styles.announcementForm}>
             <div className={styles.inlineGroup}>
-              <div><label>Company Name *</label><input type="text" placeholder="e.g. Piedmont Roofing LLC" value={vendorForm.company_name} onChange={(e) => setVendorForm({...vendorForm, company_name: e.target.value})} required /></div>
-              <div><label>Service Type Category *</label><input type="text" placeholder="e.g. Plumbing, Landscaping" value={vendorForm.service_type} onChange={(e) => setVendorForm({...vendorForm, service_type: e.target.value})} required /></div>
+              <div><label>Company Name *</label><input type="text" placeholder="e.g. Piedmont Roofing LLC" value={vendorForm?.company_name || ""} onChange={(e) => setVendorForm({...vendorForm, company_name: e.target.value})} required /></div>
+              <div><label>Service Type Category *</label><input type="text" placeholder="e.g. Plumbing, Landscaping" value={vendorForm?.service_type || ""} onChange={(e) => setVendorForm({...vendorForm, service_type: e.target.value})} required /></div>
             </div>
             <div className={styles.inlineGroup}>
-              <div><label>Contact Phone</label><input type="tel" placeholder="e.g. (405) 555-0199" value={vendorForm.contact_phone} onChange={(e) => setVendorForm({...vendorForm, contact_phone: e.target.value})} /></div>
-              <div><label>Contact Email</label><input type="email" placeholder="e.g. bids@contractor.com" value={vendorForm.contact_email} onChange={(e) => setVendorForm({...vendorForm, contact_email: e.target.value})} /></div>
+              <div><label>Contact Phone</label><input type="tel" placeholder="e.g. (405) 555-0199" value={vendorForm?.contact_phone || ""} onChange={(e) => setVendorForm({...vendorForm, contact_phone: e.target.value})} /></div>
+              <div><label>Contact Email</label><input type="email" placeholder="e.g. bids@contractor.com" value={vendorForm?.contact_email || ""} onChange={(e) => setVendorForm({...vendorForm, contact_email: e.target.value})} /></div>
             </div>
-            <div><label>Official Website URL</label><input type="url" placeholder="https://www.example.com" value={vendorForm.website_url} onChange={(e) => setVendorForm({...vendorForm, website_url: e.target.value})} /></div>
-            <div><label>Board Recommendation Note</label><textarea placeholder="Board notes..." value={vendorForm.notes} onChange={(e) => setVendorForm({...vendorForm, notes: e.target.value})} style={{ minHeight: "80px" }} /></div>
+            <div><label>Official Website URL</label><input type="url" placeholder="https://www.example.com" value={vendorForm?.website_url || ""} onChange={(e) => setVendorForm({...vendorForm, website_url: e.target.value})} /></div>
+            <div><label>Board Recommendation Note</label><textarea placeholder="Board notes..." value={vendorForm?.notes || ""} onChange={(e) => setVendorForm({...vendorForm, notes: e.target.value})} style={{ minHeight: "80px" }} /></div>
             <button type="submit" className={styles.submitBtn}>{editingVendorId !== null ? "Save Contractor Adjustments" : "Publish to Resident Directory"}</button>
           </form>
         </div>
@@ -1512,7 +1439,7 @@ export default function VendorControls({
             <th>Company Profile Name</th>
             <th>Classification Tag</th>
             <th>Contact Access Channels</th>
-            <th style={{ textAlign: "right" }}>Administrative Operations Operations</th>
+            <th style={{ textAlign: "right" }}>Administrative Operations</th>
           </tr>
         </thead>
         <tbody>
@@ -1544,14 +1471,14 @@ import { useState } from "react";
 import styles from "../BoardPortal.module.css";
 
 export default function RosterDirectory({ 
-  masterRoster, 
+  masterRoster = [], 
   showRosterModal, 
   setShowRosterModal, 
-  rosterForm, 
+  rosterForm = {}, 
   setRosterForm, 
-  rosterStatus, 
+  rosterStatus = {}, 
   handleOnboardResident,
-  onBack // Added prop for navigation
+  onBack 
 }) {
   const [sendWelcomePacket, setSendWelcomePacket] = useState(false);
 
@@ -1585,8 +1512,8 @@ export default function RosterDirectory({
       {showRosterModal && (
         <div className={styles.formCard} style={{ marginBottom: "25px", border: "1px solid #e2e8f0" }}>
           <h4>Register New Neighborhood Lot Row</h4>
-          {rosterStatus.text && (
-            <div style={{ padding: "10px", borderRadius: "6px", marginBottom: "15px", backgroundColor: rosterStatus.type === "success" ? "#d4edda" : "#f8d7da", color: rosterStatus.type === "success" ? "#155724" : "#721c24" }}>
+          {rosterStatus?.text && (
+            <div style={{ padding: "10px", borderRadius: "6px", marginBottom: "15px", backgroundColor: rosterStatus?.type === "success" ? "#d4edda" : "#f8d7da", color: rosterStatus?.type === "success" ? "#155724" : "#721c24" }}>
               {rosterStatus.text}
             </div>
           )}
@@ -1596,7 +1523,7 @@ export default function RosterDirectory({
                 <label>First Name *</label>
                 <input 
                   type="text" 
-                  value={rosterForm.first_name} 
+                  value={rosterForm?.first_name || ""} 
                   onChange={(e) => setRosterForm({...rosterForm, first_name: e.target.value})} 
                   required 
                 />
@@ -1605,7 +1532,7 @@ export default function RosterDirectory({
                 <label>Last Name *</label>
                 <input 
                   type="text" 
-                  value={rosterForm.last_name} 
+                  value={rosterForm?.last_name || ""} 
                   onChange={(e) => setRosterForm({...rosterForm, last_name: e.target.value})} 
                   required 
                 />
@@ -1616,7 +1543,7 @@ export default function RosterDirectory({
               <input 
                 type="email" 
                 placeholder="Optional until user claims account" 
-                value={rosterForm.email} 
+                value={rosterForm?.email || ""} 
                 onChange={(e) => setRosterForm({...rosterForm, email: e.target.value})} 
               />
             </div>
@@ -1625,7 +1552,7 @@ export default function RosterDirectory({
               <input 
                 type="text" 
                 placeholder="e.g. 742 Evergreen Terrace" 
-                value={rosterForm.street_address} 
+                value={rosterForm?.street_address || ""} 
                 onChange={(e) => setRosterForm({...rosterForm, street_address: e.target.value})} 
                 required 
               />
@@ -1651,21 +1578,29 @@ export default function RosterDirectory({
         <thead>
           <tr>
             <th>Lot ID</th>
-            <th>Full Resident Name</th>
-            <th>Assigned Street Address</th>
-            <th>Email Registration Hook</th>
-            <th>Portal Claim Status</th>
+            <th>Resident Name</th>
+            <th>Address</th>
+            <th>Claim Code</th> {/* New Column */}
+            <th>Status</th>
           </tr>
         </thead>
         <tbody>
-          {masterRoster.map((res) => (
+          {(masterRoster || []).map((res) => (
             <tr key={res.id}>
               <td style={{ fontWeight: "700", color: "#64748b" }}>{res.lot_number || `LOT-${100 + res.id}`}</td>
               <td style={{ fontWeight: "600" }}>{res.first_name} {res.last_name}</td>
               <td>📍 {res.street_address}</td>
-              <td style={{ color: res.email ? "#0f172a" : "#94a3b8" }}>{res.email || "No email assigned"}</td>
+              {/* Displaying the token clearly */}
+              <td style={{ fontFamily: "monospace", fontWeight: "bold", color: "#3b82f6" }}>
+                {res.onboarding_token || "—"}
+              </td>
               <td>
-                <span style={{ padding: "4px 8px", borderRadius: "12px", fontSize: "0.75rem", fontWeight: "700", textTransform: "uppercase", backgroundColor: res.is_claimed ? "#d1fae5" : "#f1f5f9", color: res.is_claimed ? "#065f46" : "#475569" }}>
+                <span style={{ 
+                  padding: "4px 8px", borderRadius: "12px", fontSize: "0.75rem", fontWeight: "700", 
+                  textTransform: "uppercase", 
+                  backgroundColor: res.is_claimed ? "#d1fae5" : "#f1f5f9", 
+                  color: res.is_claimed ? "#065f46" : "#475569" 
+                }}>
                   {res.is_claimed ? "🔒 Claimed" : "⏳ Pending"}
                 </span>
               </td>
@@ -1687,8 +1622,8 @@ export default function MissionControl({ onNavigate }) {
     { id: "requests", label: "Operations & Tickets", icon: "📋" },
     { id: "roster", label: "Master Roster", icon: "👥" },
     { id: "financials", label: "Assessment Ledger", icon: "💰" },
-    { id: "vendors", label: "Verified Vendors", icon: "🏢" },
-    { id: "documents", label: "Document Manager", icon: "📄" },
+    { id: "admin-vendors", label: "Vendor Controls", icon: "🏢" }, // Note the "admin-" prefix
+    { id: "admin-documents", label: "Document Manager", icon: "📄" }, // Note the "admin-" prefix
   ];
 
   return (
@@ -3686,48 +3621,75 @@ import NeighborhoodCalendar from "../../components/NeighborhoodCalendar/Neighbor
 import RequestForm from "../../components/RequestForm/RequestForm";
 import VendorDirectory from "../../components/VendorDirectory/VendorDirectory";
 import DocumentCenter from "../../components/DocumentCenter/DocumentCenter";
-import DocumentManager from "../../components/BoardPortal/subcomponents/DocumentManager"; // Admin view
+import DocumentManager from "../../components/BoardPortal/subcomponents/DocumentManager";
 import styles from "./Dashboard.module.css";
 
 export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
   const [activeTab, setActiveTab] = useState("feed");
-  
-  // Admin UI & Data States
-  const [viewMode, setViewMode] = useState("active");
-  const [showForm, setShowForm] = useState(false);
-  const [showEventForm, setShowEventForm] = useState(false);
+
+  // Data States
   const [requests, setRequests] = useState([]);
   const [masterRoster, setMasterRoster] = useState([]);
   const [vendorsList, setVendorsList] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Form States
-  const [announcement, setAnnouncement] = useState({ title: "", content: "", priority: "normal", channel_type: "general" });
-  const [newEvent, setNewEvent] = useState({ title: "", event_date: "", event_time: "", location: "", description: "", attachment_url: "", attachment_name: "" });
-  
-  // Contact Modal States
+  // UI States
+  const [viewMode, setViewMode] = useState("active");
+  const [showForm, setShowForm] = useState(false);
+  const [showEventForm, setShowEventForm] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
-  const [contactForm, setContactForm] = useState({ subject: "", message: "" });
+  const [showSettings, setShowSettings] = useState(false);
   const [sending, setSending] = useState(false);
 
-  const [showSettings, setShowSettings] = useState(false);
-  const API_BASE = "https://town-central-hoa-platform-469564564131.us-central1.run.app";
+  // Form States
+  const [announcement, setAnnouncement] = useState({
+    title: "",
+    content: "",
+    priority: "normal",
+    channel_type: "general",
+  });
+  const [newEvent, setNewEvent] = useState({
+    title: "",
+    event_date: "",
+    event_time: "",
+    location: "",
+    description: "",
+    attachment_url: "",
+    attachment_name: "",
+  });
+  const [financeForm, setFinanceForm] = useState({
+    street_address: "",
+    balance: "",
+    status: "Pending",
+  });
+  const [financeStatus, setFinanceStatus] = useState({ text: "", type: "" });
+  const [contactForm, setContactForm] = useState({ subject: "", message: "" });
+
+  const API_BASE =
+    "https://town-central-hoa-platform-469564564131.us-central1.run.app";
   const settingsRef = useRef(null);
 
   // Data Fetching Logic
   useEffect(() => {
     fetch(`${API_BASE}/api/requests/admin/all`)
       .then((res) => res.json())
-      .then((data) => { setRequests(data); setLoading(false); })
+      .then((data) => {
+        setRequests(data);
+        setLoading(false);
+      })
       .catch((err) => console.error("Admin requests fetch error:", err));
   }, []);
 
   const fetchRosterData = async () => {
     try {
-      const response = await fetch(`${API_BASE}/api/residents/master-list-placeholder`);
+      const response = await fetch(
+        `${API_BASE}/api/residents/master-list-placeholder`,
+      );
       const data = await response.json();
       setMasterRoster(data);
-    } catch (err) { console.error("Roster fetch error:", err); }
+    } catch (err) {
+      console.error("Roster fetch error:", err);
+    }
   };
 
   const fetchVendorsData = async () => {
@@ -3735,25 +3697,37 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
       const response = await fetch(`${API_BASE}/api/vendors`);
       const data = await response.json();
       setVendorsList(data);
-    } catch (err) { console.error("Vendor fetch error:", err); }
+    } catch (err) {
+      console.error("Vendor fetch error:", err);
+    }
   };
 
   useEffect(() => {
     if (activeTab === "roster" || activeTab === "financials") fetchRosterData();
-    if (activeTab === "vendors") fetchVendorsData();
+    if (activeTab === "vendors" || activeTab === "admin-vendors")
+      fetchVendorsData();
   }, [activeTab]);
 
   const handleResolve = async (requestId) => {
     try {
-      const response = await fetch(`${API_BASE}/api/requests/${requestId}/resolve`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ adminName: user?.first_name || "Admin" }),
-      });
+      const response = await fetch(
+        `${API_BASE}/api/requests/${requestId}/resolve`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ adminName: user?.first_name || "Admin" }),
+        },
+      );
       if (response.ok) {
-        setRequests(requests.map((req) => req.id === requestId ? { ...req, status: "Resolved" } : req));
+        setRequests(
+          requests.map((req) =>
+            req.id === requestId ? { ...req, status: "Resolved" } : req,
+          ),
+        );
       }
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const handleContactSubmit = async (e) => {
@@ -3769,8 +3743,8 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
           last_name: "ContactForm",
           type: "Board Message",
           subject: contactForm.subject,
-          description: contactForm.message
-        })
+          description: contactForm.message,
+        }),
       });
       if (response.ok) {
         alert("Message delivered to the Board!");
@@ -3787,15 +3761,34 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
     }
   };
 
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (settingsRef.current && !settingsRef.current.contains(event.target)) {
-        setShowSettings(false);
+  const handleOnboardResident = async (e, sendWelcomePacket) => {
+    e.preventDefault();
+    
+    // 1. Generate a 6-character random token
+    const generatedToken = Math.random().toString(36).substring(2, 8).toUpperCase();
+    
+    try {
+      const response = await fetch(`${API_BASE}/api/residents`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...rosterForm,
+          onboarding_token: generatedToken,
+          send_welcome: sendWelcomePacket
+        })
+      });
+
+      if (response.ok) {
+        alert(`Property added! Claim Code: ${generatedToken}`);
+        fetchRosterData(); // Refresh the list
+        setShowForm(false); // Close the modal
+        setRosterForm({ first_name: "", last_name: "", email: "", street_address: "" });
       }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+    } catch (err) {
+      console.error("Onboarding error:", err);
+      alert("Failed to save property.");
+    }
+  };
 
   return (
     <div className={styles.layout}>
@@ -3805,700 +3798,126 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
       <aside className={styles.sidebar}>
         <nav className={styles.nav}>
           <div className={styles.profileHeader} ref={settingsRef}>
-            {user?.photo ? <img src={user.photo} alt="Avatar" className={styles.userAvatarMini} /> : <div className={styles.avatarPlaceholderMini}>{user?.first_name ? user.first_name.charAt(0).toUpperCase() : "R"}</div>}
+            {user?.photo ? (
+              <img
+                src={user.photo}
+                alt="Avatar"
+                className={styles.userAvatarMini}
+              />
+            ) : (
+              <div className={styles.avatarPlaceholderMini}>
+                {user?.first_name?.charAt(0).toUpperCase()}
+              </div>
+            )}
             <div className={styles.userInfoMini}>
-              <h4 style={{ margin: 0, fontSize: "0.9rem" }}>{user?.first_name}</h4>
+              <h4>{user?.first_name}</h4>
             </div>
-            <div className={styles.settingsTrigger} onClick={() => setShowSettings(!showSettings)}>⚙️</div>
+            <div
+              className={styles.settingsTrigger}
+              onClick={() => setShowSettings(!showSettings)}
+            >
+              ⚙️
+            </div>
             {showSettings && (
               <div className={styles.settingsDropdown}>
-                <button className={styles.dropdownBtn} onClick={onNavigateToProfile}>Settings</button>
-                <button className={`${styles.dropdownBtn} ${styles.logoutText}`} onClick={onLogout}>Logout</button>
+                <button
+                  className={styles.dropdownBtn}
+                  onClick={onNavigateToProfile}
+                >
+                  Settings
+                </button>
+                <button
+                  className={`${styles.dropdownBtn} ${styles.logoutText}`}
+                  onClick={onLogout}
+                >
+                  Logout
+                </button>
               </div>
             )}
           </div>
 
-          <div className={styles.brandContainer} style={{ marginTop: "20px" }}>
-            <div className={styles.brand}>Town Central</div>
-            <span className={styles.brandSubtitle}>Resident Portal</span>
-          </div>
-
-          <button className={`${styles.navItem} ${activeTab === "feed" ? styles.activeNav : ""}`} onClick={() => setActiveTab("feed")}>Home Dashboard</button>
-          <button className={`${styles.navItem} ${activeTab === "maintenance" ? styles.activeNav : ""}`} onClick={() => setActiveTab("maintenance")}>Maintenance & ARC</button>
-          <button className={`${styles.navItem} ${activeTab === "dues" ? styles.activeNav : ""}`} onClick={() => setActiveTab("dues")}>My Dues</button>
-          <button className={`${styles.navItem} ${activeTab === "vendors" ? styles.activeNav : ""}`} onClick={() => setActiveTab("vendors")}>Trusted Companies</button>
-          <button className={`${styles.navItem} ${activeTab === 'documents' ? styles.activeNav : ''}`} onClick={() => setActiveTab('documents')}>Community Documents</button>
-          <button onClick={() => setShowContactModal(true)} className={styles.navItem}>Contact the Board</button>
+          <button
+            className={`${styles.navItem} ${activeTab === "feed" ? styles.activeNav : ""}`}
+            onClick={() => setActiveTab("feed")}
+          >
+            Home Dashboard
+          </button>
+          <button
+            className={`${styles.navItem} ${activeTab === "maintenance" ? styles.activeNav : ""}`}
+            onClick={() => setActiveTab("maintenance")}
+          >
+            Maintenance & ARC
+          </button>
+          <button
+            className={`${styles.navItem} ${activeTab === "dues" ? styles.activeNav : ""}`}
+            onClick={() => setActiveTab("dues")}
+          >
+            My Dues
+          </button>
+          <button
+            className={`${styles.navItem} ${activeTab === "vendors" ? styles.activeNav : ""}`}
+            onClick={() => setActiveTab("vendors")}
+          >
+            Trusted Companies
+          </button>
+          <button
+            className={`${styles.navItem} ${activeTab === "documents" ? styles.activeNav : ""}`}
+            onClick={() => setActiveTab("documents")}
+          >
+            Community Documents
+          </button>
+          <button
+            onClick={() => setShowContactModal(true)}
+            className={styles.navItem}
+          >
+            Contact the Board
+          </button>
 
           {(user?.role === "board_member" || user?.role === "super_admin") && (
-            <button className={`${styles.navItem} ${activeTab === "mission-control" ? styles.activeNav : ""}`} onClick={() => setActiveTab("mission-control")}>Admin Tools</button>
+            <button
+              className={`${styles.navItem} ${activeTab === "mission-control" ? styles.activeNav : ""}`}
+              onClick={() => setActiveTab("mission-control")}
+            >
+              Admin Tools
+            </button>
           )}
         </nav>
       </aside>
 
       <main className={styles.main}>
-        {activeTab === "feed" && (
-          <div className={styles.fadeContent}>
-            <header className={styles.header}><h2>Town Central Community Hub</h2></header>
-            <section style={{ marginBottom: "30px" }}><NeighborhoodCalendar /></section>
-            <div className={styles.feedCard}><AnnouncementFeed /></div>
-          </div>
-        )}
+        {/* --- RESIDENT VIEWS (Standard IDs) --- */}
+        {activeTab === "feed" && <div className={styles.fadeContent}><NeighborhoodCalendar /><AnnouncementFeed /></div>}
+        {activeTab === "maintenance" && <div className={styles.fadeContent}><RequestForm user={user} /></div>}
+        {activeTab === "dues" && <div className={styles.fadeContent}><DuesCard user={user} /></div>}
+        {activeTab === "vendors" && <div className={styles.fadeContent}><VendorDirectory /></div>}
+        {activeTab === "documents" && <div className={styles.fadeContent}><DocumentCenter user={user} /></div>}
 
-        {activeTab === "maintenance" && (
-          <div className={styles.fadeContent}>
-            <header className={styles.header}><h2>Maintenance & ARC Requests</h2></header>
-            <RequestForm user={user} />
-          </div>
-        )}
-
-        {activeTab === "dues" && (
-          <div className={styles.fadeContent}>
-            <header className={styles.header}><h2>Financial Account</h2></header>
-            <div className={styles.duesPageWrapper}><DuesCard user={user} /></div>
-          </div>
-        )}
-
-        {activeTab === "vendors" && (
-          <div className={styles.fadeContent}>
-            <VendorDirectory />
-          </div>
-        )}
-
-        {activeTab === "mission-control" && (
-          <div className={styles.fadeContent}>
-            <MissionControl onNavigate={setActiveTab} />
-          </div>
-        )}
-
-        {/* --- ADMIN SUB-PAGES --- */}
-        {activeTab === "requests" && (
-          <div className={styles.fadeContent}>
-            <OperationsDashboard 
-              onBack={() => setActiveTab("mission-control")} 
-              requests={requests} 
-              loading={loading} 
-              handleResolve={handleResolve}
-              viewMode={viewMode} 
-              setViewMode={setViewMode}
-              showForm={showForm}
-              setShowForm={setShowForm}
-              showEventForm={showEventForm}
-              setShowEventForm={setShowEventForm}
-            />
-          </div>
-        )}
-
+        {/* --- ADMIN VIEWS (Unique Admin IDs) --- */}
+        {activeTab === "mission-control" && <div className={styles.fadeContent}><MissionControl onNavigate={setActiveTab} /></div>}
+        {activeTab === "requests" && <div className={styles.fadeContent}><OperationsDashboard onBack={() => setActiveTab("mission-control")} requests={requests} loading={loading} handleResolve={handleResolve} showForm={showForm} setShowForm={setShowForm} showEventForm={showEventForm} setShowEventForm={setShowEventForm} announcement={announcement} setAnnouncement={setAnnouncement} newEvent={newEvent} setNewEvent={setNewEvent} /></div>}
         {activeTab === "roster" && (
           <div className={styles.fadeContent}>
             <RosterDirectory 
               onBack={() => setActiveTab("mission-control")} 
-              masterRoster={masterRoster}
+              masterRoster={masterRoster} 
+              showRosterModal={showForm} 
+              setShowRosterModal={setShowForm}
+              rosterForm={rosterForm}
+              setRosterForm={setRosterForm}
+              handleOnboardResident={handleOnboardResident} // <--- Add this!
             />
           </div>
         )}
-
-        {activeTab === "financials" && (
-          <div className={styles.fadeContent}>
-            <FinancialLedger 
-              onBack={() => setActiveTab("mission-control")} 
-              masterRoster={masterRoster}
-              // Ensure you pass the finance form states from your Dashboard state
-            />
-          </div>
-        )}
-
-        {activeTab === "vendors" && (
-          <div className={styles.fadeContent}>
-            <VendorDirectory 
-              onBack={() => setActiveTab("mission-control")} 
-              vendorsList={vendorsList}
-              // Ensure you pass the vendor form states from your Dashboard state
-            />
-          </div>
-        )}
-
-        {activeTab === "documents" && (
-          <div className={styles.fadeContent}>
-            <DocumentCenter user={user} onBack={() => setActiveTab("mission-control")} />
-          </div>
-        )}
+        {activeTab === "financials" && <div className={styles.fadeContent}><FinancialLedger onBack={() => setActiveTab("mission-control")} masterRoster={masterRoster} financeForm={financeForm} setFinanceForm={setFinanceForm} financeStatus={financeStatus} /></div>}
+        
+        {/* These specific IDs now ensure you don't route to the resident versions */}
+        {activeTab === "admin-vendors" && <div className={styles.fadeContent}><VendorControls onBack={() => setActiveTab("mission-control")} vendorsList={vendorsList} /></div>}
+        {activeTab === "admin-documents" && <div className={styles.fadeContent}><DocumentManager user={user} onBack={() => setActiveTab("mission-control")} /></div>}
       </main>
-
-      {/* --- INLINE CONTACT BOARD OVERLAY MODAL LAYER --- */}
-      {showContactModal && (
-        <div className={styles.modalBackdrop} onClick={() => setShowContactModal(false)}>
-          <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
-            <h3>Message the Executive Board</h3>
-            <p>Have a question regarding community events, rules, or amenities? Send a secure message directly to board management here. This transmits instantly to the board email inbox in the background without opening any external apps.</p>
-            
-            <form onSubmit={handleContactSubmit} className={styles.modalForm}>
-              <div className={styles.modalInputGroup}>
-                <label>Message Subject *</label>
-                <input 
-                  type="text" 
-                  placeholder="e.g., Amenity Keycard Request, General Inquiry" 
-                  value={contactForm.subject}
-                  onChange={(e) => setContactForm({ ...contactForm, subject: e.target.value })}
-                  required 
-                />
-              </div>
-              
-              <div className={styles.modalInputGroup}>
-                <label>Correspondence Body *</label>
-                <textarea 
-                  placeholder="Type your details here for board review..." 
-                  value={contactForm.message}
-                  onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
-                  required 
-                />
-              </div>
-
-              <div className={styles.modalButtonGroup}>
-                <button type="button" className={styles.modalCancelBtn} onClick={() => setShowContactModal(false)}>
-                  Cancel
-                </button>
-                <button type="submit" className={styles.modalSubmitBtn} disabled={sending}>
-                  {sending ? "Transmitting..." : "Send Message"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
-==================================================
-FILE: ./frontend/src/pages/Register/Register.jsx
-==================================================
-import { useState } from "react";
-import { signInWithGoogle, registerWithEmail } from "../../firebase";
-import styles from "./Register.module.css";
 
-export default function Register({ onBack, onRegisterSuccess }) {
-  const [step, setStep] = useState(1); 
-  const [address, setAddress] = useState("");
-  const [guidelinesAccepted, setGuidelinesAccepted] = useState(false);
-  const [residentData, setResidentData] = useState(null);
-  const [error, setError] = useState(null);
-  const [searching, setSearching] = useState(false);
-
-  // New States for Custom Email/Password Flow
-  const [authMethod, setAuthMethod] = useState("google"); // "google" or "email"
-  const [customEmail, setCustomEmail] = useState("");
-  const [customPassword, setCustomPassword] = useState("");
-
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
-
-  const handleAddressSearch = async (e) => {
-    e.preventDefault();
-    setError(null);
-    setSearching(true);
-
-    try {
-      const response = await fetch(`${API_URL}/api/residents/lookup`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ address })
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setResidentData(data);
-        setStep(2); 
-      } else {
-        setError(data.error || "An error occurred during lookup.");
-      }
-    } catch (err) {
-      console.error("Lookup error:", err);
-      setError("Network error: Could not reach server.");
-    } finally {
-      setSearching(false);
-    }
-  };
-
-  const handleSocialRegister = async () => {
-    try {
-      setSearching(true);
-      setError(null);
-      const googleUser = await signInWithGoogle();
-      
-      // 1. Persist the lock state to PostgreSQL database first
-      const dbResponse = await fetch(`${API_URL}/api/residents/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ residentId: residentData?.residentId })
-      });
-
-      if (!dbResponse.ok) {
-        throw new Error("Failed to secure property profile on neighborhood database roster.");
-      }
-
-      alert(`Successfully linked account for: ${googleUser.displayName}`);
-      
-      onRegisterSuccess({
-        first_name: googleUser.displayName ? googleUser.displayName.split(" ")[0] : "Resident",
-        email: googleUser.email,
-        photo: googleUser.photoURL,
-        role: "resident"
-      });
-    } catch (err) {
-      console.error(err);
-      setError(err.message || "Failed to complete social verification. Please try again.");
-    } finally {
-      setSearching(false);
-    }
-  };
-
-  const handleTraditionalRegister = async (e) => {
-    e.preventDefault();
-    if (!guidelinesAccepted) {
-      setError("You must accept the community guidelines to proceed.");
-      return;
-    }
-    
-    try {
-      setSearching(true);
-      setError(null);
-      
-      // 1. Authenticate with Firebase Auth engine
-      const traditionalUser = await registerWithEmail(customEmail, customPassword);
-      
-      // 2. Persist the lock state to PostgreSQL database right after
-      const dbResponse = await fetch(`${API_URL}/api/residents/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ residentId: residentData?.residentId })
-      });
-
-      if (!dbResponse.ok) {
-        throw new Error("Auth created, but failed to lock property profile on neighborhood roster.");
-      }
-
-      alert("Account created successfully with email!");
-      
-      onRegisterSuccess({
-        first_name: residentData?.firstName || "Resident",
-        email: traditionalUser.email,
-        photo: null, 
-        role: "resident"
-      });
-    } catch (err) {
-      if (err.code === "auth/email-already-in-use") {
-        setError("This email address is already registered inside Firebase.");
-      } else if (err.code === "auth/weak-password") {
-        setError("Password should be at least 6 characters long.");
-      } else {
-        setError(err.message || "Account creation failed. Please check your credentials.");
-      }
-    } finally {
-      setSearching(false);
-    }
-  };
-
-  return (
-    <div className={styles.container}>
-      <nav className={styles.nav}>
-        <button onClick={onBack} className={styles.backBtn}>← Back to Home</button>
-        <span className={styles.logo}>Town Central HOA</span>
-      </nav>
-
-      <div className={styles.cardWrapper}>
-        {step === 1 && (
-          <div className={styles.card}>
-            <h3>Claim Your Resident Profile</h3>
-            <p className={styles.subtext}>
-              Enter your street address below. If your property is on the neighborhood master log, we'll automatically set up your portal account.
-            </p>
-            {error && <p className={styles.errorMsg}>❌ {error}</p>}
-            <form onSubmit={handleAddressSearch} className={styles.form}>
-              <div className={styles.inputGroup}>
-                <label>Street Address</label>
-                <input 
-                  type="text" 
-                  placeholder="e.g., 123 Town Central Dr" 
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  required 
-                />
-              </div>
-              <button type="submit" className={styles.submitBtn} disabled={searching}>
-                {searching ? "Searching Log..." : "Search Database"}
-              </button>
-            </form>
-          </div>
-        )}
-
-        {step === 2 && (
-          <div className={styles.card}>
-            <div className={styles.successBanner}>✅ Profile Located!</div>
-            <h3>Welcome, {residentData?.firstName}!</h3>
-            <p className={styles.addressDisplay}>Property: <strong>{residentData?.matchedAddress}</strong></p>
-            
-            <div className={styles.guidelinesBox}>
-              <h4>📋 Platform Community Guidelines</h4>
-              <p>To ensure a safe environment, you must agree to the baseline terms:</p>
-              <ul>
-                <li><strong>Professional Interactions:</strong> Keep all posts neighborly and constructive.</li>
-                <li><strong>On-Topic Communication:</strong> Use this portal strictly for HOA business.</li>
-              </ul>
-            </div>
-
-            <label className={styles.checkboxLabel}>
-              <input 
-                type="checkbox" 
-                checked={guidelinesAccepted}
-                onChange={(e) => setGuidelinesAccepted(e.target.checked)}
-              />
-              <span>I agree to keep my posts professional and abide by the community guidelines.</span>
-            </label>
-
-            {error && <p className={styles.errorMsg}>❌ {error}</p>}
-
-            {/* Toggle tabs for Method Selection */}
-            <div className={styles.methodToggle}>
-              <button 
-                className={`${styles.toggleTab} ${authMethod === "google" ? styles.activeTab : ""}`}
-                onClick={() => { setError(null); setAuthMethod("google"); }}
-              >
-                Google Account
-              </button>
-              <button 
-                className={`${styles.toggleTab} ${authMethod === "email" ? styles.activeTab : ""}`}
-                onClick={() => { setError(null); setAuthMethod("email"); }}
-              >
-                Email / Password
-              </button>
-            </div>
-
-            {/* Render Selected Method View */}
-            {authMethod === "google" ? (
-              <button 
-                className={styles.googleBtn} // <-- Swapped class name here
-                disabled={!guidelinesAccepted || searching}
-                onClick={handleSocialRegister}
-              >
-                {searching ? (
-                  "Verifying Identity..."
-                ) : (
-                  <>
-                    <svg className={styles.googleIcon} viewBox="0 0 24 24" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
-                      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
-                    </svg>
-                    <span>Sign in with Google</span>
-                  </>
-                )}
-              </button>
-            ) : (
-              <form onSubmit={handleTraditionalRegister} className={styles.form}>
-                <div className={styles.inputGroup}>
-                  <label>Preferred Email</label>
-                  <input 
-                    type="email" 
-                    placeholder="resident@example.com"
-                    value={customEmail}
-                    onChange={(e) => setCustomEmail(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className={styles.inputGroup}>
-                  <label>Create Password</label>
-                  <input 
-                    type="password" 
-                    placeholder="Min 6 characters"
-                    value={customPassword}
-                    onChange={(e) => setCustomPassword(e.target.value)}
-                    required
-                  />
-                </div>
-                <button 
-                  type="submit" 
-                  className={styles.submitBtn} 
-                  disabled={!guidelinesAccepted || searching}
-                >
-                  {searching ? "Creating Account..." : "Create Account & Enter Portal"}
-                </button>
-              </form>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-==================================================
-FILE: ./frontend/src/pages/Register/Register.module.css
-==================================================
-.container {
-  min-height: 100vh;
-  background-color: #f8fafc;
-  background-image:
-    radial-gradient(at 0% 0%, rgba(46, 204, 113, 0.08) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, rgba(52, 152, 219, 0.05) 0px, transparent 50%);
-  color: #2c3e50;
-  display: flex;
-  flex-direction: column;
-}
-
-.nav {
-  display: flex;
-  justify-content: space-between;
-  padding: 15px 50px;
-  background: white;
-  border-bottom: 1px solid #e2e8f0;
-  align-items: center;
-}
-
-.backBtn {
-  background: none;
-  border: none;
-  color: #2ecc71;
-  font-weight: 600;
-  cursor: pointer;
-  font-size: 1rem;
-}
-
-.logo {
-  font-weight: 800;
-  letter-spacing: 0.5px;
-}
-
-.cardWrapper {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 40px 20px;
-}
-
-.card {
-  background: white;
-  padding: 40px;
-  border-radius: 20px;
-  max-width: 550px;
-  width: 100%;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
-  border: 1px solid #f1f5f9;
-}
-
-.card h3 {
-  margin-top: 0;
-  font-size: 1.5rem;
-  color: #1e293b;
-}
-
-.subtext {
-  color: #64748b;
-  font-size: 0.95rem;
-  line-height: 1.5;
-  margin-bottom: 25px;
-}
-
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.inputGroup {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.inputGroup label {
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: #64748b;
-  text-transform: uppercase;
-}
-
-.inputGroup input {
-  padding: 14px;
-  border-radius: 10px;
-  border: 1px solid #e2e8f0;
-  font-size: 1rem;
-}
-
-.inputGroup input:focus {
-  outline: none;
-  border-color: #2ecc71;
-  box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.1);
-}
-
-.submitBtn {
-  background: #2ecc71;
-  color: white;
-  border: none;
-  padding: 14px;
-  border-radius: 10px;
-  font-size: 1rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  width: 100%;
-}
-
-.submitBtn:hover:not(:disabled) {
-  background: #27ae60;
-  transform: translateY(-1px);
-}
-
-.submitBtn:disabled {
-  background: #cbd5e1;
-  color: #94a3b8;
-  cursor: not-allowed;
-}
-
-/* Official Google Identity Button Styling */
-.googleBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  background: #ffffff;
-  color: #1f2937;
-  border: 1px solid #d1d5db;
-  padding: 12px 16px;
-  border-radius: 10px;
-  font-size: 0.95rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  width: 100%;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-}
-
-.googleBtn:hover:not(:disabled) {
-  background: #f9fafb;
-  border-color: #9ca3af;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-}
-
-.googleBtn:disabled {
-  background: #f3f4f6;
-  color: #9ca3af;
-  border-color: #e5e7eb;
-  cursor: not-allowed;
-}
-
-.googleIcon {
-  width: 18px;
-  height: 18px;
-  display: block;
-}
-
-/* Step 2 specific layouts */
-.successBanner {
-  background: #f0fdf4;
-  color: #16a34a;
-  border: 1px solid #dcfce7;
-  padding: 10px 16px;
-  border-radius: 8px;
-  font-weight: 700;
-  display: inline-block;
-  font-size: 0.85rem;
-  margin-bottom: 15px;
-}
-
-.addressDisplay {
-  background: #f8fafc;
-  padding: 12px;
-  border-radius: 8px;
-  border-left: 4px solid #3b82f6;
-  font-size: 0.95rem;
-}
-
-.guidelinesBox {
-  background: #f8fafc;
-  padding: 20px;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
-  margin: 20px 0;
-}
-
-.guidelinesBox h4 {
-  margin-top: 0;
-  color: #0f172a;
-}
-
-.guidelinesBox p {
-  font-size: 0.85rem;
-  color: #475569;
-  line-height: 1.4;
-}
-
-.guidelinesBox ul {
-  padding-left: 20px;
-  font-size: 0.85rem;
-  color: #334155;
-  margin-bottom: 0;
-}
-
-.guidelinesBox li {
-  margin-bottom: 8px;
-}
-
-.checkboxLabel {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  font-size: 0.85rem;
-  color: #475569;
-  margin-bottom: 25px;
-  cursor: pointer;
-  line-height: 1.4;
-}
-
-.checkboxLabel input {
-  margin-top: 3px;
-}
-
-.errorMsg {
-  background: #fef2f2;
-  color: #dc2626;
-  border: 1px solid #fecaca;
-  padding: 12px;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  margin-bottom: 20px;
-  line-height: 1.4;
-}
-
-/* Auth Authentication Toggles */
-.methodToggle {
-  display: flex;
-  background: #e2e8f0;
-  padding: 4px;
-  border-radius: 10px;
-  margin-bottom: 20px;
-  gap: 4px;
-}
-
-.toggleTab {
-  flex: 1;
-  background: transparent;
-  border: none;
-  padding: 10px;
-  border-radius: 8px;
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: #64748b;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.activeTab {
-  background: white;
-  color: #1e293b;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-}
 ==================================================
 FILE: ./frontend/src/pages/Profile/Profile.jsx
 ==================================================
@@ -4845,4 +4264,159 @@ FILE: ./frontend/src/pages/Profile/Profile.module.css
 
 .saveBtn:hover {
   background: #0051cb;
+}
+==================================================
+FILE: ./frontend/src/pages/Claim/Claim.jsx
+==================================================
+import { useState } from "react";
+import styles from "./Claim.module.css";
+
+export default function Claim({ onBack, onClaimSuccess }) {
+  const [step, setStep] = useState(1);
+  const [formData, setFormData] = useState({ 
+    street_address: "", 
+    onboarding_token: "", 
+    email: "", 
+    password: "", 
+    first_name: "", 
+    last_name: "" 
+  });
+
+  const handleVerify = async (e) => {
+    e.preventDefault();
+    // Verifies the address and token exist as a non-claimed entry
+    const res = await fetch(`/api/residents/verify`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ 
+        street_address: formData.street_address, 
+        onboarding_token: formData.onboarding_token 
+      })
+    });
+
+    if (res.ok) {
+      setStep(2);
+    } else {
+      alert("Invalid address or claim code. Please double-check your welcome letter.");
+    }
+  };
+
+  const handleFinalize = async (e) => {
+    e.preventDefault();
+    // Finalizes account creation (maps to existing /api/register logic)
+    const res = await fetch(`/api/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(formData)
+    });
+
+    if (res.ok) {
+      onClaimSuccess();
+    } else {
+      alert("There was an issue creating your account. Please try again.");
+    }
+  };
+
+  return (
+    <div className={styles.claimContainer}>
+      <button className={styles.backBtn} onClick={onBack}>← Back</button>
+      
+      <div className={styles.formCard}>
+        <h2>{step === 1 ? "Verify Your Property" : "Complete Your Profile"}</h2>
+        
+        {step === 1 ? (
+          <form onSubmit={handleVerify}>
+            <input type="text" placeholder="Street Address" onChange={(e) => setFormData({...formData, street_address: e.target.value})} required />
+            <input type="text" placeholder="6-Digit Claim Code" onChange={(e) => setFormData({...formData, onboarding_token: e.target.value})} required />
+            <button type="submit" className={styles.submitBtn}>Verify Address</button>
+          </form>
+        ) : (
+          <form onSubmit={handleFinalize}>
+            <input type="text" placeholder="First Name" onChange={(e) => setFormData({...formData, first_name: e.target.value})} required />
+            <input type="text" placeholder="Last Name" onChange={(e) => setFormData({...formData, last_name: e.target.value})} required />
+            <input type="email" placeholder="Email Address" onChange={(e) => setFormData({...formData, email: e.target.value})} required />
+            <input type="password" placeholder="Create Secure Password" onChange={(e) => setFormData({...formData, password: e.target.value})} required />
+            <button type="submit" className={styles.submitBtn}>Activate Account</button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+==================================================
+FILE: ./frontend/src/pages/Claim/Claim.module.css
+==================================================
+.claimContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+  background-color: #f8fafc;
+}
+
+.backBtn {
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 0.9rem;
+  margin-bottom: 20px;
+  transition: color 0.2s;
+}
+
+.backBtn:hover {
+  color: #1e293b;
+}
+
+.formCard {
+  background: white;
+  padding: 40px;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 400px;
+}
+
+.formCard h2 {
+  margin: 0 0 25px 0;
+  color: #0f172a;
+  text-align: center;
+}
+
+.formCard form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.formCard input {
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 1rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.formCard input:focus {
+  outline: 2px solid #3b82f6;
+  border-color: transparent;
+}
+
+.submitBtn {
+  background-color: #0f172a;
+  color: white;
+  padding: 12px;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: background-color 0.2s;
+}
+
+.submitBtn:hover {
+  background-color: #1e293b;
 }

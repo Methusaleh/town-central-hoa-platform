@@ -40,35 +40,71 @@ router.post("/lookup", async (req, res) => {
   }
 });
 
-// POST /api/residents/register - Flag a roster profile as claimed in the DB
-router.post("/register", async (req, res) => {
-  const { residentId } = req.body;
-
-  if (!residentId) {
-    return res.status(400).json({ error: "Resident ID is required for registration persistence." });
-  }
+// POST /api/claim - Finalizes account creation and claims the roster profile
+router.post("/claim", async (req, res) => {
+  const { first_name, last_name, email, password, street_address, residentId } = req.body;
 
   try {
-    const query = `
+    // Start a transaction so if one part fails, neither happens
+    await db.query("BEGIN");
+
+    // 1. Create the user account
+    // Note: You should be hashing your passwords before storing them!
+    const userQuery = `
+      INSERT INTO users (first_name, last_name, email, password, address)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING id;
+    `;
+    await db.query(userQuery, [first_name, last_name, email, password, street_address]);
+
+    // 2. Mark the roster entry as claimed (Your old logic!)
+    const rosterQuery = `
       UPDATE neighborhood_roster 
       SET is_claimed = true 
       WHERE id = $1 
-      RETURNING id, street_address, is_claimed;
+      RETURNING id, street_address;
     `;
-    const { rows } = await db.query(query, [residentId]);
+    const { rows } = await db.query(rosterQuery, [residentId]);
 
     if (rows.length === 0) {
-      return res.status(404).json({ error: "Resident record not found." });
+      throw new Error("Resident roster record not found.");
     }
 
-    res.json({
+    await db.query("COMMIT");
+
+    res.status(201).json({
       success: true,
-      message: "Roster profile successfully locked and claimed.",
+      message: "Account created and profile claimed successfully.",
       updatedRecord: rows[0]
     });
   } catch (err) {
-    console.error("Database registration update error:", err.message);
-    res.status(500).json({ error: "Server error updating roster state." });
+    await db.query("ROLLBACK");
+    console.error("Claim process error:", err.message);
+    res.status(500).json({ error: "Server error during account claim process." });
+  }
+});
+
+// POST /api/residents/verify
+router.post("/verify", async (req, res) => {
+  const { street_address, onboarding_token } = req.body;
+
+  try {
+    const query = `
+      SELECT id 
+      FROM neighborhood_roster 
+      WHERE street_address ILIKE $1 
+      AND onboarding_token = $2 
+      AND (is_claimed = false OR is_claimed IS NULL)
+    `;
+    const { rows } = await db.query(query, [street_address.trim(), onboarding_token.trim()]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "Verification failed. Check address and token." });
+    }
+
+    res.status(200).json({ success: true, residentId: rows[0].id });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
