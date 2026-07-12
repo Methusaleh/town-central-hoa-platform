@@ -3853,6 +3853,9 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
   const [showContactModal, setShowContactModal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [sending, setSending] = useState(false);
+  // Add this with your other UI/Form states
+  const [rosterForm, setRosterForm] = useState({ first_name: "", last_name: "", email: "", street_address: "" });
+  const [rosterStatus, setRosterStatus] = useState({ text: "", type: "" });
 
   // Form States
   const [announcement, setAnnouncement] = useState({
@@ -4107,7 +4110,29 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
 
         {/* --- ADMIN VIEWS (Unique Admin IDs) --- */}
         {activeTab === "mission-control" && <div className={styles.fadeContent}><MissionControl onNavigate={setActiveTab} /></div>}
-        {activeTab === "requests" && <div className={styles.fadeContent}><OperationsDashboard onBack={() => setActiveTab("mission-control")} requests={requests} loading={loading} handleResolve={handleResolve} showForm={showForm} setShowForm={setShowForm} showEventForm={showEventForm} setShowEventForm={setShowEventForm} announcement={announcement} setAnnouncement={setAnnouncement} newEvent={newEvent} setNewEvent={setNewEvent} /></div>}
+        {activeTab === "requests" && (
+          <div className={styles.fadeContent}>
+            <OperationsDashboard 
+              onBack={() => setActiveTab("mission-control")} 
+              requests={requests} 
+              loading={loading} 
+              handleResolve={handleResolve} 
+              // State management for toggle
+              viewMode={viewMode} 
+              setViewMode={setViewMode} 
+              // Grouped form props
+              formProps={{
+                showForm, setShowForm,
+                showEventForm, setShowEventForm,
+                announcement, setAnnouncement,
+                newEvent, setNewEvent
+              }}
+              // Handlers
+              handlePostAnnouncement={handlePostAnnouncement} // Ensure these exist in your Dashboard
+              handlePostEvent={handlePostEvent}               // Ensure these exist in your Dashboard
+            />
+          </div>
+        )}
         {activeTab === "roster" && (
           <div className={styles.fadeContent}>
             <RosterDirectory 
@@ -4115,9 +4140,10 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
               masterRoster={masterRoster} 
               showRosterModal={showForm} 
               setShowRosterModal={setShowForm}
-              rosterForm={rosterForm}
+              rosterForm={rosterForm || {}} 
               setRosterForm={setRosterForm}
-              handleOnboardResident={handleOnboardResident} // <--- Add this!
+              rosterStatus={financeStatus} // Or your specific rosterStatus state
+              handleOnboardResident={handleOnboardResident}
             />
           </div>
         )}

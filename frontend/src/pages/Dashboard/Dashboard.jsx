@@ -182,6 +182,42 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
     }
   };
 
+  const handlePostAnnouncement = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await fetch(`${API_BASE}/api/announcements`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(announcement),
+      });
+      if (response.ok) {
+        alert("Announcement posted!");
+        setAnnouncement({ title: "", content: "", priority: "normal", channel_type: "general" });
+        setShowForm(false);
+      }
+    } catch (err) {
+      console.error("Announcement error:", err);
+    }
+  };
+
+  const handlePostEvent = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await fetch(`${API_BASE}/api/events`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newEvent),
+      });
+      if (response.ok) {
+        alert("Event added to calendar!");
+        setNewEvent({ title: "", event_date: "", event_time: "", location: "", description: "", attachment_url: "", attachment_name: "" });
+        setShowEventForm(false);
+      }
+    } catch (err) {
+      console.error("Event error:", err);
+    }
+  };
+
   return (
     <div className={styles.layout}>
       <div className={styles.orb1}></div>
