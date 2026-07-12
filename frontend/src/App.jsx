@@ -2,12 +2,17 @@ import { useState } from "react";
 import Landing from "./pages/Landing/Landing";
 import Dashboard from "./pages/Dashboard/Dashboard";
 import ContactPage from "./pages/Contact/ContactPage";
+import AcceptInvite from "./pages/AcceptInvite/AcceptInvite";
 import Profile from "./pages/Profile/Profile";
-import Claim from "./pages/Claim/Claim"; // Import the new Claim component
+import Claim from "./pages/Claim/Claim";
 
 export default function App() {
-  // 'view' can now be "landing", "dashboard", "contact", or "claim"
-  const [view, setView] = useState("landing");
+  // Check the URL for the token BEFORE setting the initial state
+  const params = new URLSearchParams(window.location.search);
+  const initialView = params.get("invite") ? "accept-invite" : "landing";
+
+  // 'view' can now be "landing", "dashboard", "contact", "claim", "profile", or "accept-invite"
+  const [view, setView] = useState(initialView);
 
   const [user, setUser] = useState({
     first_name: "Aaron",
@@ -25,21 +30,28 @@ export default function App() {
     setView("dashboard");
   };
   const goToContact = () => setView("contact");
-  const goToClaim = () => setView("claim"); // Updated handler name
+  const goToClaim = () => setView("claim");
 
   return (
     <div className="app-container">
       {view === "landing" && (
         <Landing 
           onLogin={goToDashboard} 
-          onRegisterClick={goToClaim} // Updated to call goToClaim
+          onRegisterClick={goToClaim} 
           onContactClick={goToContact} 
         />
       )}
 
-      {/* Updated view from "register" to "claim" */}
       {view === "claim" && (
         <Claim onBack={goToLanding} onClaimSuccess={goToDashboard} />
+      )}
+
+      {/* New Invitation Flow Routing */}
+      {view === "accept-invite" && (
+        <AcceptInvite 
+          onBack={goToLanding} 
+          onJoinSuccess={goToLanding} 
+        />
       )}
 
       {view === "dashboard" && (

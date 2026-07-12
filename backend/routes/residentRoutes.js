@@ -230,6 +230,60 @@ router.post("/admin-add", async (req, res) => {
   }
 });
 
+// GET /api/residents/invite/:token - Verifies the token on page load
+router.get("/invite/:token", async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      "SELECT email, address FROM invitations WHERE token = $1 AND is_used = false",
+      [req.params.token]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "Invalid or expired token" });
+    }
+
+    res.json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: "Server error validating token." });
+  }
+});
+
+// POST /api/residents/invite/accept - Finalizes the secondary account creation
+router.post("/invite/accept", async (req, res) => {
+  const { token, first_name, last_name, password } = req.body;
+
+  try {
+    await db.query("BEGIN");
+    
+    // 1. Lock the invitation row for update to prevent race conditions
+    const inviteRes = await db.query(
+      "SELECT email, address FROM invitations WHERE token = $1 AND is_used = false FOR UPDATE",
+      [token]
+    );
+
+    if (inviteRes.rows.length === 0) {
+      throw new Error("Token has already been used or is invalid.");
+    }
+    
+    const { email, address } = inviteRes.rows[0];
+
+    // 2. Create the new user attached to the primary resident's address
+    await db.query(
+      "INSERT INTO users (first_name, last_name, email, password, address) VALUES ($1, $2, $3, $4, $5)",
+      [first_name, last_name, email, password, address]
+    );
+
+    // 3. Mark the invitation as used
+    await db.query("UPDATE invitations SET is_used = true WHERE token = $1", [token]);
+    
+    await db.query("COMMIT");
+    res.status(201).json({ success: true });
+  } catch (err) {
+    await db.query("ROLLBACK");
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // --- ADDED FOR AUTOCOMPLETE: Fetch true directory indexing for administrative subcomponents ---
 router.get("/master-list-placeholder", async (req, res) => {
   try {
