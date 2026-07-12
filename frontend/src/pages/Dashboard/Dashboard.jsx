@@ -150,6 +150,35 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
     }
   };
 
+  const handleOnboardResident = async (e, sendWelcomePacket) => {
+    e.preventDefault();
+    
+    // 1. Generate a 6-character random token
+    const generatedToken = Math.random().toString(36).substring(2, 8).toUpperCase();
+    
+    try {
+      const response = await fetch(`${API_BASE}/api/residents`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...rosterForm,
+          onboarding_token: generatedToken,
+          send_welcome: sendWelcomePacket
+        })
+      });
+
+      if (response.ok) {
+        alert(`Property added! Claim Code: ${generatedToken}`);
+        fetchRosterData(); // Refresh the list
+        setShowForm(false); // Close the modal
+        setRosterForm({ first_name: "", last_name: "", email: "", street_address: "" });
+      }
+    } catch (err) {
+      console.error("Onboarding error:", err);
+      alert("Failed to save property.");
+    }
+  };
+
   return (
     <div className={styles.layout}>
       <div className={styles.orb1}></div>
@@ -255,7 +284,19 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
         {/* --- ADMIN VIEWS (Unique Admin IDs) --- */}
         {activeTab === "mission-control" && <div className={styles.fadeContent}><MissionControl onNavigate={setActiveTab} /></div>}
         {activeTab === "requests" && <div className={styles.fadeContent}><OperationsDashboard onBack={() => setActiveTab("mission-control")} requests={requests} loading={loading} handleResolve={handleResolve} showForm={showForm} setShowForm={setShowForm} showEventForm={showEventForm} setShowEventForm={setShowEventForm} announcement={announcement} setAnnouncement={setAnnouncement} newEvent={newEvent} setNewEvent={setNewEvent} /></div>}
-        {activeTab === "roster" && <div className={styles.fadeContent}><RosterDirectory onBack={() => setActiveTab("mission-control")} masterRoster={masterRoster} showRosterModal={showForm} setShowRosterModal={setShowForm} /></div>}
+        {activeTab === "roster" && (
+          <div className={styles.fadeContent}>
+            <RosterDirectory 
+              onBack={() => setActiveTab("mission-control")} 
+              masterRoster={masterRoster} 
+              showRosterModal={showForm} 
+              setShowRosterModal={setShowForm}
+              rosterForm={rosterForm}
+              setRosterForm={setRosterForm}
+              handleOnboardResident={handleOnboardResident} // <--- Add this!
+            />
+          </div>
+        )}
         {activeTab === "financials" && <div className={styles.fadeContent}><FinancialLedger onBack={() => setActiveTab("mission-control")} masterRoster={masterRoster} financeForm={financeForm} setFinanceForm={setFinanceForm} financeStatus={financeStatus} /></div>}
         
         {/* These specific IDs now ensure you don't route to the resident versions */}

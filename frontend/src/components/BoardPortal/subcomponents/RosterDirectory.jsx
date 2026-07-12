@@ -109,10 +109,10 @@ export default function RosterDirectory({
         <thead>
           <tr>
             <th>Lot ID</th>
-            <th>Full Resident Name</th>
-            <th>Assigned Street Address</th>
-            <th>Email Registration Hook</th>
-            <th>Portal Claim Status</th>
+            <th>Resident Name</th>
+            <th>Address</th>
+            <th>Claim Code</th> {/* New Column */}
+            <th>Status</th>
           </tr>
         </thead>
         <tbody>
@@ -121,9 +121,17 @@ export default function RosterDirectory({
               <td style={{ fontWeight: "700", color: "#64748b" }}>{res.lot_number || `LOT-${100 + res.id}`}</td>
               <td style={{ fontWeight: "600" }}>{res.first_name} {res.last_name}</td>
               <td>📍 {res.street_address}</td>
-              <td style={{ color: res.email ? "#0f172a" : "#94a3b8" }}>{res.email || "No email assigned"}</td>
+              {/* Displaying the token clearly */}
+              <td style={{ fontFamily: "monospace", fontWeight: "bold", color: "#3b82f6" }}>
+                {res.onboarding_token || "—"}
+              </td>
               <td>
-                <span style={{ padding: "4px 8px", borderRadius: "12px", fontSize: "0.75rem", fontWeight: "700", textTransform: "uppercase", backgroundColor: res.is_claimed ? "#d1fae5" : "#f1f5f9", color: res.is_claimed ? "#065f46" : "#475569" }}>
+                <span style={{ 
+                  padding: "4px 8px", borderRadius: "12px", fontSize: "0.75rem", fontWeight: "700", 
+                  textTransform: "uppercase", 
+                  backgroundColor: res.is_claimed ? "#d1fae5" : "#f1f5f9", 
+                  color: res.is_claimed ? "#065f46" : "#475569" 
+                }}>
                   {res.is_claimed ? "🔒 Claimed" : "⏳ Pending"}
                 </span>
               </td>
