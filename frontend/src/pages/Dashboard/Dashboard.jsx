@@ -29,6 +29,9 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
   const [showContactModal, setShowContactModal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [sending, setSending] = useState(false);
+  // Add this with your other UI/Form states
+  const [rosterForm, setRosterForm] = useState({ first_name: "", last_name: "", email: "", street_address: "" });
+  const [rosterStatus, setRosterStatus] = useState({ text: "", type: "" });
 
   // Form States
   const [announcement, setAnnouncement] = useState({
@@ -291,9 +294,11 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
               masterRoster={masterRoster} 
               showRosterModal={showForm} 
               setShowRosterModal={setShowForm}
-              rosterForm={rosterForm}
+              // Add these fallbacks to prevent the ReferenceError:
+              rosterForm={rosterForm || {}} 
               setRosterForm={setRosterForm}
-              handleOnboardResident={handleOnboardResident} // <--- Add this!
+              rosterStatus={financeStatus} // Or your specific rosterStatus state
+              handleOnboardResident={handleOnboardResident}
             />
           </div>
         )}

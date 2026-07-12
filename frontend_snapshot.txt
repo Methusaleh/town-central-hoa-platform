@@ -37,12 +37,17 @@ import { useState } from "react";
 import Landing from "./pages/Landing/Landing";
 import Dashboard from "./pages/Dashboard/Dashboard";
 import ContactPage from "./pages/Contact/ContactPage";
+import AcceptInvite from "./pages/AcceptInvite/AcceptInvite";
 import Profile from "./pages/Profile/Profile";
-import Claim from "./pages/Claim/Claim"; // Import the new Claim component
+import Claim from "./pages/Claim/Claim";
 
 export default function App() {
-  // 'view' can now be "landing", "dashboard", "contact", or "claim"
-  const [view, setView] = useState("landing");
+  // Check the URL for the token BEFORE setting the initial state
+  const params = new URLSearchParams(window.location.search);
+  const initialView = params.get("invite") ? "accept-invite" : "landing";
+
+  // 'view' can now be "landing", "dashboard", "contact", "claim", "profile", or "accept-invite"
+  const [view, setView] = useState(initialView);
 
   const [user, setUser] = useState({
     first_name: "Aaron",
@@ -60,21 +65,28 @@ export default function App() {
     setView("dashboard");
   };
   const goToContact = () => setView("contact");
-  const goToClaim = () => setView("claim"); // Updated handler name
+  const goToClaim = () => setView("claim");
 
   return (
     <div className="app-container">
       {view === "landing" && (
         <Landing 
           onLogin={goToDashboard} 
-          onRegisterClick={goToClaim} // Updated to call goToClaim
+          onRegisterClick={goToClaim} 
           onContactClick={goToContact} 
         />
       )}
 
-      {/* Updated view from "register" to "claim" */}
       {view === "claim" && (
         <Claim onBack={goToLanding} onClaimSuccess={goToDashboard} />
+      )}
+
+      {/* New Invitation Flow Routing */}
+      {view === "accept-invite" && (
+        <AcceptInvite 
+          onBack={goToLanding} 
+          onJoinSuccess={goToLanding} 
+        />
       )}
 
       {view === "dashboard" && (
@@ -1241,18 +1253,17 @@ export default function OperationsDashboard({
 FILE: ./frontend/src/components/BoardPortal/subcomponents/FinancialLedger.jsx
 ==================================================
 import { useState } from "react";
+import AdminPaymentForm from "./AdminPaymentForm";
 import styles from "../BoardPortal.module.css";
 
 export default function FinancialLedger({ 
-  masterRoster = [], // Default to empty array for safety
-  financeForm = {},  // Default to empty object for safety
-  setFinanceForm, 
-  financeStatus = {}, // Default to empty object for safety
-  handleUpdateFinanceLedger,
-  onBack 
+  masterRoster = [], 
+  onBack,
+  currentUser // Passed from BoardPortal
 }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedLot, setSelectedLot] = useState(null);
 
   const autocompleteSuggestions = masterRoster.filter(r => {
     const query = searchQuery.toLowerCase();
@@ -1273,96 +1284,62 @@ export default function FinancialLedger({
 
       <div className={styles.tableHeader}>
         <div>
-          <h3 style={{ margin: 0 }}>Resident Assessment Ledger</h3>
+          <h3 style={{ margin: 0 }}>Financial Ledger Management</h3>
           <p style={{ margin: "5px 0 0 0", fontSize: "0.85rem", color: "#64748b" }}>
-            Type any name or street segment to fetch the underlying ledger record row.
+            Search for a resident to log a payment or view their account history.
           </p>
         </div>
       </div>
 
-      <div className={styles.formCard} style={{ border: "1px solid #e2e8f0", maxWidth: "600px" }}>
-        <h4>Update Ledger Statement</h4>
-        {financeStatus?.text && (
-          <div style={{ 
-            padding: "10px", 
-            borderRadius: "6px", 
-            marginBottom: "15px", 
-            backgroundColor: financeStatus?.type === "success" ? "#d4edda" : "#f8d7da", 
-            color: financeStatus?.type === "success" ? "#155724" : "#721c24" 
-          }}>
-            {financeStatus.text}
-          </div>
-        )}
-        <form onSubmit={(e) => {
-          handleUpdateFinanceLedger(e);
-          setSearchQuery("");
-        }} className={styles.announcementForm}>
+      {/* SEARCH INTERFACE */}
+      <div className={styles.formCard} style={{ border: "1px solid #e2e8f0", maxWidth: "600px", marginBottom: "20px" }}>
+        <div style={{ position: "relative" }}>
+          <label>Find Resident Record</label>
+          <input 
+            type="text" 
+            placeholder="Type name or address..." 
+            value={searchQuery} 
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setShowSuggestions(true);
+            }}
+            onFocus={() => setShowSuggestions(true)}
+            onBlur={() => setTimeout(() => setShowSuggestions(false), 250)}
+          />
           
-          <div style={{ position: "relative" }}>
-            <label>Search Resident Name or Street Address *</label>
-            <input 
-              type="text" 
-              placeholder="Type Aaron, Becky, Thomas, 1559, etc..." 
-              value={searchQuery} 
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setShowSuggestions(true);
-              }}
-              onFocus={() => setShowSuggestions(true)}
-              onBlur={() => setTimeout(() => setShowSuggestions(false), 250)}
-              required={!financeForm?.street_address} 
-              autoComplete="off"
-            />
-            
-            {showSuggestions && searchQuery && autocompleteSuggestions.length > 0 && (
-              <div style={{ position: "absolute", top: "100%", left: 0, right: 0, backgroundColor: "white", border: "1px solid #e2e8f0", borderRadius: "8px", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", zIndex: 1000, maxHeight: "180px", overflowY: "auto", marginTop: "4px" }}>
-                {autocompleteSuggestions.map((lot) => (
-                  <div
-                    key={lot.id}
-                    onMouseDown={() => {
-                      setFinanceForm({ ...financeForm, street_address: lot.street_address });
-                      setSearchQuery(`${lot.first_name} ${lot.last_name} (${lot.street_address})`);
-                      setShowSuggestions(false);
-                    }}
-                    style={{ padding: "10px 14px", cursor: "pointer", borderBottom: "1px solid #f1f5f9", fontSize: "0.9rem" }}
-                  >
-                    👤 <strong>{lot.first_name} {lot.last_name}</strong> — 📍 {lot.street_address}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className={styles.inlineGroup} style={{ alignItems: "flex-end" }}>
-            <div>
-              <label>Outstanding Assessment Balance ($) *</label>
-              <input 
-                type="number" 
-                step="0.01" 
-                placeholder="0.00" 
-                value={financeForm?.balance || ""} 
-                onChange={(e) => setFinanceForm({...financeForm, balance: e.target.value})} 
-                required 
-              />
+          {showSuggestions && searchQuery && autocompleteSuggestions.length > 0 && (
+            <div style={{ position: "absolute", top: "100%", left: 0, right: 0, backgroundColor: "white", border: "1px solid #e2e8f0", borderRadius: "8px", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", zIndex: 1000, maxHeight: "180px", overflowY: "auto", marginTop: "4px" }}>
+              {autocompleteSuggestions.map((lot) => (
+                <div
+                  key={lot.id}
+                  onMouseDown={() => {
+                    setSelectedLot(lot);
+                    setSearchQuery(`${lot.first_name} ${lot.last_name} (${lot.street_address})`);
+                    setShowSuggestions(false);
+                  }}
+                  style={{ padding: "10px 14px", cursor: "pointer", borderBottom: "1px solid #f1f5f9", fontSize: "0.9rem" }}
+                >
+                  👤 <strong>{lot.first_name} {lot.last_name}</strong> — 📍 {lot.street_address}
+                </div>
+              ))}
             </div>
-            <div>
-              <label>Payment Status Assignment</label>
-              <select 
-                value={financeForm?.status || "Pending"} 
-                onChange={(e) => setFinanceForm({...financeForm, status: e.target.value})} 
-                className={styles.prioritySelect}
-              >
-                <option value="Pending">Pending / Unpaid</option>
-                <option value="Partial">Partial Payment</option>
-                <option value="Paid">Paid in Full</option>
-              </select>
-            </div>
-          </div>
-          <button type="submit" className={styles.submitBtn} style={{ backgroundColor: "#3498db" }}>
-            Commit Ledger Overwrite
-          </button>
-        </form>
+          )}
+        </div>
       </div>
+
+      {/* ACTIVE LEDGER VIEW */}
+      {selectedLot && (
+        <div className={styles.formCard} style={{ border: "1px solid #e2e8f0", maxWidth: "600px" }}>
+          <AdminPaymentForm 
+            user={currentUser} 
+            street_address={selectedLot.street_address}
+            onPaymentSuccess={() => {
+              alert("Payment applied successfully!");
+              // In the future, call a refresh function here to re-fetch roster/dues data
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -1612,6 +1589,59 @@ export default function RosterDirectory({
   );
 }
 ==================================================
+FILE: ./frontend/src/components/BoardPortal/subcomponents/AdminPaymentForm.module.css
+==================================================
+.formContainer {
+  padding: 15px 0;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.inputGroup label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.inputGroup input, .inputGroup select {
+  padding: 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.submitBtn {
+  background-color: #10b981;
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 5px;
+}
+
+.submitBtn:hover {
+  background-color: #059669;
+}
+
+.statusMessage {
+  margin-top: 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+==================================================
 FILE: ./frontend/src/components/BoardPortal/subcomponents/MissionControl.jsx
 ==================================================
 // ./frontend/src/components/BoardPortal/subcomponents/MissionControl.jsx
@@ -1659,6 +1689,189 @@ export default function MissionControl({ onNavigate }) {
       </div>
     </div>
   );
+}
+==================================================
+FILE: ./frontend/src/components/BoardPortal/subcomponents/AdminPaymentForm.jsx
+==================================================
+import { useState } from "react";
+import styles from "./AdminPaymentForm.module.css";
+
+export default function AdminPaymentForm({ user, street_address, onPaymentSuccess }) {
+  const [formData, setFormData] = useState({
+    amount: "",
+    payment_method: "check",
+    reference_note: ""
+  });
+  const [status, setStatus] = useState("");
+
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setStatus("Processing...");
+
+    try {
+      const res = await fetch(`${API_URL}/api/dues/manual-payment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          street_address,
+          ...formData,
+          admin_name: user?.first_name || "Board Member"
+        })
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setStatus(`✅ Success! Payment applied.`);
+        setFormData({ amount: "", payment_method: "check", reference_note: "" });
+        
+        // Notify the parent (FinancialLedger) that data needs to be refreshed
+        if (onPaymentSuccess) onPaymentSuccess();
+      } else {
+        setStatus(`❌ Error: ${data.error}`);
+      }
+    } catch (err) {
+      setStatus("❌ Network error. Please check server connection.");
+    }
+  };
+
+  return (
+    <div className={styles.formContainer}>
+      <h4>Log Payment for {street_address}</h4>
+      <form onSubmit={handleSubmit} className={styles.form}>
+        <div className={styles.inputGroup}>
+          <label>Amount ($)</label>
+          <input 
+            type="number" 
+            step="0.01" 
+            placeholder="0.00" 
+            value={formData.amount}
+            onChange={(e) => setFormData({...formData, amount: e.target.value})}
+            required
+          />
+        </div>
+
+        <div className={styles.inputGroup}>
+          <label>Method</label>
+          <select 
+            value={formData.payment_method}
+            onChange={(e) => setFormData({...formData, payment_method: e.target.value})}
+          >
+            <option value="check">Paper Check</option>
+            <option value="zelle">Zelle (Business)</option>
+            <option value="ach">ACH Transfer</option>
+          </select>
+        </div>
+
+        <div className={styles.inputGroup}>
+          <label>Reference / Note</label>
+          <input 
+            type="text" 
+            placeholder="e.g. Check #1042" 
+            value={formData.reference_note}
+            onChange={(e) => setFormData({...formData, reference_note: e.target.value})}
+          />
+        </div>
+
+        <button type="submit" className={styles.submitBtn}>Apply Payment</button>
+      </form>
+      {status && <p className={styles.statusMessage}>{status}</p>}
+    </div>
+  );
+}
+==================================================
+FILE: ./frontend/src/components/InviteMember/InviteMember.jsx
+==================================================
+import { useState } from "react";
+import styles from "./InviteMember.module.css";
+
+export default function InviteMember({ user }) {
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState("");
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+
+  const handleInvite = async (e) => {
+    e.preventDefault();
+    setStatus("Sending...");
+    
+    try {
+      const res = await fetch(`${API_URL}/api/residents/invite`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          email, 
+          primary_resident_id: user.id, // Linking back to the current user
+          address: user.address 
+        })
+      });
+
+      if (res.ok) {
+        setStatus("✅ Invitation sent!");
+        setEmail("");
+      } else {
+        setStatus("❌ Failed to send invite.");
+      }
+    } catch (err) {
+      setStatus("❌ Network error.");
+    }
+  };
+
+  return (
+    <div className={styles.inviteContainer}>
+      <h4>Invite Household Member</h4>
+      <p>Send an invitation link to a roommate or family member to join your household account.</p>
+      <form onSubmit={handleInvite} className={styles.form}>
+        <input 
+          type="email" 
+          placeholder="member@email.com" 
+          value={email} 
+          onChange={(e) => setEmail(e.target.value)} 
+          required 
+        />
+        <button type="submit" className={styles.btn}>Send Invite</button>
+      </form>
+      {status && <p className={styles.status}>{status}</p>}
+    </div>
+  );
+}
+==================================================
+FILE: ./frontend/src/components/InviteMember/InviteMember.module.css
+==================================================
+.inviteContainer {
+  padding: 20px;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  margin-top: 20px;
+}
+
+.form {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.form input {
+  padding: 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  flex: 1;
+}
+
+.btn {
+  padding: 8px 16px;
+  background: #2ecc71;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.status {
+  font-size: 0.85rem;
+  margin-top: 10px;
 }
 ==================================================
 FILE: ./frontend/src/components/DocumentCenter/DocumentCenter.module.css
@@ -3922,6 +4135,7 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
 FILE: ./frontend/src/pages/Profile/Profile.jsx
 ==================================================
 import { useState } from "react";
+import InviteMember from "../../components/InviteMember/InviteMember";
 import styles from "./Profile.module.css";
 
 export default function Profile({ user, onBack, onUserUpdate }) {
@@ -4006,7 +4220,6 @@ export default function Profile({ user, onBack, onUserUpdate }) {
         <div className={styles.card}>
           <div className={styles.avatarSection}>
             <label className={styles.avatarLabel} title="Click to upload custom picture">
-              {/* Hidden HTML file stream picker input anchor */}
               <input 
                 type="file" 
                 accept="image/*" 
@@ -4014,8 +4227,6 @@ export default function Profile({ user, onBack, onUserUpdate }) {
                 style={{ display: "none" }}
                 disabled={uploading}
               />
-              
-              {/* If user has a photo, show it. Otherwise, show the text-avatar fallback */}
               {user?.photo ? (
                 <img
                   src={user.photo}
@@ -4027,12 +4238,10 @@ export default function Profile({ user, onBack, onUserUpdate }) {
                   {user?.first_name ? user.first_name.charAt(0).toUpperCase() : "R"}
                 </div>
               )}
-              
               <div className={styles.avatarHoverBadge}>
                 {uploading ? "Saving..." : "📷 Upload"}
               </div>
             </label>
-
             <h3>{user?.first_name || "Resident"}</h3>
             <span className={styles.badge}>{user?.role || "Resident"}</span>
           </div>
@@ -4052,57 +4261,64 @@ export default function Profile({ user, onBack, onUserUpdate }) {
           </div>
         </div>
 
-        {/* Right Card: Preferences */}
-        <div className={styles.card}>
-          <h3>Community Preferences</h3>
-          <p className={styles.subtext}>
-            Manage how you want to receive communication from the HOA Board.
-          </p>
+        {/* Right Column: Preferences & Management */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
+          {/* Preferences Card */}
+          <div className={styles.card}>
+            <h3>Community Preferences</h3>
+            <p className={styles.subtext}>
+              Manage how you want to receive communication from the HOA Board.
+            </p>
 
-          <div className={styles.settingRow}>
-            <div>
-              <h4>Critical Email Alerts</h4>
-              <p>
-                Immediate notifications for maintenance closures or safety notices.
-              </p>
+            <div className={styles.settingRow}>
+              <div>
+                <h4>Critical Email Alerts</h4>
+                <p>Immediate notifications for maintenance closures or safety notices.</p>
+              </div>
+              <input
+                type="checkbox"
+                checked={notifications.emailAlerts}
+                onChange={() => handleToggle("emailAlerts")}
+              />
             </div>
-            <input
-              type="checkbox"
-              checked={notifications.emailAlerts}
-              onChange={() => handleToggle("emailAlerts")}
-            />
+
+            <div className={styles.settingRow}>
+              <div>
+                <h4>SMS Mobile Notices</h4>
+                <p>Receive text alerts for urgent community updates.</p>
+              </div>
+              <input
+                type="checkbox"
+                checked={notifications.textAlerts}
+                onChange={() => handleToggle("textAlerts")}
+              />
+            </div>
+
+            <div className={styles.settingRow}>
+              <div>
+                <h4>Monthly Newsletter</h4>
+                <p>Stay up to date on community events and meeting minutes.</p>
+              </div>
+              <input
+                type="checkbox"
+                checked={notifications.newsletter}
+                onChange={() => handleToggle("newsletter")}
+              />
+            </div>
+
+            <button
+              className={styles.saveBtn}
+              onClick={() => alert("Preferences saved successfully!")}
+            >
+              Save Preferences
+            </button>
           </div>
 
-          <div className={styles.settingRow}>
-            <div>
-              <h4>SMS Mobile Notices</h4>
-              <p>Receive text alerts for urgent community updates.</p>
-            </div>
-            <input
-              type="checkbox"
-              checked={notifications.textAlerts}
-              onChange={() => handleToggle("textAlerts")}
-            />
+          {/* Household Management Card */}
+          <div className={styles.card}>
+            <h3>Household Management</h3>
+            <InviteMember user={user} />
           </div>
-
-          <div className={styles.settingRow}>
-            <div>
-              <h4>Monthly Newsletter</h4>
-              <p>Stay up to date on community events and meeting minutes.</p>
-            </div>
-            <input
-              type="checkbox"
-              checked={notifications.newsletter}
-              onChange={() => handleToggle("newsletter")}
-            />
-          </div>
-
-          <button
-            className={styles.saveBtn}
-            onClick={() => alert("Preferences saved successfully!")}
-          >
-            Save Preferences
-          </button>
         </div>
       </div>
     </div>
@@ -4116,6 +4332,9 @@ FILE: ./frontend/src/pages/Profile/Profile.module.css
   margin: 0 auto;
   padding: 2rem;
   color: #333;
+  height: 100vh;
+  overflow-y: auto;
+  box-sizing: border-box;
 }
 
 .header {
@@ -4264,6 +4483,215 @@ FILE: ./frontend/src/pages/Profile/Profile.module.css
 
 .saveBtn:hover {
   background: #0051cb;
+}
+==================================================
+FILE: ./frontend/src/pages/AcceptInvite/AcceptInvite.jsx
+==================================================
+import { useState, useEffect } from "react";
+import styles from "./AcceptInvite.module.css";
+
+export default function AcceptInvite({ onBack, onJoinSuccess }) {
+  const [token, setToken] = useState(null);
+  const [status, setStatus] = useState("verifying"); // "verifying", "valid", "invalid"
+  const [inviteData, setInviteData] = useState(null);
+  const [formData, setFormData] = useState({
+    first_name: "",
+    last_name: "",
+    password: ""
+  });
+
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+
+  useEffect(() => {
+    // Extract the token from the URL parameters
+    const params = new URLSearchParams(window.location.search);
+    const inviteToken = params.get("invite");
+
+    if (!inviteToken) {
+      setStatus("invalid");
+      return;
+    }
+
+    setToken(inviteToken);
+
+    // Verify the token has not been used yet
+    fetch(`${API_URL}/api/residents/invite/${inviteToken}`)
+      .then((res) => {
+        if (!res.ok) throw new Error("Invalid or expired token");
+        return res.json();
+      })
+      .then((data) => {
+        setInviteData(data);
+        setStatus("valid");
+      })
+      .catch(() => setStatus("invalid"));
+  }, [API_URL]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    try {
+      const res = await fetch(`${API_URL}/api/residents/invite/accept`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token,
+          first_name: formData.first_name,
+          last_name: formData.last_name,
+          password: formData.password
+        })
+      });
+
+      if (res.ok) {
+        // Clear the URL parameter so it doesn't persist on refresh
+        window.history.replaceState({}, document.title, window.location.pathname);
+        onJoinSuccess();
+      } else {
+        alert("Failed to create account. Please try again.");
+      }
+    } catch (err) {
+      alert("Network error. Please check your connection.");
+    }
+  };
+
+  if (status === "verifying") {
+    return (
+      <div className={styles.container}>
+        <div className={styles.card}>
+          <h2>Validating Invitation...</h2>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === "invalid") {
+    return (
+      <div className={styles.container}>
+        <div className={styles.card}>
+          <h2>Link Expired or Invalid</h2>
+          <p>This invitation link has either already been used or does not exist.</p>
+          <button className={styles.submitBtn} onClick={onBack}>Return to Home</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.container}>
+      <div className={styles.card}>
+        <h2>Join Your Household</h2>
+        <p>You have been invited to join the resident portal for <strong>{inviteData?.address}</strong>.</p>
+        
+        <form onSubmit={handleSubmit} className={styles.form}>
+          <div className={styles.inputGroup}>
+            <label>Email Address</label>
+            {/* Disabled because the token is permanently locked to the invited email */}
+            <input type="email" value={inviteData?.email || ""} disabled className={styles.disabledInput} />
+          </div>
+          <div className={styles.inputGroup}>
+            <label>First Name</label>
+            <input type="text" required onChange={(e) => setFormData({...formData, first_name: e.target.value})} />
+          </div>
+          <div className={styles.inputGroup}>
+            <label>Last Name</label>
+            <input type="text" required onChange={(e) => setFormData({...formData, last_name: e.target.value})} />
+          </div>
+          <div className={styles.inputGroup}>
+            <label>Create Password</label>
+            <input type="password" required onChange={(e) => setFormData({...formData, password: e.target.value})} />
+          </div>
+          <button type="submit" className={styles.submitBtn}>Activate Profile</button>
+        </form>
+      </div>
+    </div>
+  );
+}
+==================================================
+FILE: ./frontend/src/pages/AcceptInvite/AcceptInvite.module.css
+==================================================
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #f8fafc;
+  padding: 20px;
+}
+
+.card {
+  background: white;
+  padding: 40px;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 450px;
+  text-align: center;
+}
+
+.card h2 {
+  margin: 0 0 10px 0;
+  color: #0f172a;
+}
+
+.card p {
+  color: #64748b;
+  margin-bottom: 25px;
+  font-size: 0.95rem;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  text-align: left;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.inputGroup label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+}
+
+.inputGroup input {
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+}
+
+.inputGroup input:focus {
+  outline: none;
+  border-color: #2ecc71;
+}
+
+.disabledInput {
+  background-color: #f1f5f9;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.submitBtn {
+  background-color: #2ecc71;
+  color: white;
+  border: none;
+  padding: 14px;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: background-color 0.2s;
+}
+
+.submitBtn:hover {
+  background-color: #27ae60;
 }
 ==================================================
 FILE: ./frontend/src/pages/Claim/Claim.jsx
