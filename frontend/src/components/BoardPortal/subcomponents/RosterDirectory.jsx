@@ -105,23 +105,23 @@ export default function RosterDirectory({
         </div>
       )}
 
+      {/* Table Updated: Lot ID removed, Email added */}
       <table className={styles.table}>
         <thead>
           <tr>
-            <th>Lot ID</th>
             <th>Resident Name</th>
             <th>Address</th>
-            <th>Claim Code</th> {/* New Column */}
+            <th>Email</th>
+            <th>Claim Code</th>
             <th>Status</th>
           </tr>
         </thead>
         <tbody>
           {(masterRoster || []).map((res) => (
             <tr key={res.id}>
-              <td style={{ fontWeight: "700", color: "#64748b" }}>{res.lot_number || `LOT-${100 + res.id}`}</td>
               <td style={{ fontWeight: "600" }}>{res.first_name} {res.last_name}</td>
               <td>📍 {res.street_address}</td>
-              {/* Displaying the token clearly */}
+              <td style={{ color: "#475569" }}>{res.email || "—"}</td>
               <td style={{ fontFamily: "monospace", fontWeight: "bold", color: "#3b82f6" }}>
                 {res.onboarding_token || "—"}
               </td>
