@@ -2,12 +2,12 @@ import { useState } from "react";
 import styles from "../BoardPortal.module.css";
 
 export default function FinancialLedger({ 
-  masterRoster, 
-  financeForm, 
+  masterRoster = [], // Default to empty array for safety
+  financeForm = {},  // Default to empty object for safety
   setFinanceForm, 
-  financeStatus, 
+  financeStatus = {}, // Default to empty object for safety
   handleUpdateFinanceLedger,
-  onBack // Added prop for navigation
+  onBack 
 }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -23,7 +23,6 @@ export default function FinancialLedger({
 
   return (
     <div className={styles.tableCard} style={{ marginTop: "10px" }}>
-      {/* Navigation Header */}
       <div style={{ marginBottom: "20px" }}>
         <button className={styles.cancelBtn} onClick={onBack}>
           ← Back to Mission Control
@@ -69,7 +68,6 @@ export default function FinancialLedger({
               }}
               onFocus={() => setShowSuggestions(true)}
               onBlur={() => setTimeout(() => setShowSuggestions(false), 250)}
-              // Add the safe check here:
               required={!financeForm?.street_address} 
               autoComplete="off"
             />
@@ -85,8 +83,6 @@ export default function FinancialLedger({
                       setShowSuggestions(false);
                     }}
                     style={{ padding: "10px 14px", cursor: "pointer", borderBottom: "1px solid #f1f5f9", fontSize: "0.9rem" }}
-                    onMouseEnter={(e) => e.target.style.backgroundColor = "#f8fafc"}
-                    onMouseLeave={(e) => e.target.style.backgroundColor = "transparent"}
                   >
                     👤 <strong>{lot.first_name} {lot.last_name}</strong> — 📍 {lot.street_address}
                   </div>
@@ -102,7 +98,7 @@ export default function FinancialLedger({
                 type="number" 
                 step="0.01" 
                 placeholder="0.00" 
-                value={financeForm.balance} 
+                value={financeForm?.balance || ""} 
                 onChange={(e) => setFinanceForm({...financeForm, balance: e.target.value})} 
                 required 
               />
@@ -110,7 +106,7 @@ export default function FinancialLedger({
             <div>
               <label>Payment Status Assignment</label>
               <select 
-                value={financeForm.status} 
+                value={financeForm?.status || "Pending"} 
                 onChange={(e) => setFinanceForm({...financeForm, status: e.target.value})} 
                 className={styles.prioritySelect}
               >
