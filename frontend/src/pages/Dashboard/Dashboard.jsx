@@ -316,7 +316,12 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
         {/* --- RESIDENT VIEWS (Standard IDs) --- */}
         {activeTab === "feed" && <div className={styles.fadeContent}><NeighborhoodCalendar /><AnnouncementFeed /></div>}
         {activeTab === "maintenance" && <div className={styles.fadeContent}><RequestForm user={user} /></div>}
-        {activeTab === "dues" && <div className={styles.fadeContent}><DuesCard user={user} /></div>}
+        {activeTab === "dues" && (
+          <div className={styles.fadeContent} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+            <DuesCard user={user} />
+            <ResidentLedger user={user} />
+          </div>
+        )}
         {activeTab === "vendors" && <div className={styles.fadeContent}><VendorDirectory /></div>}
         {activeTab === "documents" && <div className={styles.fadeContent}><DocumentCenter user={user} /></div>}
 

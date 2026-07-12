@@ -32,6 +32,19 @@ router.get("/:email", async (req, res) => {
   }
 });
 
+router.get("/history/:address", async (req, res) => {
+  try {
+    const { address } = req.params;
+    const { rows } = await db.query(
+      "SELECT * FROM ledger_transactions WHERE address = $1 ORDER BY created_at DESC",
+      [address.trim()]
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // PUT /api/dues/update-balance - Admin modification targeting the address text field directly
 router.put("/update-balance", async (req, res) => {
   const { street_address, balance, status } = req.body;

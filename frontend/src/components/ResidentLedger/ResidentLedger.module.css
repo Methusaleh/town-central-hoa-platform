@@ -1,0 +1,44 @@
+.ledgerContainer {
+  background: white;
+  padding: 24px;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  height: 400px; /* Fixed height for scrolling */
+  display: flex;
+  flex-direction: column;
+}
+
+.scrollArea {
+  overflow-y: auto;
+  flex-grow: 1;
+  margin-top: 15px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th {
+  text-align: left;
+  font-size: 0.75rem;
+  color: #64748b;
+  text-transform: uppercase;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.table td {
+  padding: 12px 0;
+  border-bottom: 1px solid #f8fafc;
+  font-size: 0.9rem;
+}
+
+.comingSoon {
+  font-size: 0.7rem;
+  background: #f1f5f9;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: #64748b;
+  margin-left: 8px;
+}
