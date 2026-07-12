@@ -1,32 +1,31 @@
-import { useState } from "react";
 import styles from "../BoardPortal.module.css";
 
 export default function OperationsDashboard({ 
   requests, 
   loading, 
   viewMode, 
-  setViewMode, 
-  showForm, 
-  setShowForm, 
-  showEventForm, 
-  setShowEventForm,
-  announcement,
-  setAnnouncement,
-  newEvent,
-  setNewEvent,
+  onToggleView, // Correctly added as a prop
+  formProps,    // Grouped form state for cleaner prop passing
   handlePostAnnouncement,
   handlePostEvent,
   handleResolve,
   locationInputRef,
-  onBack // Added prop for navigation
+  onBack 
 }) {
+  // Destructure grouped props for cleaner access
+  const { 
+    showForm, setShowForm, 
+    showEventForm, setShowEventForm, 
+    announcement, setAnnouncement, 
+    newEvent, setNewEvent 
+  } = formProps;
+
   const filteredRequests = requests.filter((req) =>
     viewMode === "active" ? req.status === "Open" : req.status === "Resolved"
   );
 
   return (
     <>
-      {/* Navigation Header */}
       <div style={{ marginBottom: "20px" }}>
         <button className={styles.cancelBtn} onClick={onBack}>
           ← Back to Mission Control
@@ -140,14 +139,7 @@ export default function OperationsDashboard({
                     setNewEvent({ ...newEvent, attachment_name: e.dataTransfer.files[0].name });
                   }
                 }}
-                style={{ 
-                  border: "2px dashed #cbd5e1", 
-                  borderRadius: "8px", 
-                  padding: "20px", 
-                  textAlign: "center", 
-                  background: "#f8fafc",
-                  cursor: "pointer"
-                }}
+                style={{ border: "2px dashed #cbd5e1", borderRadius: "8px", padding: "20px", textAlign: "center", background: "#f8fafc", cursor: "pointer" }}
                 onClick={() => document.getElementById("event-file-input").click()}
               >
                 <p style={{ margin: 0, fontSize: "0.9rem", color: "#64748b" }}>
@@ -175,10 +167,7 @@ export default function OperationsDashboard({
         <div className={styles.tableCard}>
           <div className={styles.tableHeader}>
             <h3>{viewMode === "active" ? "Active Resident Requests" : "Resolved Archive"}</h3>
-            <button 
-              className={styles.toggleBtn} 
-              onClick={onToggleView} // Use the prop function here
-            >
+            <button className={styles.toggleBtn} onClick={onToggleView}>
               {viewMode === "active" ? "View Archive" : "Back to Active"}
             </button>
           </div>
