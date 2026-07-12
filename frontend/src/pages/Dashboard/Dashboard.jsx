@@ -15,7 +15,7 @@ import styles from "./Dashboard.module.css";
 
 export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
   const [activeTab, setActiveTab] = useState("feed");
-  
+
   // Data States
   const [requests, setRequests] = useState([]);
   const [masterRoster, setMasterRoster] = useState([]);
@@ -31,29 +31,54 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
   const [sending, setSending] = useState(false);
 
   // Form States
-  const [announcement, setAnnouncement] = useState({ title: "", content: "", priority: "normal", channel_type: "general" });
-  const [newEvent, setNewEvent] = useState({ title: "", event_date: "", event_time: "", location: "", description: "", attachment_url: "", attachment_name: "" });
-  const [financeForm, setFinanceForm] = useState({ street_address: "", balance: "", status: "Pending" });
+  const [announcement, setAnnouncement] = useState({
+    title: "",
+    content: "",
+    priority: "normal",
+    channel_type: "general",
+  });
+  const [newEvent, setNewEvent] = useState({
+    title: "",
+    event_date: "",
+    event_time: "",
+    location: "",
+    description: "",
+    attachment_url: "",
+    attachment_name: "",
+  });
+  const [financeForm, setFinanceForm] = useState({
+    street_address: "",
+    balance: "",
+    status: "Pending",
+  });
   const [financeStatus, setFinanceStatus] = useState({ text: "", type: "" });
   const [contactForm, setContactForm] = useState({ subject: "", message: "" });
 
-  const API_BASE = "https://town-central-hoa-platform-469564564131.us-central1.run.app";
+  const API_BASE =
+    "https://town-central-hoa-platform-469564564131.us-central1.run.app";
   const settingsRef = useRef(null);
 
   // Data Fetching Logic
   useEffect(() => {
     fetch(`${API_BASE}/api/requests/admin/all`)
       .then((res) => res.json())
-      .then((data) => { setRequests(data); setLoading(false); })
+      .then((data) => {
+        setRequests(data);
+        setLoading(false);
+      })
       .catch((err) => console.error("Admin requests fetch error:", err));
   }, []);
 
   const fetchRosterData = async () => {
     try {
-      const response = await fetch(`${API_BASE}/api/residents/master-list-placeholder`);
+      const response = await fetch(
+        `${API_BASE}/api/residents/master-list-placeholder`,
+      );
       const data = await response.json();
       setMasterRoster(data);
-    } catch (err) { console.error("Roster fetch error:", err); }
+    } catch (err) {
+      console.error("Roster fetch error:", err);
+    }
   };
 
   const fetchVendorsData = async () => {
@@ -61,25 +86,37 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
       const response = await fetch(`${API_BASE}/api/vendors`);
       const data = await response.json();
       setVendorsList(data);
-    } catch (err) { console.error("Vendor fetch error:", err); }
+    } catch (err) {
+      console.error("Vendor fetch error:", err);
+    }
   };
 
   useEffect(() => {
     if (activeTab === "roster" || activeTab === "financials") fetchRosterData();
-    if (activeTab === "vendors" || activeTab === "admin-vendors") fetchVendorsData();
+    if (activeTab === "vendors" || activeTab === "admin-vendors")
+      fetchVendorsData();
   }, [activeTab]);
 
   const handleResolve = async (requestId) => {
     try {
-      const response = await fetch(`${API_BASE}/api/requests/${requestId}/resolve`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ adminName: user?.first_name || "Admin" }),
-      });
+      const response = await fetch(
+        `${API_BASE}/api/requests/${requestId}/resolve`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ adminName: user?.first_name || "Admin" }),
+        },
+      );
       if (response.ok) {
-        setRequests(requests.map((req) => req.id === requestId ? { ...req, status: "Resolved" } : req));
+        setRequests(
+          requests.map((req) =>
+            req.id === requestId ? { ...req, status: "Resolved" } : req,
+          ),
+        );
       }
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const handleContactSubmit = async (e) => {
@@ -95,8 +132,8 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
           last_name: "ContactForm",
           type: "Board Message",
           subject: contactForm.subject,
-          description: contactForm.message
-        })
+          description: contactForm.message,
+        }),
       });
       if (response.ok) {
         alert("Message delivered to the Board!");
@@ -121,45 +158,180 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
       <aside className={styles.sidebar}>
         <nav className={styles.nav}>
           <div className={styles.profileHeader} ref={settingsRef}>
-            {user?.photo ? <img src={user.photo} alt="Avatar" className={styles.userAvatarMini} /> : <div className={styles.avatarPlaceholderMini}>{user?.first_name?.charAt(0).toUpperCase()}</div>}
-            <div className={styles.userInfoMini}><h4>{user?.first_name}</h4></div>
-            <div className={styles.settingsTrigger} onClick={() => setShowSettings(!showSettings)}>⚙️</div>
+            {user?.photo ? (
+              <img
+                src={user.photo}
+                alt="Avatar"
+                className={styles.userAvatarMini}
+              />
+            ) : (
+              <div className={styles.avatarPlaceholderMini}>
+                {user?.first_name?.charAt(0).toUpperCase()}
+              </div>
+            )}
+            <div className={styles.userInfoMini}>
+              <h4>{user?.first_name}</h4>
+            </div>
+            <div
+              className={styles.settingsTrigger}
+              onClick={() => setShowSettings(!showSettings)}
+            >
+              ⚙️
+            </div>
             {showSettings && (
               <div className={styles.settingsDropdown}>
-                <button className={styles.dropdownBtn} onClick={onNavigateToProfile}>Settings</button>
-                <button className={`${styles.dropdownBtn} ${styles.logoutText}`} onClick={onLogout}>Logout</button>
+                <button
+                  className={styles.dropdownBtn}
+                  onClick={onNavigateToProfile}
+                >
+                  Settings
+                </button>
+                <button
+                  className={`${styles.dropdownBtn} ${styles.logoutText}`}
+                  onClick={onLogout}
+                >
+                  Logout
+                </button>
               </div>
             )}
           </div>
 
-          <button className={`${styles.navItem} ${activeTab === "feed" ? styles.activeNav : ""}`} onClick={() => setActiveTab("feed")}>Home Dashboard</button>
-          <button className={`${styles.navItem} ${activeTab === "maintenance" ? styles.activeNav : ""}`} onClick={() => setActiveTab("maintenance")}>Maintenance & ARC</button>
-          <button className={`${styles.navItem} ${activeTab === "dues" ? styles.activeNav : ""}`} onClick={() => setActiveTab("dues")}>My Dues</button>
-          <button className={`${styles.navItem} ${activeTab === "vendors" ? styles.activeNav : ""}`} onClick={() => setActiveTab("vendors")}>Trusted Companies</button>
-          <button className={`${styles.navItem} ${activeTab === "documents" ? styles.activeNav : ""}`} onClick={() => setActiveTab("documents")}>Community Documents</button>
-          <button onClick={() => setShowContactModal(true)} className={styles.navItem}>Contact the Board</button>
+          <button
+            className={`${styles.navItem} ${activeTab === "feed" ? styles.activeNav : ""}`}
+            onClick={() => setActiveTab("feed")}
+          >
+            Home Dashboard
+          </button>
+          <button
+            className={`${styles.navItem} ${activeTab === "maintenance" ? styles.activeNav : ""}`}
+            onClick={() => setActiveTab("maintenance")}
+          >
+            Maintenance & ARC
+          </button>
+          <button
+            className={`${styles.navItem} ${activeTab === "dues" ? styles.activeNav : ""}`}
+            onClick={() => setActiveTab("dues")}
+          >
+            My Dues
+          </button>
+          <button
+            className={`${styles.navItem} ${activeTab === "vendors" ? styles.activeNav : ""}`}
+            onClick={() => setActiveTab("vendors")}
+          >
+            Trusted Companies
+          </button>
+          <button
+            className={`${styles.navItem} ${activeTab === "documents" ? styles.activeNav : ""}`}
+            onClick={() => setActiveTab("documents")}
+          >
+            Community Documents
+          </button>
+          <button
+            onClick={() => setShowContactModal(true)}
+            className={styles.navItem}
+          >
+            Contact the Board
+          </button>
 
           {(user?.role === "board_member" || user?.role === "super_admin") && (
-            <button className={`${styles.navItem} ${activeTab === "mission-control" ? styles.activeNav : ""}`} onClick={() => setActiveTab("mission-control")}>Admin Tools</button>
+            <button
+              className={`${styles.navItem} ${activeTab === "mission-control" ? styles.activeNav : ""}`}
+              onClick={() => setActiveTab("mission-control")}
+            >
+              Admin Tools
+            </button>
           )}
         </nav>
       </aside>
 
       <main className={styles.main}>
         {/* Resident Views */}
-        {activeTab === "feed" && <div className={styles.fadeContent}><NeighborhoodCalendar /><AnnouncementFeed /></div>}
-        {activeTab === "maintenance" && <div className={styles.fadeContent}><RequestForm user={user} /></div>}
-        {activeTab === "dues" && <div className={styles.fadeContent}><DuesCard user={user} /></div>}
-        {activeTab === "vendors" && <div className={styles.fadeContent}><VendorDirectory /></div>}
-        {activeTab === "documents" && <div className={styles.fadeContent}><DocumentCenter user={user} /></div>}
+        {activeTab === "feed" && (
+          <div className={styles.fadeContent}>
+            <NeighborhoodCalendar />
+            <AnnouncementFeed />
+          </div>
+        )}
+        {activeTab === "maintenance" && (
+          <div className={styles.fadeContent}>
+            <RequestForm user={user} />
+          </div>
+        )}
+        {activeTab === "dues" && (
+          <div className={styles.fadeContent}>
+            <DuesCard user={user} />
+          </div>
+        )}
+        {activeTab === "vendors" && (
+          <div className={styles.fadeContent}>
+            <VendorDirectory />
+          </div>
+        )}
+        {activeTab === "documents" && (
+          <div className={styles.fadeContent}>
+            <DocumentCenter user={user} />
+          </div>
+        )}
 
         {/* Admin Views */}
-        {activeTab === "mission-control" && <div className={styles.fadeContent}><MissionControl onNavigate={setActiveTab} /></div>}
-        {activeTab === "requests" && <div className={styles.fadeContent}><OperationsDashboard onBack={() => setActiveTab("mission-control")} requests={requests} loading={loading} handleResolve={handleResolve} showForm={showForm} setShowForm={setShowForm} showEventForm={showEventForm} setShowEventForm={setShowEventForm} announcement={announcement} setAnnouncement={setAnnouncement} newEvent={newEvent} setNewEvent={setNewEvent} /></div>}
-        {activeTab === "roster" && <div className={styles.fadeContent}><RosterDirectory onBack={() => setActiveTab("mission-control")} masterRoster={masterRoster} /></div>}
-        {activeTab === "financials" && <div className={styles.fadeContent}><FinancialLedger onBack={() => setActiveTab("mission-control")} masterRoster={masterRoster} financeForm={financeForm} setFinanceForm={setFinanceForm} financeStatus={financeStatus} /></div>}
-        {activeTab === "admin-vendors" && <div className={styles.fadeContent}><VendorControls onBack={() => setActiveTab("mission-control")} vendorsList={vendorsList} /></div>}
-        {activeTab === "admin-documents" && <div className={styles.fadeContent}><DocumentManager user={user} onBack={() => setActiveTab("mission-control")} /></div>}
+        {activeTab === "mission-control" && (
+          <div className={styles.fadeContent}>
+            <MissionControl onNavigate={setActiveTab} />
+          </div>
+        )}
+        {activeTab === "requests" && (
+          <div className={styles.fadeContent}>
+            <OperationsDashboard
+              onBack={() => setActiveTab("mission-control")}
+              requests={requests}
+              loading={loading}
+              handleResolve={handleResolve}
+              showForm={showForm}
+              setShowForm={setShowForm}
+              showEventForm={showEventForm}
+              setShowEventForm={setShowEventForm}
+              announcement={announcement}
+              setAnnouncement={setAnnouncement}
+              newEvent={newEvent}
+              setNewEvent={setNewEvent}
+            />
+          </div>
+        )}
+        {activeTab === "roster" && (
+          <div className={styles.fadeContent}>
+            <RosterDirectory
+              onBack={() => setActiveTab("mission-control")}
+              masterRoster={masterRoster}
+            />
+          </div>
+        )}
+        {activeTab === "financials" && (
+          <div className={styles.fadeContent}>
+            <FinancialLedger
+              onBack={() => setActiveTab("mission-control")}
+              masterRoster={masterRoster}
+              financeForm={financeForm}
+              setFinanceForm={setFinanceForm}
+              financeStatus={financeStatus}
+            />
+          </div>
+        )}
+        {activeTab === "admin-vendors" && (
+          <div className={styles.fadeContent}>
+            <VendorControls
+              onBack={() => setActiveTab("mission-control")}
+              vendorsList={vendorsList}
+            />
+          </div>
+        )}
+        {activeTab === "admin-documents" && (
+          <div className={styles.fadeContent}>
+            <DocumentManager
+              user={user}
+              onBack={() => setActiveTab("mission-control")}
+            />
+          </div>
+        )}
       </main>
     </div>
   );
