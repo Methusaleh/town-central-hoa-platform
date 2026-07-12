@@ -245,93 +245,22 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
       </aside>
 
       <main className={styles.main}>
-        {/* Resident Views */}
-        {activeTab === "feed" && (
-          <div className={styles.fadeContent}>
-            <NeighborhoodCalendar />
-            <AnnouncementFeed />
-          </div>
-        )}
-        {activeTab === "maintenance" && (
-          <div className={styles.fadeContent}>
-            <RequestForm user={user} />
-          </div>
-        )}
-        {activeTab === "dues" && (
-          <div className={styles.fadeContent}>
-            <DuesCard user={user} />
-          </div>
-        )}
-        {activeTab === "vendors" && (
-          <div className={styles.fadeContent}>
-            <VendorDirectory />
-          </div>
-        )}
-        {activeTab === "documents" && (
-          <div className={styles.fadeContent}>
-            <DocumentCenter user={user} />
-          </div>
-        )}
+        {/* --- RESIDENT VIEWS (Standard IDs) --- */}
+        {activeTab === "feed" && <div className={styles.fadeContent}><NeighborhoodCalendar /><AnnouncementFeed /></div>}
+        {activeTab === "maintenance" && <div className={styles.fadeContent}><RequestForm user={user} /></div>}
+        {activeTab === "dues" && <div className={styles.fadeContent}><DuesCard user={user} /></div>}
+        {activeTab === "vendors" && <div className={styles.fadeContent}><VendorDirectory /></div>}
+        {activeTab === "documents" && <div className={styles.fadeContent}><DocumentCenter user={user} /></div>}
 
-        {/* Admin Views */}
-        {activeTab === "mission-control" && (
-          <div className={styles.fadeContent}>
-            <MissionControl onNavigate={setActiveTab} />
-          </div>
-        )}
-        {activeTab === "requests" && (
-          <div className={styles.fadeContent}>
-            <OperationsDashboard
-              onBack={() => setActiveTab("mission-control")}
-              requests={requests}
-              loading={loading}
-              handleResolve={handleResolve}
-              showForm={showForm}
-              setShowForm={setShowForm}
-              showEventForm={showEventForm}
-              setShowEventForm={setShowEventForm}
-              announcement={announcement}
-              setAnnouncement={setAnnouncement}
-              newEvent={newEvent}
-              setNewEvent={setNewEvent}
-            />
-          </div>
-        )}
-        {activeTab === "roster" && (
-          <div className={styles.fadeContent}>
-            <RosterDirectory
-              onBack={() => setActiveTab("mission-control")}
-              masterRoster={masterRoster}
-            />
-          </div>
-        )}
-        {activeTab === "financials" && (
-          <div className={styles.fadeContent}>
-            <FinancialLedger
-              onBack={() => setActiveTab("mission-control")}
-              masterRoster={masterRoster}
-              financeForm={financeForm}
-              setFinanceForm={setFinanceForm}
-              financeStatus={financeStatus}
-            />
-          </div>
-        )}
-        {activeTab === "admin-vendors" && (
-          <div className={styles.fadeContent}>
-            <VendorControls
-              onBack={() => setActiveTab("mission-control")}
-              vendorsList={vendorsList}
-            />
-          </div>
-        )}
-        {activeTab === "admin-documents" && (
-          <div className={styles.fadeContent}>
-            <DocumentManager
-              user={user}
-              onBack={() => setActiveTab("mission-control")}
-            />
-          </div>
-        )}
+        {/* --- ADMIN VIEWS (Unique Admin IDs) --- */}
+        {activeTab === "mission-control" && <div className={styles.fadeContent}><MissionControl onNavigate={setActiveTab} /></div>}
+        {activeTab === "requests" && <div className={styles.fadeContent}><OperationsDashboard onBack={() => setActiveTab("mission-control")} requests={requests} loading={loading} handleResolve={handleResolve} showForm={showForm} setShowForm={setShowForm} showEventForm={showEventForm} setShowEventForm={setShowEventForm} announcement={announcement} setAnnouncement={setAnnouncement} newEvent={newEvent} setNewEvent={setNewEvent} /></div>}
+        {activeTab === "roster" && <div className={styles.fadeContent}><RosterDirectory onBack={() => setActiveTab("mission-control")} masterRoster={masterRoster} showRosterModal={showForm} setShowRosterModal={setShowForm} /></div>}
+        {activeTab === "financials" && <div className={styles.fadeContent}><FinancialLedger onBack={() => setActiveTab("mission-control")} masterRoster={masterRoster} financeForm={financeForm} setFinanceForm={setFinanceForm} financeStatus={financeStatus} /></div>}
+        
+        {/* These specific IDs now ensure you don't route to the resident versions */}
+        {activeTab === "admin-vendors" && <div className={styles.fadeContent}><VendorControls onBack={() => setActiveTab("mission-control")} vendorsList={vendorsList} /></div>}
+        {activeTab === "admin-documents" && <div className={styles.fadeContent}><DocumentManager user={user} onBack={() => setActiveTab("mission-control")} /></div>}
       </main>
     </div>
   );

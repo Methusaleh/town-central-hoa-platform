@@ -6,8 +6,8 @@ export default function MissionControl({ onNavigate }) {
     { id: "requests", label: "Operations & Tickets", icon: "📋" },
     { id: "roster", label: "Master Roster", icon: "👥" },
     { id: "financials", label: "Assessment Ledger", icon: "💰" },
-    { id: "vendors", label: "Verified Vendors", icon: "🏢" },
-    { id: "documents", label: "Document Manager", icon: "📄" },
+    { id: "admin-vendors", label: "Vendor Controls", icon: "🏢" }, // Note the "admin-" prefix
+    { id: "admin-documents", label: "Document Manager", icon: "📄" }, // Note the "admin-" prefix
   ];
 
   return (
