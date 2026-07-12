@@ -28,6 +28,11 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
   // Form States
   const [announcement, setAnnouncement] = useState({ title: "", content: "", priority: "normal", channel_type: "general" });
   const [newEvent, setNewEvent] = useState({ title: "", event_date: "", event_time: "", location: "", description: "", attachment_url: "", attachment_name: "" });
+  const [financeForm, setFinanceForm] = useState({
+    street_address: "",
+    balance: "",
+    status: "Pending"
+  });
   
   // Contact Modal States
   const [showContactModal, setShowContactModal] = useState(false);

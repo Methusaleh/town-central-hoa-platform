@@ -69,7 +69,8 @@ export default function FinancialLedger({
               }}
               onFocus={() => setShowSuggestions(true)}
               onBlur={() => setTimeout(() => setShowSuggestions(false), 250)}
-              required={!financeForm.street_address} 
+              // Add the safe check here:
+              required={!financeForm?.street_address} 
               autoComplete="off"
             />
             
