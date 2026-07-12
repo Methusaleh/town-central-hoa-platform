@@ -294,7 +294,6 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
               masterRoster={masterRoster} 
               showRosterModal={showForm} 
               setShowRosterModal={setShowForm}
-              // Add these fallbacks to prevent the ReferenceError:
               rosterForm={rosterForm || {}} 
               setRosterForm={setRosterForm}
               rosterStatus={financeStatus} // Or your specific rosterStatus state
