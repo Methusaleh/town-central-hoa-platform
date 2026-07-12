@@ -284,6 +284,60 @@ router.post("/invite/accept", async (req, res) => {
   }
 });
 
+// DELETE /api/residents/account/:id - Admin tool to delete a user account safely
+router.delete("/account/:id", async (req, res) => {
+  const userId = req.params.id;
+
+  try {
+    await db.query("BEGIN");
+
+    // 1. Grab the user's address BEFORE we delete them
+    const userRes = await db.query("SELECT address FROM users WHERE id = $1", [userId]);
+    
+    if (userRes.rows.length === 0) {
+      await db.query("ROLLBACK");
+      return res.status(404).json({ error: "User account not found." });
+    }
+    
+    const userAddress = userRes.rows[0].address;
+
+    // 2. Delete the actual user record
+    await db.query("DELETE FROM users WHERE id = $1", [userId]);
+
+    // 3. Count how many users still share this exact address string
+    const countRes = await db.query(
+      "SELECT COUNT(*) FROM users WHERE address = $1", 
+      [userAddress]
+    );
+    
+    const remainingResidents = parseInt(countRes.rows[0].count, 10);
+
+    // 4. THE SAFEGUARD: If the house is completely empty, unclaim the property
+    let propertyUnclaimed = false;
+    if (remainingResidents === 0) {
+      await db.query(
+        "UPDATE neighborhood_roster SET is_claimed = false WHERE street_address = $1",
+        [userAddress]
+      );
+      propertyUnclaimed = true;
+    }
+
+    await db.query("COMMIT");
+
+    res.json({ 
+      success: true, 
+      message: "User account deleted successfully.",
+      propertyUnclaimed: propertyUnclaimed,
+      remainingResidents: remainingResidents
+    });
+
+  } catch (err) {
+    await db.query("ROLLBACK");
+    console.error("Safeguard deletion error:", err.message);
+    res.status(500).json({ error: "Server error during account deletion process." });
+  }
+});
+
 // --- ADDED FOR AUTOCOMPLETE: Fetch true directory indexing for administrative subcomponents ---
 router.get("/master-list-placeholder", async (req, res) => {
   try {
