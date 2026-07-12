@@ -329,19 +329,19 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
               requests={requests} 
               loading={loading} 
               handleResolve={handleResolve} 
-              // State management for toggle
+              
+              // Pass the value and the toggle function explicitly
               viewMode={viewMode} 
-              setViewMode={setViewMode} 
-              // Grouped form props
+              onToggleView={() => setViewMode(viewMode === "active" ? "archived" : "active")}
+              
               formProps={{
                 showForm, setShowForm,
                 showEventForm, setShowEventForm,
                 announcement, setAnnouncement,
                 newEvent, setNewEvent
               }}
-              // Handlers
-              handlePostAnnouncement={handlePostAnnouncement} // Ensure these exist in your Dashboard
-              handlePostEvent={handlePostEvent}               // Ensure these exist in your Dashboard
+              handlePostAnnouncement={handlePostAnnouncement}
+              handlePostEvent={handlePostEvent}
             />
           </div>
         )}

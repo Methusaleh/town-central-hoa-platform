@@ -177,7 +177,7 @@ export default function OperationsDashboard({
             <h3>{viewMode === "active" ? "Active Resident Requests" : "Resolved Archive"}</h3>
             <button 
               className={styles.toggleBtn} 
-              onClick={() => setViewMode(viewMode === "active" ? "archived" : "active")}
+              onClick={onToggleView} // Use the prop function here
             >
               {viewMode === "active" ? "View Archive" : "Back to Active"}
             </button>
