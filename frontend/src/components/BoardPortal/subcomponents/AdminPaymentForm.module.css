@@ -1,0 +1,50 @@
+.formContainer {
+  padding: 15px 0;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.inputGroup label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.inputGroup input, .inputGroup select {
+  padding: 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.submitBtn {
+  background-color: #10b981;
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 5px;
+}
+
+.submitBtn:hover {
+  background-color: #059669;
+}
+
+.statusMessage {
+  margin-top: 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import AdminPaymentForm from "../../components/Admin/AdminPaymentForm";
+import AdminPaymentForm from "./AdminPaymentForm";
 import styles from "../BoardPortal.module.css";
 
 export default function FinancialLedger({ 
