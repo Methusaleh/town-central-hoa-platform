@@ -286,7 +286,29 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
 
         {/* --- ADMIN VIEWS (Unique Admin IDs) --- */}
         {activeTab === "mission-control" && <div className={styles.fadeContent}><MissionControl onNavigate={setActiveTab} /></div>}
-        {activeTab === "requests" && <div className={styles.fadeContent}><OperationsDashboard onBack={() => setActiveTab("mission-control")} requests={requests} loading={loading} handleResolve={handleResolve} showForm={showForm} setShowForm={setShowForm} showEventForm={showEventForm} setShowEventForm={setShowEventForm} announcement={announcement} setAnnouncement={setAnnouncement} newEvent={newEvent} setNewEvent={setNewEvent} /></div>}
+        {activeTab === "requests" && (
+          <div className={styles.fadeContent}>
+            <OperationsDashboard 
+              onBack={() => setActiveTab("mission-control")} 
+              requests={requests} 
+              loading={loading} 
+              handleResolve={handleResolve} 
+              // State management for toggle
+              viewMode={viewMode} 
+              setViewMode={setViewMode} 
+              // Grouped form props
+              formProps={{
+                showForm, setShowForm,
+                showEventForm, setShowEventForm,
+                announcement, setAnnouncement,
+                newEvent, setNewEvent
+              }}
+              // Handlers
+              handlePostAnnouncement={handlePostAnnouncement} // Ensure these exist in your Dashboard
+              handlePostEvent={handlePostEvent}               // Ensure these exist in your Dashboard
+            />
+          </div>
+        )}
         {activeTab === "roster" && (
           <div className={styles.fadeContent}>
             <RosterDirectory 
