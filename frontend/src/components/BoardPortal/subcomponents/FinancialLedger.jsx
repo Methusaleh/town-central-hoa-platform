@@ -41,8 +41,14 @@ export default function FinancialLedger({
 
       <div className={styles.formCard} style={{ border: "1px solid #e2e8f0", maxWidth: "600px" }}>
         <h4>Update Ledger Statement</h4>
-        {financeStatus.text && (
-          <div style={{ padding: "10px", borderRadius: "6px", marginBottom: "15px", backgroundColor: financeStatus.type === "success" ? "#d4edda" : "#f8d7da", color: financeStatus.type === "success" ? "#155724" : "#721c24" }}>
+        {financeStatus?.text && (
+          <div style={{ 
+            padding: "10px", 
+            borderRadius: "6px", 
+            marginBottom: "15px", 
+            backgroundColor: financeStatus?.type === "success" ? "#d4edda" : "#f8d7da", 
+            color: financeStatus?.type === "success" ? "#155724" : "#721c24" 
+          }}>
             {financeStatus.text}
           </div>
         )}

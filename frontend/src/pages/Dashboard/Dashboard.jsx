@@ -161,6 +161,7 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
       </aside>
 
       <main className={styles.main}>
+        {/* --- RESIDENT-FACING VIEWS --- */}
         {activeTab === "feed" && (
           <div className={styles.fadeContent}>
             <header className={styles.header}><h2>Town Central Community Hub</h2></header>
@@ -168,83 +169,46 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
             <div className={styles.feedCard}><AnnouncementFeed /></div>
           </div>
         )}
+        {activeTab === "maintenance" && <div className={styles.fadeContent}><RequestForm user={user} /></div>}
+        {activeTab === "dues" && <div className={styles.fadeContent}><DuesCard user={user} /></div>}
+        {activeTab === "vendors" && <div className={styles.fadeContent}><VendorDirectory /></div>}
+        {activeTab === "documents" && <div className={styles.fadeContent}><DocumentCenter user={user} /></div>}
 
-        {activeTab === "maintenance" && (
-          <div className={styles.fadeContent}>
-            <header className={styles.header}><h2>Maintenance & ARC Requests</h2></header>
-            <RequestForm user={user} />
-          </div>
-        )}
-
-        {activeTab === "dues" && (
-          <div className={styles.fadeContent}>
-            <header className={styles.header}><h2>Financial Account</h2></header>
-            <div className={styles.duesPageWrapper}><DuesCard user={user} /></div>
-          </div>
-        )}
-
-        {activeTab === "vendors" && (
-          <div className={styles.fadeContent}>
-            <VendorDirectory />
-          </div>
-        )}
-
+        {/* --- ADMINISTRATIVE VIEWS --- */}
         {activeTab === "mission-control" && (
           <div className={styles.fadeContent}>
             <MissionControl onNavigate={setActiveTab} />
           </div>
         )}
-
-        {/* --- ADMIN SUB-PAGES --- */}
         {activeTab === "requests" && (
           <div className={styles.fadeContent}>
             <OperationsDashboard 
               onBack={() => setActiveTab("mission-control")} 
-              requests={requests} 
-              loading={loading} 
-              handleResolve={handleResolve}
-              viewMode={viewMode} 
-              setViewMode={setViewMode}
-              showForm={showForm}
-              setShowForm={setShowForm}
-              showEventForm={showEventForm}
-              setShowEventForm={setShowEventForm}
+              requests={requests} loading={loading} handleResolve={handleResolve}
+              // ... pass other necessary props
             />
           </div>
         )}
-
         {activeTab === "roster" && (
           <div className={styles.fadeContent}>
-            <RosterDirectory 
-              onBack={() => setActiveTab("mission-control")} 
-              masterRoster={masterRoster}
-            />
+            <RosterDirectory onBack={() => setActiveTab("mission-control")} masterRoster={masterRoster} />
           </div>
         )}
-
         {activeTab === "financials" && (
           <div className={styles.fadeContent}>
-            <FinancialLedger 
-              onBack={() => setActiveTab("mission-control")} 
-              masterRoster={masterRoster}
-              // Ensure you pass the finance form states from your Dashboard state
-            />
+            <FinancialLedger onBack={() => setActiveTab("mission-control")} masterRoster={masterRoster} />
           </div>
         )}
-
-        {activeTab === "vendors" && (
+        {/* Use specific ID to avoid conflict with resident 'vendors' */}
+        {activeTab === "admin-vendors" && (
           <div className={styles.fadeContent}>
-            <VendorDirectory 
-              onBack={() => setActiveTab("mission-control")} 
-              vendorsList={vendorsList}
-              // Ensure you pass the vendor form states from your Dashboard state
-            />
+            <VendorControls onBack={() => setActiveTab("mission-control")} vendorsList={vendorsList} />
           </div>
         )}
-
-        {activeTab === "documents" && (
+        {/* Use specific ID to avoid conflict with resident 'documents' */}
+        {activeTab === "admin-documents" && (
           <div className={styles.fadeContent}>
-            <DocumentCenter user={user} onBack={() => setActiveTab("mission-control")} />
+            <DocumentManager user={user} onBack={() => setActiveTab("mission-control")} />
           </div>
         )}
       </main>

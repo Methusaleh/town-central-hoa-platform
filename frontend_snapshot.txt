@@ -1324,12 +1324,12 @@ export default function FinancialLedger({
   financeForm, 
   setFinanceForm, 
   financeStatus, 
-  handleUpdateFinanceLedger 
+  handleUpdateFinanceLedger,
+  onBack // Added prop for navigation
 }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
 
-  // Computes suggestion index parameters fluidly based on query values
   const autocompleteSuggestions = masterRoster.filter(r => {
     const query = searchQuery.toLowerCase();
     return (
@@ -1341,6 +1341,13 @@ export default function FinancialLedger({
 
   return (
     <div className={styles.tableCard} style={{ marginTop: "10px" }}>
+      {/* Navigation Header */}
+      <div style={{ marginBottom: "20px" }}>
+        <button className={styles.cancelBtn} onClick={onBack}>
+          ← Back to Mission Control
+        </button>
+      </div>
+
       <div className={styles.tableHeader}>
         <div>
           <h3 style={{ margin: 0 }}>Resident Assessment Ledger</h3>
@@ -1359,10 +1366,9 @@ export default function FinancialLedger({
         )}
         <form onSubmit={(e) => {
           handleUpdateFinanceLedger(e);
-          setSearchQuery(""); // clear state after submission package leaves
+          setSearchQuery("");
         }} className={styles.announcementForm}>
           
-          {/* THE FIXED FIXED INPUT CONTAINER */}
           <div style={{ position: "relative" }}>
             <label>Search Resident Name or Street Address *</label>
             <input 
@@ -1385,9 +1391,7 @@ export default function FinancialLedger({
                   <div
                     key={lot.id}
                     onMouseDown={() => {
-                      // Locks in the physical street address string to state
                       setFinanceForm({ ...financeForm, street_address: lot.street_address });
-                      // decoupled string keeps next query operations clean
                       setSearchQuery(`${lot.first_name} ${lot.last_name} (${lot.street_address})`);
                       setShowSuggestions(false);
                     }}
@@ -1450,10 +1454,18 @@ export default function VendorControls({
   vendorsList,
   handleVendorSubmit,
   startEditVendor,
-  handleDeleteVendor
+  handleDeleteVendor,
+  onBack // Added prop for navigation
 }) {
   return (
     <div className={styles.tableCard} style={{ marginTop: "10px" }}>
+      {/* Navigation Header */}
+      <div style={{ marginBottom: "20px" }}>
+        <button className={styles.cancelBtn} onClick={onBack}>
+          ← Back to Mission Control
+        </button>
+      </div>
+
       <div className={styles.tableHeader}>
         <div>
           <h3 style={{ margin: 0 }}>Trusted Companies Directory Control</h3>
@@ -3665,6 +3677,8 @@ FILE: ./frontend/src/pages/Dashboard/Dashboard.jsx
 import { useState, useEffect, useRef } from "react";
 import MissionControl from "../../components/BoardPortal/subcomponents/MissionControl";
 import RosterDirectory from "../../components/BoardPortal/subcomponents/RosterDirectory";
+import FinancialLedger from "../../components/BoardPortal/subcomponents/FinancialLedger";
+import VendorControls from "../../components/BoardPortal/subcomponents/VendorControls";
 import OperationsDashboard from "../../components/BoardPortal/subcomponents/OperationsDashboard";
 import AnnouncementFeed from "../../components/AnnouncementFeed/AnnouncementFeed";
 import DuesCard from "../../components/DuesCard/DuesCard";
@@ -3672,6 +3686,7 @@ import NeighborhoodCalendar from "../../components/NeighborhoodCalendar/Neighbor
 import RequestForm from "../../components/RequestForm/RequestForm";
 import VendorDirectory from "../../components/VendorDirectory/VendorDirectory";
 import DocumentCenter from "../../components/DocumentCenter/DocumentCenter";
+import DocumentManager from "../../components/BoardPortal/subcomponents/DocumentManager"; // Admin view
 import styles from "./Dashboard.module.css";
 
 export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
@@ -3860,7 +3875,7 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
         {activeTab === "requests" && (
           <div className={styles.fadeContent}>
             <OperationsDashboard 
-              onBack={() => setActiveTab("mission-control")} // <-- ADD THIS
+              onBack={() => setActiveTab("mission-control")} 
               requests={requests} 
               loading={loading} 
               handleResolve={handleResolve}
@@ -3870,7 +3885,6 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
               setShowForm={setShowForm}
               showEventForm={showEventForm}
               setShowEventForm={setShowEventForm}
-              // ... (ensure other props like announcement/newEvent are here)
             />
           </div>
         )}
@@ -3880,12 +3894,35 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
             <RosterDirectory 
               onBack={() => setActiveTab("mission-control")} 
               masterRoster={masterRoster}
-              // ... pass remaining props here
             />
           </div>
         )}
 
-        {activeSection === "documents" && <DocumentManager user={user} onBack={() => setActiveSection("requests")} />}
+        {activeTab === "financials" && (
+          <div className={styles.fadeContent}>
+            <FinancialLedger 
+              onBack={() => setActiveTab("mission-control")} 
+              masterRoster={masterRoster}
+              // Ensure you pass the finance form states from your Dashboard state
+            />
+          </div>
+        )}
+
+        {activeTab === "vendors" && (
+          <div className={styles.fadeContent}>
+            <VendorDirectory 
+              onBack={() => setActiveTab("mission-control")} 
+              vendorsList={vendorsList}
+              // Ensure you pass the vendor form states from your Dashboard state
+            />
+          </div>
+        )}
+
+        {activeTab === "documents" && (
+          <div className={styles.fadeContent}>
+            <DocumentCenter user={user} onBack={() => setActiveTab("mission-control")} />
+          </div>
+        )}
       </main>
 
       {/* --- INLINE CONTACT BOARD OVERLAY MODAL LAYER --- */}
