@@ -108,6 +108,26 @@ router.post("/verify", async (req, res) => {
   }
 });
 
+// POST /api/residents/invite - Generate invitation for secondary member
+router.post("/invite", async (req, res) => {
+  const { email, primary_resident_id, address } = req.body;
+  const inviteToken = crypto.randomBytes(16).toString("hex");
+
+  try {
+    // 1. Save the token to an invitations table
+    await db.query(
+      "INSERT INTO invitations (email, token, primary_resident_id, address) VALUES ($1, $2, $3, $4)",
+      [email, inviteToken, primary_resident_id, address]
+    );
+
+    // 2. Send the email with the link containing the token
+    // (We can use your existing nodemailer setup from requestRoutes.js)[cite: 3]
+    res.status(201).json({ success: true, message: "Invitation sent!" });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to generate invitation." });
+  }
+});
+
 // PUT /api/residents/avatar - Update a resident's profile photo
 router.put("/avatar", async (req, res) => {
   const { email, photoData } = req.body;

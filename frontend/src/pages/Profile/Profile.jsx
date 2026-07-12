@@ -1,4 +1,5 @@
 import { useState } from "react";
+import InviteMember from "../../components/InviteMember/InviteMember";
 import styles from "./Profile.module.css";
 
 export default function Profile({ user, onBack, onUserUpdate }) {
@@ -83,7 +84,6 @@ export default function Profile({ user, onBack, onUserUpdate }) {
         <div className={styles.card}>
           <div className={styles.avatarSection}>
             <label className={styles.avatarLabel} title="Click to upload custom picture">
-              {/* Hidden HTML file stream picker input anchor */}
               <input 
                 type="file" 
                 accept="image/*" 
@@ -91,8 +91,6 @@ export default function Profile({ user, onBack, onUserUpdate }) {
                 style={{ display: "none" }}
                 disabled={uploading}
               />
-              
-              {/* If user has a photo, show it. Otherwise, show the text-avatar fallback */}
               {user?.photo ? (
                 <img
                   src={user.photo}
@@ -104,12 +102,10 @@ export default function Profile({ user, onBack, onUserUpdate }) {
                   {user?.first_name ? user.first_name.charAt(0).toUpperCase() : "R"}
                 </div>
               )}
-              
               <div className={styles.avatarHoverBadge}>
                 {uploading ? "Saving..." : "📷 Upload"}
               </div>
             </label>
-
             <h3>{user?.first_name || "Resident"}</h3>
             <span className={styles.badge}>{user?.role || "Resident"}</span>
           </div>
@@ -129,57 +125,64 @@ export default function Profile({ user, onBack, onUserUpdate }) {
           </div>
         </div>
 
-        {/* Right Card: Preferences */}
-        <div className={styles.card}>
-          <h3>Community Preferences</h3>
-          <p className={styles.subtext}>
-            Manage how you want to receive communication from the HOA Board.
-          </p>
+        {/* Right Column: Preferences & Management */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
+          {/* Preferences Card */}
+          <div className={styles.card}>
+            <h3>Community Preferences</h3>
+            <p className={styles.subtext}>
+              Manage how you want to receive communication from the HOA Board.
+            </p>
 
-          <div className={styles.settingRow}>
-            <div>
-              <h4>Critical Email Alerts</h4>
-              <p>
-                Immediate notifications for maintenance closures or safety notices.
-              </p>
+            <div className={styles.settingRow}>
+              <div>
+                <h4>Critical Email Alerts</h4>
+                <p>Immediate notifications for maintenance closures or safety notices.</p>
+              </div>
+              <input
+                type="checkbox"
+                checked={notifications.emailAlerts}
+                onChange={() => handleToggle("emailAlerts")}
+              />
             </div>
-            <input
-              type="checkbox"
-              checked={notifications.emailAlerts}
-              onChange={() => handleToggle("emailAlerts")}
-            />
+
+            <div className={styles.settingRow}>
+              <div>
+                <h4>SMS Mobile Notices</h4>
+                <p>Receive text alerts for urgent community updates.</p>
+              </div>
+              <input
+                type="checkbox"
+                checked={notifications.textAlerts}
+                onChange={() => handleToggle("textAlerts")}
+              />
+            </div>
+
+            <div className={styles.settingRow}>
+              <div>
+                <h4>Monthly Newsletter</h4>
+                <p>Stay up to date on community events and meeting minutes.</p>
+              </div>
+              <input
+                type="checkbox"
+                checked={notifications.newsletter}
+                onChange={() => handleToggle("newsletter")}
+              />
+            </div>
+
+            <button
+              className={styles.saveBtn}
+              onClick={() => alert("Preferences saved successfully!")}
+            >
+              Save Preferences
+            </button>
           </div>
 
-          <div className={styles.settingRow}>
-            <div>
-              <h4>SMS Mobile Notices</h4>
-              <p>Receive text alerts for urgent community updates.</p>
-            </div>
-            <input
-              type="checkbox"
-              checked={notifications.textAlerts}
-              onChange={() => handleToggle("textAlerts")}
-            />
+          {/* Household Management Card */}
+          <div className={styles.card}>
+            <h3>Household Management</h3>
+            <InviteMember user={user} />
           </div>
-
-          <div className={styles.settingRow}>
-            <div>
-              <h4>Monthly Newsletter</h4>
-              <p>Stay up to date on community events and meeting minutes.</p>
-            </div>
-            <input
-              type="checkbox"
-              checked={notifications.newsletter}
-              onChange={() => handleToggle("newsletter")}
-            />
-          </div>
-
-          <button
-            className={styles.saveBtn}
-            onClick={() => alert("Preferences saved successfully!")}
-          >
-            Save Preferences
-          </button>
         </div>
       </div>
     </div>
