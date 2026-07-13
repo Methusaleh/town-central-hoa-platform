@@ -1484,37 +1484,8 @@ export default function RosterDirectory({
             </div>
           )}
           <form onSubmit={handleSubmit} className={styles.announcementForm}>
-            <div className={styles.inlineGroup}>
-              <div>
-                <label>First Name *</label>
-                <input 
-                  type="text" 
-                  value={rosterForm?.first_name || ""} 
-                  onChange={(e) => setRosterForm({...rosterForm, first_name: e.target.value})} 
-                  required 
-                />
-              </div>
-              <div>
-                <label>Last Name *</label>
-                <input 
-                  type="text" 
-                  value={rosterForm?.last_name || ""} 
-                  onChange={(e) => setRosterForm({...rosterForm, last_name: e.target.value})} 
-                  required 
-                />
-              </div>
-            </div>
             <div>
-              <label>Preferred Contact Email</label>
-              <input 
-                type="email" 
-                placeholder="Optional until user claims account" 
-                value={rosterForm?.email || ""} 
-                onChange={(e) => setRosterForm({...rosterForm, email: e.target.value})} 
-              />
-            </div>
-            <div>
-              <label>Street Address Assignment *</label>
+              <label>Street Address *</label>
               <input 
                 type="text" 
                 placeholder="e.g. 742 Evergreen Terrace" 
@@ -1522,41 +1493,38 @@ export default function RosterDirectory({
                 onChange={(e) => setRosterForm({...rosterForm, street_address: e.target.value})} 
                 required 
               />
-              <div style={{ margin: "15px 0", display: "flex", alignItems: "center", gap: "10px" }}>
-                <input 
-                  type="checkbox" 
-                  id="welcomePacket" 
-                  checked={sendWelcomePacket} 
-                  onChange={(e) => setSendWelcomePacket(e.target.checked)}
-                  style={{ width: "18px", height: "18px", cursor: "pointer" }}
-                />
-                <label htmlFor="welcomePacket" style={{ fontSize: "0.9rem", color: "#475569", cursor: "pointer", fontWeight: "600" }}>
-                  📧 Email Official Digital Welcome Packet to resident instantly upon onboarding
-                </label>
-              </div>
+            </div>
+            <div>
+              <label>Known Resident Email (Optional)</label>
+              <input 
+                type="email" 
+                placeholder="Resident's email address" 
+                value={rosterForm?.email || ""} 
+                onChange={(e) => setRosterForm({...rosterForm, email: e.target.value})} 
+              />
             </div>
             <button type="submit" className={styles.submitBtn}>Write Secure Roster Entry</button>
           </form>
         </div>
       )}
 
+      {/* Table Updated: Lot ID removed, Email added */}
       <table className={styles.table}>
         <thead>
           <tr>
-            <th>Lot ID</th>
             <th>Resident Name</th>
             <th>Address</th>
-            <th>Claim Code</th> {/* New Column */}
+            <th>Email</th>
+            <th>Claim Code</th>
             <th>Status</th>
           </tr>
         </thead>
         <tbody>
           {(masterRoster || []).map((res) => (
             <tr key={res.id}>
-              <td style={{ fontWeight: "700", color: "#64748b" }}>{res.lot_number || `LOT-${100 + res.id}`}</td>
               <td style={{ fontWeight: "600" }}>{res.first_name} {res.last_name}</td>
               <td>📍 {res.street_address}</td>
-              {/* Displaying the token clearly */}
+              <td style={{ color: "#475569" }}>{res.email || "—"}</td>
               <td style={{ fontFamily: "monospace", fontWeight: "bold", color: "#3b82f6" }}>
                 {res.onboarding_token || "—"}
               </td>
@@ -3038,6 +3006,103 @@ export default function CivicGuide() {
 }
 
 ==================================================
+FILE: ./frontend/src/components/ResidentLedger/ResidentLedger.module.css
+==================================================
+.ledgerContainer {
+  background: white;
+  padding: 24px;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  height: 400px; /* Fixed height for scrolling */
+  display: flex;
+  flex-direction: column;
+}
+
+.scrollArea {
+  overflow-y: auto;
+  flex-grow: 1;
+  margin-top: 15px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th {
+  text-align: left;
+  font-size: 0.75rem;
+  color: #64748b;
+  text-transform: uppercase;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.table td {
+  padding: 12px 0;
+  border-bottom: 1px solid #f8fafc;
+  font-size: 0.9rem;
+}
+
+.comingSoon {
+  font-size: 0.7rem;
+  background: #f1f5f9;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: #64748b;
+  margin-left: 8px;
+}
+==================================================
+FILE: ./frontend/src/components/ResidentLedger/ResidentLedger.jsx
+==================================================
+import { useState, useEffect } from "react";
+import styles from "./ResidentLedger.module.css";
+
+export default function ResidentLedger({ user }) {
+  const [transactions, setTransactions] = useState([]);
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+
+  useEffect(() => {
+    if (user?.address) {
+      fetch(`${API_URL}/api/dues/history/${encodeURIComponent(user.address)}`)
+        .then((res) => res.json())
+        .then((data) => setTransactions(data))
+        .catch((err) => console.error("History fetch error:", err));
+    }
+  }, [user?.address, API_URL]);
+
+  return (
+    <div className={styles.ledgerContainer}>
+      <h3>Transaction History</h3>
+      <div className={styles.scrollArea}>
+        <table className={styles.table}>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Type</th>
+              <th>Method</th>
+              <th>Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {transactions.map((t) => (
+              <tr key={t.id}>
+                <td>{new Date(t.created_at).toLocaleDateString()}</td>
+                <td style={{ textTransform: "capitalize" }}>{t.transaction_type}</td>
+                {/* Method displays exactly as recorded in the database */}
+                <td>{t.payment_method || "Check"}</td>
+                <td style={{ color: t.transaction_type === "charge" ? "#ef4444" : "#10b981" }}>
+                  {t.transaction_type === "charge" ? "+" : "-"}${parseFloat(t.amount).toFixed(2)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+==================================================
 FILE: ./frontend/src/pages/Landing/Landing.jsx
 ==================================================
 import Footer from "../../components/Footer/Footer";
@@ -4129,7 +4194,12 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
         {/* --- RESIDENT VIEWS (Standard IDs) --- */}
         {activeTab === "feed" && <div className={styles.fadeContent}><NeighborhoodCalendar /><AnnouncementFeed /></div>}
         {activeTab === "maintenance" && <div className={styles.fadeContent}><RequestForm user={user} /></div>}
-        {activeTab === "dues" && <div className={styles.fadeContent}><DuesCard user={user} /></div>}
+        {activeTab === "dues" && (
+          <div className={styles.fadeContent} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+            <DuesCard user={user} />
+            <ResidentLedger user={user} />
+          </div>
+        )}
         {activeTab === "vendors" && <div className={styles.fadeContent}><VendorDirectory /></div>}
         {activeTab === "documents" && <div className={styles.fadeContent}><DocumentCenter user={user} /></div>}
 

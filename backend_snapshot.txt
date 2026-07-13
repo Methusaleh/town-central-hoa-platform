@@ -1948,6 +1948,19 @@ router.get("/:email", async (req, res) => {
   }
 });
 
+router.get("/history/:address", async (req, res) => {
+  try {
+    const { address } = req.params;
+    const { rows } = await db.query(
+      "SELECT * FROM ledger_transactions WHERE address = $1 ORDER BY created_at DESC",
+      [address.trim()]
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // PUT /api/dues/update-balance - Admin modification targeting the address text field directly
 router.put("/update-balance", async (req, res) => {
   const { street_address, balance, status } = req.body;
@@ -2512,42 +2525,37 @@ router.post("/claim", async (req, res) => {
   const { first_name, last_name, email, password, street_address, residentId } = req.body;
 
   try {
-    // Start a transaction so if one part fails, neither happens
     await db.query("BEGIN");
 
     // 1. Create the user account
-    // Note: You should be hashing your passwords before storing them!
-    const userQuery = `
-      INSERT INTO users (first_name, last_name, email, password, address)
-      VALUES ($1, $2, $3, $4, $5)
-      RETURNING id;
-    `;
-    await db.query(userQuery, [first_name, last_name, email, password, street_address]);
+    await db.query(
+      `INSERT INTO users (first_name, last_name, email, password, address) VALUES ($1, $2, $3, $4, $5)`,
+      [first_name, last_name, email, password, street_address]
+    );
 
-    // 2. Mark the roster entry as claimed (Your old logic!)
-    const rosterQuery = `
-      UPDATE neighborhood_roster 
-      SET is_claimed = true 
-      WHERE id = $1 
-      RETURNING id, street_address;
-    `;
-    const { rows } = await db.query(rosterQuery, [residentId]);
+    // 2. Mark roster as claimed
+    const { rows } = await db.query(
+      "UPDATE neighborhood_roster SET is_claimed = true, first_name = $1, last_name = $2 WHERE id = $3 RETURNING id",
+      [first_name, last_name, residentId]
+    );
 
-    if (rows.length === 0) {
-      throw new Error("Resident roster record not found.");
-    }
+    // 3. TRIGGER WELCOME PACKET HERE
+    const mailOptions = {
+        from: `"Town Central Executive Board" <${process.env.EMAIL_USER}>`,
+        to: email,
+        subject: `Welcome to Town Central, ${first_name}! 🏡`,
+        html: `<!-- Your existing Welcome Packet HTML code here -->`
+    };
+
+    transporter.sendMail(mailOptions, (err) => {
+        if (err) console.error("Welcome Packet Error:", err);
+    });
 
     await db.query("COMMIT");
-
-    res.status(201).json({
-      success: true,
-      message: "Account created and profile claimed successfully.",
-      updatedRecord: rows[0]
-    });
+    res.status(201).json({ success: true });
   } catch (err) {
     await db.query("ROLLBACK");
-    console.error("Claim process error:", err.message);
-    res.status(500).json({ error: "Server error during account claim process." });
+    res.status(500).json({ error: "Server error during claim." });
   }
 });
 
@@ -2629,71 +2637,27 @@ router.put("/avatar", async (req, res) => {
 
 // Updated POST /api/residents/admin-add inside residentRoutes.js
 router.post("/admin-add", async (req, res) => {
-  const { first_name, last_name, email, street_address, sendWelcomePacket } = req.body;
+  const { email, street_address } = req.body;
 
-  if (!first_name || !last_name || !street_address) {
-    return res.status(400).json({ error: "First Name, Last Name, and Street Address are required fields." });
+  if (!street_address) {
+    return res.status(400).json({ error: "Street Address is required." });
   }
 
   try {
-    if (email && email.trim() !== "") {
-      const checkEmail = await db.query("SELECT id FROM neighborhood_roster WHERE email = $1", [email.trim().toLowerCase()]);
-      if (checkEmail.rows.length > 0) {
-        return res.status(400).json({ error: "A resident with this email address already exists." });
-      }
-    }
-
     const insertQuery = `
       INSERT INTO neighborhood_roster (first_name, last_name, email, street_address, is_claimed)
-      VALUES ($1, $2, $3, $4, false)
-      RETURNING id, first_name, last_name, email, street_address, is_claimed;
+      VALUES ('Pending', 'Resident', $1, $2, false)
+      RETURNING id, street_address;
     `;
-    
     const { rows } = await db.query(insertQuery, [
-      first_name.trim(),
-      last_name.trim(),
-      email && email.trim() !== "" ? email.trim().toLowerCase() : null,
+      email ? email.trim().toLowerCase() : null,
       street_address.trim()
     ]);
 
-    const newResident = rows[0];
-
-    // AUTOMATED WELCOME PACKET DISPATCH
-    if (sendWelcomePacket && email && email.trim() !== "") {
-      const mailOptions = {
-        from: `"Town Central Executive Board" <${process.env.EMAIL_USER}>`,
-        to: email.trim(),
-        subject: `Welcome to Town Central, ${first_name}! 🏡`,
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
-            <div style="background-color: #2c3e50; padding: 20px; text-align: center; color: white;">
-              <h2>Welcome to the Neighborhood!</h2>
-            </div>
-            <div style="padding: 24px; color: #334155; line-height: 1.6;">
-              <p>Hi ${first_name},</p>
-              <p>Congratulations on your new home! The Town Central HOA Executive Board is thrilled to welcome you to our community.</p>
-              <p>To help you get settled, we have generated your official neighborhood digital onboarding packet. This contains pool keys instructions, trash schedules, and architectural guidelines.</p>
-              
-              <div style="text-align: center; margin: 30px 0;">
-                <a href="https://town-central-hoa-platform.vercel.app/public-docs/Welcome_Packet_2026.pdf" style="background-color: #2ecc71; color: white; padding: 12px 24px; text-decoration: none; font-weight: bold; border-radius: 6px;">📥 Download Welcome Packet</a>
-              </div>
-              
-              <p>Once you are ready, please visit the portal to claim your profile and set up your secure resident login credentials.</p>
-            </div>
-          </div>
-        `
-      };
-
-      transporter.sendMail(mailOptions, (err, info) => {
-        if (err) console.error("Welcome Packet Delivery Fault:", err.message);
-        else console.log("Welcome Packet sent successfully:", info.response);
-      });
-    }
-
-    res.status(201).json({ success: true, resident: newResident });
+    res.status(201).json({ success: true, resident: rows[0] });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Internal server error creating resident record." });
+    res.status(500).json({ error: "Internal server error." });
   }
 });
 
