@@ -49,37 +49,8 @@ export default function RosterDirectory({
             </div>
           )}
           <form onSubmit={handleSubmit} className={styles.announcementForm}>
-            <div className={styles.inlineGroup}>
-              <div>
-                <label>First Name *</label>
-                <input 
-                  type="text" 
-                  value={rosterForm?.first_name || ""} 
-                  onChange={(e) => setRosterForm({...rosterForm, first_name: e.target.value})} 
-                  required 
-                />
-              </div>
-              <div>
-                <label>Last Name *</label>
-                <input 
-                  type="text" 
-                  value={rosterForm?.last_name || ""} 
-                  onChange={(e) => setRosterForm({...rosterForm, last_name: e.target.value})} 
-                  required 
-                />
-              </div>
-            </div>
             <div>
-              <label>Preferred Contact Email</label>
-              <input 
-                type="email" 
-                placeholder="Optional until user claims account" 
-                value={rosterForm?.email || ""} 
-                onChange={(e) => setRosterForm({...rosterForm, email: e.target.value})} 
-              />
-            </div>
-            <div>
-              <label>Street Address Assignment *</label>
+              <label>Street Address *</label>
               <input 
                 type="text" 
                 placeholder="e.g. 742 Evergreen Terrace" 
@@ -87,18 +58,15 @@ export default function RosterDirectory({
                 onChange={(e) => setRosterForm({...rosterForm, street_address: e.target.value})} 
                 required 
               />
-              <div style={{ margin: "15px 0", display: "flex", alignItems: "center", gap: "10px" }}>
-                <input 
-                  type="checkbox" 
-                  id="welcomePacket" 
-                  checked={sendWelcomePacket} 
-                  onChange={(e) => setSendWelcomePacket(e.target.checked)}
-                  style={{ width: "18px", height: "18px", cursor: "pointer" }}
-                />
-                <label htmlFor="welcomePacket" style={{ fontSize: "0.9rem", color: "#475569", cursor: "pointer", fontWeight: "600" }}>
-                  📧 Email Official Digital Welcome Packet to resident instantly upon onboarding
-                </label>
-              </div>
+            </div>
+            <div>
+              <label>Known Resident Email (Optional)</label>
+              <input 
+                type="email" 
+                placeholder="Resident's email address" 
+                value={rosterForm?.email || ""} 
+                onChange={(e) => setRosterForm({...rosterForm, email: e.target.value})} 
+              />
             </div>
             <button type="submit" className={styles.submitBtn}>Write Secure Roster Entry</button>
           </form>
