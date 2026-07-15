@@ -2773,7 +2773,7 @@ router.delete("/account/:id", async (req, res) => {
 router.get("/master-list-placeholder", async (req, res) => {
   try {
     const query = `
-      SELECT id, first_name, last_name, street_address, lot_number, is_claimed 
+      SELECT id, first_name, last_name, email, street_address, lot_number, is_claimed 
       FROM neighborhood_roster 
       ORDER BY last_name ASC, first_name ASC;
     `;

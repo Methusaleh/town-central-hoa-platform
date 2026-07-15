@@ -371,6 +371,40 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
         {activeTab === "admin-vendors" && <div className={styles.fadeContent}><VendorControls onBack={() => setActiveTab("mission-control")} vendorsList={vendorsList} /></div>}
         {activeTab === "admin-documents" && <div className={styles.fadeContent}><DocumentManager user={user} onBack={() => setActiveTab("mission-control")} /></div>}
       </main>
+
+      {showContactModal && (
+        <div className={styles.modalBackdrop} onClick={() => setShowContactModal(false)}>
+          <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+            <h3>Contact the Board</h3>
+            <p>Send a message directly to the HOA Executive Board.</p>
+            <form onSubmit={handleContactSubmit} className={styles.modalForm}>
+              <div className={styles.modalInputGroup}>
+                <label>Subject</label>
+                <input 
+                  type="text" 
+                  required 
+                  value={contactForm.subject}
+                  onChange={(e) => setContactForm({...contactForm, subject: e.target.value})} 
+                />
+              </div>
+              <div className={styles.modalInputGroup}>
+                <label>Message</label>
+                <textarea 
+                  required 
+                  value={contactForm.message}
+                  onChange={(e) => setContactForm({...contactForm, message: e.target.value})} 
+                />
+              </div>
+              <div className={styles.modalButtonGroup}>
+                <button type="button" className={styles.modalCancelBtn} onClick={() => setShowContactModal(false)}>Cancel</button>
+                <button type="submit" className={styles.modalSubmitBtn} disabled={sending}>
+                  {sending ? "Sending..." : "Send Message"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
