@@ -5,6 +5,7 @@ import FinancialLedger from "../../components/BoardPortal/subcomponents/Financia
 import VendorControls from "../../components/BoardPortal/subcomponents/VendorControls";
 import OperationsDashboard from "../../components/BoardPortal/subcomponents/OperationsDashboard";
 import AnnouncementFeed from "../../components/AnnouncementFeed/AnnouncementFeed";
+import ResidentLedger from "../../components/ResidentLedger/ResidentLedger";
 import DuesCard from "../../components/DuesCard/DuesCard";
 import NeighborhoodCalendar from "../../components/NeighborhoodCalendar/NeighborhoodCalendar";
 import RequestForm from "../../components/RequestForm/RequestForm";
