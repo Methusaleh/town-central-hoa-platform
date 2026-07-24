@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import styles from "./AnnouncementFeed.module.css";
 
-export default function AnnouncementFeed({ showCreateModal, onCloseCreateModal }) {
+export default function AnnouncementFeed() {
   const [notifications, setNotifications] = useState([]);
   const [alerts, setAlerts] = useState([]);
   const [reactions, setReactions] = useState({}); 
@@ -9,7 +9,8 @@ export default function AnnouncementFeed({ showCreateModal, onCloseCreateModal }
   const [activePicker, setActivePicker] = useState(null); 
   const [commentsOpen, setCommentsOpen] = useState({});
   
-  // State for creating a new alert right from the dashboard modal
+  // Modal state for creating a new alert right from the alerts section
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [newAlertCategory, setNewAlertCategory] = useState("Lost Pet");
   const [newAlertContent, setNewAlertContent] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
@@ -18,7 +19,6 @@ export default function AnnouncementFeed({ showCreateModal, onCloseCreateModal }
   const AVAILABLE_EMOJIS = ["👍", "❤️", "🎉", "💡", "⚠️"];
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
-  // Fetch both Announcements/Notifications and Community Alerts simultaneously
   useEffect(() => {
     Promise.all([
       fetch(`${API_URL}/api/notifications`).then((res) => res.json()),
@@ -96,7 +96,7 @@ export default function AnnouncementFeed({ showCreateModal, onCloseCreateModal }
         setAlerts([newAlert, ...alerts]);
         setNewAlertContent("");
         setSelectedFile(null);
-        onCloseCreateModal();
+        setShowCreateModal(false);
       } else {
         alert("Failed to publish alert.");
       }
@@ -107,12 +107,35 @@ export default function AnnouncementFeed({ showCreateModal, onCloseCreateModal }
     }
   };
 
+  const getPriorityClass = (channelType) => {
+    switch (channelType) {
+      case "critical_email":
+        return styles.urgent;
+      case "sms_notice":
+        return styles.event;
+      case "newsletter":
+        return styles.newsletterStyle;
+      default:
+        return styles.normal;
+    }
+  };
+
   return (
     <div className={styles.feedContainer}>
       
-      {/* SECTION 1: COMMUNITY ALERTS STREAM */}
-      <div style={{ marginBottom: "15px" }}>
-        <h3 className={styles.feedTitle}>🚨 Community Alerts & Notices</h3>
+      {/* SECTION 1: COMMUNITY ALERTS STREAM WITH THE '+' POST BUTTON */}
+      <div style={{ marginBottom: "24px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+          <h3 className={styles.feedTitle} style={{ margin: 0 }}>🚨 Community Alerts & Notices</h3>
+          <button 
+            onClick={() => setShowCreateModal(true)}
+            className={styles.socialActionBtn}
+            style={{ background: "#2ecc71", color: "white", border: "none", fontWeight: "700" }}
+          >
+            ➕ Post Alert
+          </button>
+        </div>
+
         {alerts.length === 0 ? (
           <div className={styles.announcementCard} style={{ textAlign: "center", color: "#94a3b8", fontStyle: "italic" }}>
             <p style={{ margin: 0 }}>No active community alerts right now.</p>
@@ -146,7 +169,7 @@ export default function AnnouncementFeed({ showCreateModal, onCloseCreateModal }
         )}
       </div>
 
-      {/* SECTION 2: OFFICIAL BOARD ANNOUNCEMENTS & STREAM */}
+      {/* SECTION 2: OFFICIAL BOARD ANNOUNCEMENTS & STREAM (WITH COLOR-CODED SPINES RESTORED) */}
       <div>
         <h3 className={styles.feedTitle}>💬 Neighborhood Stream & Updates</h3>
         {notifications.length === 0 ? (
@@ -161,7 +184,11 @@ export default function AnnouncementFeed({ showCreateModal, onCloseCreateModal }
             const isPickerOpen = activePicker === item.id;
 
             return (
-              <div key={`notif-${item.id}`} className={styles.announcementCard} style={{ marginBottom: "12px" }}>
+              <div 
+                key={`notif-${item.id}`} 
+                className={`${styles.announcementCard} ${getPriorityClass(item.channel_type)}`}
+                style={{ marginBottom: "12px" }}
+              >
                 <div className={styles.cardHeader}>
                   <h4>{item.title}</h4>
                   <span className={styles.date}>
@@ -256,11 +283,12 @@ export default function AnnouncementFeed({ showCreateModal, onCloseCreateModal }
         )}
       </div>
 
-      {/* Modal to Post New Alert Right From Dashboard */}
+      {/* Modal to Post New Alert Right From Alerts Section */}
       {showCreateModal && (
-        <div className={styles.modalBackdrop} onClick={onCloseCreateModal}>
+        <div className={styles.modalBackdrop} onClick={() => setShowCreateModal(false)}>
           <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
             <h3>🚨 Post Community Alert</h3>
+            <p style={{ fontSize: "0.875rem", color: "#64748b", marginTop: "5px" }}>Share a community alert with your neighbors</p>
             <form onSubmit={handleCreateAlertSubmit} style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "15px" }}>
               <div>
                 <label style={{ fontSize: "0.75rem", fontWeight: "700", color: "#64748b", textTransform: "uppercase" }}>Category</label>
@@ -297,10 +325,10 @@ export default function AnnouncementFeed({ showCreateModal, onCloseCreateModal }
               </div>
 
               <div style={{ display: "flex", gap: "8px", marginTop: "10px" }}>
-                <button type="submit" className={styles.quickPayBtn} style={{ flex: 1, justifyContent: "center", border: "none" }} disabled={posting}>
+                <button type="submit" className={styles.socialActionBtn} style={{ flex: 1, justifyContent: "center", background: "#2ecc71", color: "white", border: "none" }} disabled={posting}>
                   {posting ? "Publishing..." : "Publish Instantly"}
                 </button>
-                <button type="button" className={styles.modalCloseBtn} style={{ flex: 1 }} onClick={onCloseCreateModal}>
+                <button type="button" className={styles.modalCloseBtn} style={{ flex: 1 }} onClick={() => setShowCreateModal(false)}>
                   Cancel
                 </button>
               </div>
