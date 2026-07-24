@@ -5,6 +5,7 @@ export default function AnnouncementFeed() {
   const [notifications, setNotifications] = useState([]);
   const [likes, setLikes] = useState({});
   const [commentsOpen, setCommentsOpen] = useState({});
+  const [activeLikesModal, setActiveLikesModal] = useState(null); // Tracks item ID for the modal
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
   useEffect(() => {
@@ -14,14 +15,24 @@ export default function AnnouncementFeed() {
       .catch((err) => console.error("Error fetching notifications:", err));
   }, [API_URL]);
 
-  const toggleLike = (id) => {
-    setLikes((prev) => ({
-      ...prev,
-      [id]: {
-        count: (prev[id]?.count || 0) + (prev[id]?.liked ? -1 : 1),
-        liked: !prev[id]?.liked,
-      },
-    }));
+  const toggleLike = (id, userName = "Current Resident") => {
+    setLikes((prev) => {
+      const current = prev[id] || { count: 0, liked: false, users: [] };
+      const alreadyLiked = current.liked;
+      
+      const newUsers = alreadyLiked
+        ? current.users.filter((u) => u !== userName)
+        : [...current.users, userName];
+
+      return {
+        ...prev,
+        [id]: {
+          count: current.count + (alreadyLiked ? -1 : 1),
+          liked: !alreadyLiked,
+          users: newUsers,
+        },
+      };
+    });
   };
 
   const getPriorityClass = (channelType) => {
@@ -41,7 +52,9 @@ export default function AnnouncementFeed() {
     <div className={styles.feedContainer}>
       <h3 className={styles.feedTitle}>💬 Neighborhood Stream</h3>
       {notifications.map((item) => {
-        const itemLike = likes[item.id] || { count: 0, liked: false };
+        const itemLike = likes[item.id] || { count: 0, liked: false, users: [] };
+        const isCommentOpen = commentsOpen[item.id];
+
         return (
           <div
             key={item.id}
@@ -61,29 +74,51 @@ export default function AnnouncementFeed() {
                 className={`${styles.socialActionBtn} ${itemLike.liked ? styles.liked : ""}`}
                 onClick={() => toggleLike(item.id)}
               >
-                ❤️ {itemLike.count > 0 ? `${itemLike.count} Likes` : "Like"}
+                ❤️ {itemLike.liked ? "Liked" : "Like"}
               </button>
+
+              {itemLike.count > 0 && (
+                <button
+                  className={styles.likesCountBtn}
+                  onClick={() => setActiveLikesModal(item.id)}
+                >
+                  {itemLike.count} {itemLike.count === 1 ? "person" : "people"} liked this
+                </button>
+              )}
+
               <button
-                className={styles.socialActionBtn}
+                className={`${styles.socialActionBtn} ${isCommentOpen ? styles.liked : ""}`}
+                style={{ marginLeft: itemLike.count === 0 ? "auto" : "0" }}
                 onClick={() =>
-                  setCommentsOpen((prev) => ({ ...prev, [item.id]: !prev[item.id] }))
+                  setCommentsOpen((prev) => ({ ...prev, [item.id]: !isCommentOpen }))
                 }
               >
-                💬 Reply / Comment
+                💬 Reply
               </button>
             </div>
 
-            {/* Expandable Comment Box */}
-            {commentsOpen[item.id] && (
-              <div style={{ marginTop: "12px", display: "flex", gap: "8px" }}>
+            {/* Expandable Comment Box with Auto-Close functionality */}
+            {isCommentOpen && (
+              <div className={styles.commentInputWrapper}>
                 <input
                   type="text"
-                  placeholder="Write a neighborly reply..."
-                  style={{ flex: 1, padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "0.9rem" }}
+                  placeholder="Write a neighborly reply (Press Escape or click away to close)..."
+                  className={styles.commentInput}
+                  autoFocus
+                  onBlur={() => {
+                    // Small delay to allow clicking send or interacting if needed
+                    setTimeout(() => {
+                      setCommentsOpen((prev) => ({ ...prev, [item.id]: false }));
+                    }, 200);
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && e.target.value.trim()) {
                       alert(`Reply posted: "${e.target.value}"`);
                       e.target.value = "";
+                      setCommentsOpen((prev) => ({ ...prev, [item.id]: false }));
+                    }
+                    if (e.key === "Escape") {
+                      setCommentsOpen((prev) => ({ ...prev, [item.id]: false }));
                     }
                   }}
                 />
@@ -92,6 +127,25 @@ export default function AnnouncementFeed() {
           </div>
         );
       })}
+
+      {/* Likes Modal */}
+      {activeLikesModal && (
+        <div className={styles.modalBackdrop} onClick={() => setActiveLikesModal(null)}>
+          <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+            <h3>Liked by</h3>
+            <ul className={styles.likesList}>
+              {(likes[activeLikesModal]?.users || []).map((user, idx) => (
+                <li key={idx} className={styles.likesListItem}>
+                  👤 {user}
+                </li>
+              ))}
+            </ul>
+            <button className={styles.modalCloseBtn} onClick={() => setActiveLikesModal(null)}>
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

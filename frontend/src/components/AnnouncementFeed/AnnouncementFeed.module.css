@@ -89,3 +89,149 @@
   background: #2ecc71;
   color: white;
 }
+
+/* --- SOCIAL STREAM STYLING POLISH --- */
+.socialActionsBar {
+  display: flex;
+  gap: 12px;
+  margin-top: 15px;
+  padding-top: 12px;
+  border-top: 1px solid #f1f5f9;
+  align-items: center;
+}
+
+.socialActionBtn {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: inherit;
+}
+
+.socialActionBtn:hover {
+  background: #f1f5f9;
+  color: #2ecc71;
+  border-color: #cbd5e1;
+}
+
+.socialActionBtn.liked {
+  background: #f0fdf4;
+  color: #16a34a;
+  border-color: #dcfce7;
+}
+
+/* Likes Counter Text Button */
+.likesCountBtn {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  margin-left: auto;
+}
+
+.likesCountBtn:hover {
+  color: #3b82f6;
+}
+
+/* Polished Comment Input Wrapper */
+.commentInputWrapper {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.commentInput {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  font-size: 0.9rem;
+  background: #f8fafc;
+  color: #1e293b;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+.commentInput:focus {
+  outline: none;
+  border-color: #2ecc71;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.15);
+}
+
+/* --- MODAL FOR LIKES LIST --- */
+.modalBackdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(8px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modalCard {
+  background: white;
+  padding: 30px;
+  border-radius: 20px;
+  max-width: 400px;
+  width: 100%;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  border: 1px solid #f1f5f9;
+}
+
+.modalCard h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #0f172a;
+  font-size: 1.2rem;
+}
+
+.likesList {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 20px 0;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.likesListItem {
+  padding: 8px 0;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 0.9rem;
+  color: #334155;
+  font-weight: 500;
+}
+
+.modalCloseBtn {
+  width: 100%;
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  padding: 10px;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.modalCloseBtn:hover {
+  background: #e2e8f0;
+}
