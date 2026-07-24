@@ -3,60 +3,95 @@ import styles from "./AnnouncementFeed.module.css";
 
 export default function AnnouncementFeed() {
   const [notifications, setNotifications] = useState([]);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [likes, setLikes] = useState({});
+  const [commentsOpen, setCommentsOpen] = useState({});
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
   useEffect(() => {
-    // Repointed from /api/announcements to our new notification engine path
     fetch(`${API_URL}/api/notifications`)
       .then((res) => res.json())
       .then((data) => setNotifications(data))
       .catch((err) => console.error("Error fetching notifications:", err));
   }, [API_URL]);
 
-  // Show only first 5 unless expanded
-  const displayedNotifications = isExpanded ? notifications : notifications.slice(0, 5);
+  const toggleLike = (id) => {
+    setLikes((prev) => ({
+      ...prev,
+      [id]: {
+        count: (prev[id]?.count || 0) + (prev[id]?.liked ? -1 : 1),
+        liked: !prev[id]?.liked,
+      },
+    }));
+  };
 
-  // Helper function to dynamically map database channel_types to our styling borders
   const getPriorityClass = (channelType) => {
     switch (channelType) {
       case "critical_email":
-        return styles.urgent; // Red highlight border
+        return styles.urgent;
       case "sms_notice":
-        return styles.event;  // Blue highlight border
+        return styles.event;
       case "newsletter":
-        return styles.newsletterStyle; // Secondary dark gray styling
+        return styles.newsletterStyle;
       default:
-        return styles.normal; // Standard emerald green border
+        return styles.normal;
     }
   };
 
   return (
     <div className={styles.feedContainer}>
-      <h3 className={styles.feedTitle}>Community Feed</h3>
-      {displayedNotifications.map((item) => (
-        <div
-          key={item.id}
-          className={`${styles.announcementCard} ${getPriorityClass(item.channel_type)}`}
-        >
-          <div className={styles.cardHeader}>
-            <h4>{item.title}</h4>
-            <span className={styles.date}>
-              {new Date(item.created_at).toLocaleDateString()}
-            </span>
-          </div>
-          <p>{item.message || item.content}</p> {/* Fallback safety for column key matching */}
-        </div>
-      ))}
+      <h3 className={styles.feedTitle}>💬 Neighborhood Stream</h3>
+      {notifications.map((item) => {
+        const itemLike = likes[item.id] || { count: 0, liked: false };
+        return (
+          <div
+            key={item.id}
+            className={`${styles.announcementCard} ${getPriorityClass(item.channel_type)}`}
+          >
+            <div className={styles.cardHeader}>
+              <h4>{item.title}</h4>
+              <span className={styles.date}>
+                {new Date(item.created_at).toLocaleDateString()}
+              </span>
+            </div>
+            <p>{item.message || item.content}</p>
 
-      {notifications.length > 5 && (
-        <button
-          className={styles.expandBtn}
-          onClick={() => setIsExpanded(!isExpanded)}
-        >
-          {isExpanded ? "Show Less" : `View All (${notifications.length})`}
-        </button>
-      )}
+            {/* Social Interaction Buttons */}
+            <div className={styles.socialActionsBar}>
+              <button
+                className={`${styles.socialActionBtn} ${itemLike.liked ? styles.liked : ""}`}
+                onClick={() => toggleLike(item.id)}
+              >
+                ❤️ {itemLike.count > 0 ? `${itemLike.count} Likes` : "Like"}
+              </button>
+              <button
+                className={styles.socialActionBtn}
+                onClick={() =>
+                  setCommentsOpen((prev) => ({ ...prev, [item.id]: !prev[item.id] }))
+                }
+              >
+                💬 Reply / Comment
+              </button>
+            </div>
+
+            {/* Expandable Comment Box */}
+            {commentsOpen[item.id] && (
+              <div style={{ marginTop: "12px", display: "flex", gap: "8px" }}>
+                <input
+                  type="text"
+                  placeholder="Write a neighborly reply..."
+                  style={{ flex: 1, padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "0.9rem" }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && e.target.value.trim()) {
+                      alert(`Reply posted: "${e.target.value}"`);
+                      e.target.value = "";
+                    }
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

@@ -589,6 +589,74 @@
   gap: 24px;
 }
 
+/* --- SOCIAL STREAM LAYOUT --- */
+.socialStreamContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 720px; /* Slimmer, readable social timeline width */
+  margin: 0 auto;
+  animation: fadeIn 0.4s ease-out;
+}
+
+.socialWelcomeCard {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 20px;
+  padding: 30px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03);
+  text-align: center;
+}
+
+.socialWelcomeCard h2 {
+  margin: 0 0 6px 0;
+  font-size: 1.6rem;
+  color: #0f172a;
+}
+
+.socialWelcomeCard p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.95rem;
+}
+
+/* Social Action Bar on Feed Cards */
+.socialActionsBar {
+  display: flex;
+  gap: 15px;
+  margin-top: 15px;
+  padding-top: 12px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.socialActionBtn {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.socialActionBtn:hover {
+  background: #f1f5f9;
+  color: #2ecc71;
+  border-color: #cbd5e1;
+}
+
+.socialActionBtn.liked {
+  background: #f0fdf4;
+  color: #16a34a;
+  border-color: #dcfce7;
+}
+
 @media (max-width: 768px) {
   .fluidGrid {
     grid-template-columns: 1fr;
