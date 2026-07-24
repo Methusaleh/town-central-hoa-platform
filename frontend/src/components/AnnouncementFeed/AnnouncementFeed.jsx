@@ -3,9 +3,12 @@ import styles from "./AnnouncementFeed.module.css";
 
 export default function AnnouncementFeed() {
   const [notifications, setNotifications] = useState([]);
-  const [likes, setLikes] = useState({});
+  const [reactions, setReactions] = useState({}); // { [itemId]: { '👍': { count: 1, users: ['Aaron'] }, ... } }
+  const [activePicker, setActivePicker] = useState(null); // Tracks item ID for open emoji popover
   const [commentsOpen, setCommentsOpen] = useState({});
-  const [activeLikesModal, setActiveLikesModal] = useState(null); // Tracks item ID for the modal
+  const [activeReactorsModal, setActiveReactorsModal] = useState(null); // { itemId, emoji }
+  
+  const AVAILABLE_EMOJIS = ["👍", "❤️", "🎉", "💡", "⚠️"];
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
   useEffect(() => {
@@ -15,24 +18,38 @@ export default function AnnouncementFeed() {
       .catch((err) => console.error("Error fetching notifications:", err));
   }, [API_URL]);
 
-  const toggleLike = (id, userName = "Current Resident") => {
-    setLikes((prev) => {
-      const current = prev[id] || { count: 0, liked: false, users: [] };
-      const alreadyLiked = current.liked;
+  const handleEmojiClick = (itemId, emoji, userName = "Current Resident") => {
+    setReactions((prev) => {
+      const itemReactions = prev[itemId] || {};
+      const emojiData = itemReactions[emoji] || { count: 0, users: [], reactedByMe: false };
       
-      const newUsers = alreadyLiked
-        ? current.users.filter((u) => u !== userName)
-        : [...current.users, userName];
+      const alreadyReacted = emojiData.reactedByMe;
+      const newUsers = alreadyReacted
+        ? emojiData.users.filter((u) => u !== userName)
+        : [...emojiData.users, userName];
+      
+      const newCount = emojiData.count + (alreadyReacted ? -1 : 1);
+
+      // If count drops to 0, remove that emoji key entirely
+      if (newCount <= 0) {
+        const copy = { ...itemReactions };
+        delete copy[emoji];
+        return { ...prev, [itemId]: copy };
+      }
 
       return {
         ...prev,
-        [id]: {
-          count: current.count + (alreadyLiked ? -1 : 1),
-          liked: !alreadyLiked,
-          users: newUsers,
+        [itemId]: {
+          ...itemReactions,
+          [emoji]: {
+            count: newCount,
+            users: newUsers,
+            reactedByMe: !alreadyReacted,
+          },
         },
       };
     });
+    setActivePicker(null);
   };
 
   const getPriorityClass = (channelType) => {
@@ -52,8 +69,9 @@ export default function AnnouncementFeed() {
     <div className={styles.feedContainer}>
       <h3 className={styles.feedTitle}>💬 Neighborhood Stream</h3>
       {notifications.map((item) => {
-        const itemLike = likes[item.id] || { count: 0, liked: false, users: [] };
+        const itemReactions = reactions[item.id] || {};
         const isCommentOpen = commentsOpen[item.id];
+        const isPickerOpen = activePicker === item.id;
 
         return (
           <div
@@ -68,27 +86,49 @@ export default function AnnouncementFeed() {
             </div>
             <p>{item.message || item.content}</p>
 
-            {/* Social Interaction Buttons */}
-            <div className={styles.socialActionsBar}>
-              <button
-                className={`${styles.socialActionBtn} ${itemLike.liked ? styles.liked : ""}`}
-                onClick={() => toggleLike(item.id)}
-              >
-                ❤️ {itemLike.liked ? "Liked" : "Like"}
-              </button>
-
-              {itemLike.count > 0 && (
+            {/* Reactions & Reply Action Bar */}
+            <div className={styles.reactionsContainer}>
+              {/* Render active reaction badges */}
+              {Object.entries(itemReactions).map(([emoji, data]) => (
                 <button
-                  className={styles.likesCountBtn}
-                  onClick={() => setActiveLikesModal(item.id)}
+                  key={emoji}
+                  className={`${styles.reactionBadge} ${data.reactedByMe ? styles.active : ""}`}
+                  onClick={() => handleEmojiClick(item.id, emoji)}
+                  title={`Clicked by: ${data.users.join(", ")}`}
                 >
-                  {itemLike.count} {itemLike.count === 1 ? "person" : "people"} liked this
+                  <span>{emoji}</span>
+                  <span>{data.count}</span>
                 </button>
-              )}
+              ))}
+
+              {/* Add Reaction Button & Popover */}
+              <div style={{ position: "relative" }}>
+                <button
+                  className={styles.addReactionBtn}
+                  onClick={() => setActivePicker(isPickerOpen ? null : item.id)}
+                  title="Add reaction"
+                >
+                  ➕
+                </button>
+
+                {isPickerOpen && (
+                  <div className={styles.emojiPopover}>
+                    {AVAILABLE_EMOJIS.map((emoji) => (
+                      <button
+                        key={emoji}
+                        className={styles.emojiOption}
+                        onClick={() => handleEmojiClick(item.id, emoji)}
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               <button
-                className={`${styles.socialActionBtn} ${isCommentOpen ? styles.liked : ""}`}
-                style={{ marginLeft: itemLike.count === 0 ? "auto" : "0" }}
+                className={`${styles.reactionBadge} ${isCommentOpen ? styles.active : ""}`}
+                style={{ marginLeft: "auto" }}
                 onClick={() =>
                   setCommentsOpen((prev) => ({ ...prev, [item.id]: !isCommentOpen }))
                 }
@@ -106,7 +146,6 @@ export default function AnnouncementFeed() {
                   className={styles.commentInput}
                   autoFocus
                   onBlur={() => {
-                    // Small delay to allow clicking send or interacting if needed
                     setTimeout(() => {
                       setCommentsOpen((prev) => ({ ...prev, [item.id]: false }));
                     }, 200);
@@ -127,25 +166,6 @@ export default function AnnouncementFeed() {
           </div>
         );
       })}
-
-      {/* Likes Modal */}
-      {activeLikesModal && (
-        <div className={styles.modalBackdrop} onClick={() => setActiveLikesModal(null)}>
-          <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
-            <h3>Liked by</h3>
-            <ul className={styles.likesList}>
-              {(likes[activeLikesModal]?.users || []).map((user, idx) => (
-                <li key={idx} className={styles.likesListItem}>
-                  👤 {user}
-                </li>
-              ))}
-            </ul>
-            <button className={styles.modalCloseBtn} onClick={() => setActiveLikesModal(null)}>
-              Close
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
