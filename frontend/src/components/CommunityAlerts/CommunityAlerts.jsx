@@ -6,52 +6,74 @@ export default function CommunityAlerts({ user }) {
   const [showModal, setShowModal] = useState(false);
   const [category, setCategory] = useState("Lost Pet");
   const [content, setContent] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [posting, setPosting] = useState(false);
 
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
-  // Fetch active alerts on load
   useEffect(() => {
-    // In future iterations, link this to your backend alert table endpoint
-    // For now, initializing clean state architecture matching your board rules
-    setLoading(false);
-  }, []);
+    fetch(`${API_URL}/api/alerts`)
+      .then((res) => res.json())
+      .then((data) => setAlerts(data))
+      .catch((err) => console.error("Error fetching alerts:", err));
+  }, [API_URL]);
 
-  // Handle posting an alert instantly
-  const handleSubmitAlert = (e) => {
+  const handleSubmitAlert = async (e) => {
     e.preventDefault();
     if (!content.trim()) return;
 
-    const newAlert = {
-      id: Date.now().toString(),
-      category,
-      author: `${user?.first_name || "Verified"} Resident`,
-      timestamp: "Just now",
-      content: content.trim(),
-      flags: 0,
-    };
+    setPosting(true);
+    try {
+      const formData = new FormData();
+      formData.append("category", category);
+      formData.append("author", `${user?.first_name || "Verified"} Resident`);
+      formData.append("content", content.trim());
+      if (selectedFile) {
+        formData.append("image", selectedFile);
+      }
 
-    setAlerts([newAlert, ...alerts]);
-    setContent("");
-    setShowModal(false);
+      const res = await fetch(`${API_URL}/api/alerts`, {
+        method: "POST",
+        body: formData, // FormData automatically sets correct multipart headers
+      });
+
+      if (res.ok) {
+        const newAlert = await res.json();
+        setAlerts([newAlert, ...alerts]);
+        setContent("");
+        setSelectedFile(null);
+        setShowModal(false);
+      } else {
+        alert("Failed to publish alert.");
+      }
+    } catch (err) {
+      console.error("Network error posting alert:", err);
+    } finally {
+      setPosting(false);
+    }
   };
 
-  // Handle community flagging (auto-hide if it reaches 3 flags)
-  const handleFlagAlert = (id) => {
-    setAlerts(
-      alerts
-        .map((alert) => {
-          if (alert.id === id) {
-            const updatedFlags = alert.flags + 1;
-            if (updatedFlags >= 3) {
-              return null; // Auto-removes post if flagged 3 times by community
-            }
-            return { ...alert, flags: updatedFlags };
-          }
-          return alert;
-        })
-        .filter(Boolean)
-    );
+  const handleFlagAlert = async (id) => {
+    try {
+      const res = await fetch(`${API_URL}/api/alerts/${id}/flag`, {
+        method: "PATCH",
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        if (data.removed) {
+          setAlerts(alerts.filter((alert) => alert.id !== id));
+        } else {
+          setAlerts(
+            alerts.map((alert) =>
+              alert.id === id ? { ...alert, flags: data.flags } : alert
+            )
+          );
+        }
+      }
+    } catch (err) {
+      console.error("Network error flagging alert:", err);
+    }
   };
 
   return (
@@ -90,9 +112,22 @@ export default function CommunityAlerts({ user }) {
                   {alert.category === "Safety Alert" && "⚠️ "}
                   {alert.category}
                 </span>
-                <span className={styles.timestamp}>{alert.timestamp}</span>
+                <span className={styles.timestamp}>
+                  {new Date(alert.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
               </div>
+
               <p className={styles.content}>{alert.content}</p>
+
+              {/* Render Image Attachment if present */}
+              {alert.image_url && (
+                <div className={styles.imageContainer}>
+                  <a href={alert.image_url} target="_blank" rel="noopener noreferrer">
+                    <img src={alert.image_url} alt="Alert attachment" className={styles.alertImage} />
+                  </a>
+                </div>
+              )}
+
               <div className={styles.cardFooter}>
                 <span>Posted by {alert.author}</span>
                 <button
@@ -114,7 +149,6 @@ export default function CommunityAlerts({ user }) {
           <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
             <h3>Create Community Alert</h3>
 
-            {/* MANDATORY DISCLAIMER */}
             <div className={styles.disclaimer}>
               ⚠️ <strong>Rule Check:</strong> Community Alerts are strictly for time-sensitive neighborhood notices (lost pets, street safety, block parties). General complaints or maintenance requests should use the <strong>Contact the Board</strong> channel instead.
             </div>
@@ -136,12 +170,23 @@ export default function CommunityAlerts({ user }) {
               <div className={styles.inputGroup}>
                 <label>Details</label>
                 <textarea
-                  rows="4"
+                  rows="3"
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   placeholder="Provide brief details, locations, or times..."
                   className={styles.textarea}
                   required
+                />
+              </div>
+
+              {/* Image Upload Input */}
+              <div className={styles.inputGroup}>
+                <label>Attach Photo (Optional - Great for Lost Pets)</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setSelectedFile(e.target.files[0] || null)}
+                  style={{ fontSize: "0.85rem", padding: "6px" }}
                 />
               </div>
 
@@ -153,8 +198,8 @@ export default function CommunityAlerts({ user }) {
                 >
                   Cancel
                 </button>
-                <button type="submit" className={styles.submitBtn}>
-                  Publish Instantly
+                <button type="submit" className={styles.submitBtn} disabled={posting}>
+                  {posting ? "Publishing..." : "Publish Instantly"}
                 </button>
               </div>
             </form>

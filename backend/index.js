@@ -9,6 +9,7 @@ const residentRoutes = require("./routes/residentRoutes");
 const vendorRoutes = require("./routes/vendorRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const documentRoutes = require("./routes/documentRoutes");
+const alertRoutes = require("./routes/alertRoutes");
 const app = express();
 const port = process.env.PORT || 8080; // Use Cloud Run's assigned port or default to 8080
 
@@ -42,6 +43,7 @@ app.use("/api/residents", residentRoutes);
 app.use("/api/vendors", vendorRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/documents", documentRoutes);
+app.use("/api/alerts", alertRoutes);
 
 // We will plug in separate route files here as we build them
 // app.use('/api/residents', residentRoutes);
