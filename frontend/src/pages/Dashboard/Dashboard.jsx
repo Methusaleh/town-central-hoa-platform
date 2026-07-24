@@ -322,7 +322,39 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
 
       <main className={styles.main}>
         {/* --- RESIDENT VIEWS (Standard IDs) --- */}
-        {activeTab === "feed" && <div className={styles.fadeContent}><NeighborhoodCalendar /><AnnouncementFeed /></div>}
+        {activeTab === "feed" && (
+          <div className={styles.liteDashboardContainer}>
+            {/* Quick Status Banner (Mission-Control-Lite Header) */}
+            <div className={styles.statusBanner}>
+              <div className={styles.bannerWelcome}>
+                <h2>Welcome back, {user?.first_name}! 👋</h2>
+                <p>Town Central HOA active community portal & timeline.</p>
+              </div>
+              <div className={styles.bannerAction}>
+                <button 
+                  className={styles.quickPayBtn}
+                  onClick={() => setActiveTab("dues")}
+                >
+                  💳 View Assessment Status
+                </button>
+              </div>
+            </div>
+
+            {/* Fluid Asymmetrical Layout */}
+            <div className={styles.fluidGrid}>
+              {/* Left Stream: Calendar & Community Feed */}
+              <div className={styles.streamSection}>
+                <NeighborhoodCalendar />
+                <AnnouncementFeed />
+              </div>
+
+              {/* Right Sidebar Stream: Quick Ledger Snippet or Alerts */}
+              <div className={styles.sidebarSection}>
+                <ResidentLedger user={user} />
+              </div>
+            </div>
+          </div>
+        )}
         {activeTab === "maintenance" && <div className={styles.fadeContent}><RequestForm user={user} /></div>}
         {activeTab === "dues" && (
           <div className={styles.fadeContent} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
