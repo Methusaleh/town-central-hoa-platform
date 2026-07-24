@@ -12,6 +12,7 @@ import RequestForm from "../../components/RequestForm/RequestForm";
 import VendorDirectory from "../../components/VendorDirectory/VendorDirectory";
 import DocumentCenter from "../../components/DocumentCenter/DocumentCenter";
 import DocumentManager from "../../components/BoardPortal/subcomponents/DocumentManager";
+import CommunityAlerts from "../../components/CommunityAlerts/CommunityAlerts";
 import styles from "./Dashboard.module.css";
 
 export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
@@ -296,6 +297,12 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
             Community Documents
           </button>
           <button
+            className={`${styles.navItem} ${activeTab === "alerts" ? styles.activeNav : ""}`}
+            onClick={() => setActiveTab("alerts")}
+          >
+            Community Alerts
+          </button>
+          <button
             onClick={() => setShowContactModal(true)}
             className={styles.navItem}
           >
@@ -370,6 +377,7 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
         {/* These specific IDs now ensure you don't route to the resident versions */}
         {activeTab === "admin-vendors" && <div className={styles.fadeContent}><VendorControls onBack={() => setActiveTab("mission-control")} vendorsList={vendorsList} /></div>}
         {activeTab === "admin-documents" && <div className={styles.fadeContent}><DocumentManager user={user} onBack={() => setActiveTab("mission-control")} /></div>}
+        {activeTab === "alerts" && <div className={styles.fadeContent}><CommunityAlerts user={user} /></div>}
       </main>
 
       {showContactModal && (
