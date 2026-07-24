@@ -1,18 +1,19 @@
 import { useState, useEffect } from "react";
 import styles from "./DuesCard.module.css";
 
-// CHANGE THE PROP INJECTION TO READ USER OBJECT INSTEAD OF RESIDENTNAME STRING
 export default function DuesCard({ user }) {
   const [duesInfo, setDuesInfo] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [paymentMode, setPaymentMode] = useState("overview"); // "overview", "stripe", "billpay", "check"
+  const [clientSecret, setClientSecret] = useState("");
+  const [processing, setProcessing] = useState(false);
+
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
   useEffect(() => {
     const fetchDues = async () => {
       try {
-        // Hitting the upgraded endpoint securely using the authenticated session payload email
-        const response = await fetch(
-          `https://town-central-hoa-platform-469564564131.us-central1.run.app/api/dues/${user?.email}`,
-        );
+        const response = await fetch(`${API_URL}/api/dues/${user?.email}`);
         const data = await response.json();
         setDuesInfo(data);
       } catch (err) {
@@ -23,10 +24,35 @@ export default function DuesCard({ user }) {
     };
 
     if (user?.email) fetchDues();
-  }, [user?.email]);
+  }, [user?.email, API_URL]);
 
-  if (loading)
-    return <div className={styles.loading}>Loading account details...</div>;
+  const initStripeACH = async () => {
+    setProcessing(true);
+    try {
+      const res = await fetch(`${API_URL}/api/billing/create-intent`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: user?.email,
+          amount: duesInfo?.balance || 0,
+          street_address: duesInfo?.street_address || user?.address,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setClientSecret(data.clientSecret);
+        setPaymentMode("stripe");
+      } else {
+        alert(data.error || "Could not initialize secure checkout.");
+      }
+    } catch (err) {
+      console.error("Billing network error:", err);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  if (loading) return <div className={styles.loading}>Loading account details...</div>;
 
   return (
     <div className={styles.card}>
@@ -34,11 +60,7 @@ export default function DuesCard({ user }) {
         <h3>Annual Assessments</h3>
         <span
           className={
-            duesInfo?.status === "Paid" 
-              ? styles.paidTag 
-              : duesInfo?.status === "Partial"
-                ? styles.pendingTag // Adopts the amber warning color notice frame
-                : styles.pendingTag
+            duesInfo?.status === "Paid" ? styles.paidTag : styles.pendingTag
           }
         >
           {duesInfo?.status || "No Record"}
@@ -52,26 +74,83 @@ export default function DuesCard({ user }) {
         </h2>
       </div>
 
-      <div className={styles.details}>
-        <p>
-          Next Due Date: <strong>June 1, 2026</strong>
-        </p>
-        <p>
-          Last Payment:{" "}
-          <strong>
-            {duesInfo?.last_payment_date
-              ? new Date(duesInfo.last_payment_date).toLocaleDateString()
-              : "N/A"}
-          </strong>
-        </p>
-      </div>
+      {paymentMode === "overview" && (
+        <>
+          <div className={styles.details}>
+            <p>Next Due Date: <strong>June 1, 2026</strong></p>
+            <p>Last Payment: <strong>{duesInfo?.last_payment_date ? new Date(duesInfo.last_payment_date).toLocaleDateString() : "N/A"}</strong></p>
+          </div>
 
-      <button
-        className={styles.payBtn}
-        disabled={!duesInfo || duesInfo.balance <= 0}
-      >
-        {duesInfo?.balance > 0 ? "Pay Now" : "Nothing Due"}
-      </button>
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "15px" }}>
+            <button 
+              className={styles.payBtn} 
+              onClick={initStripeACH}
+              disabled={!duesInfo || duesInfo.balance <= 0 || processing}
+            >
+              {processing ? "Loading Gateway..." : "⚡ Pay Online (Stripe ACH - $5 Fee)"}
+            </button>
+
+            <button 
+              className={styles.secondaryPayBtn} 
+              onClick={() => setPaymentMode("billpay")}
+            >
+              🏦 Use Bank Bill-Pay (Free)
+            </button>
+
+            <button 
+              className={styles.secondaryPayBtn} 
+              onClick={() => setPaymentMode("check")}
+            >
+              ✉️ Send Physical Check (Free)
+            </button>
+          </div>
+        </>
+      )}
+
+      {paymentMode === "stripe" && (
+        <div style={{ background: "#f8fafc", padding: "15px", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
+          <h4>Secure Digital Bank Transfer</h4>
+          <p style={{ fontSize: "0.85rem", color: "#64748b" }}>
+            A flat $5.00 processing fee applies to automated digital checkouts. Your balance will update instantly upon completion.
+          </p>
+          {/* Stripe Element or Sandbox confirmation placeholder */}
+          <div style={{ background: "white", padding: "15px", borderRadius: "8px", border: "1px dashed #cbd5e1", textAlign: "center", margin: "15px 0" }}>
+            <p style={{ margin: 0, fontWeight: "600", color: "#0f172a" }}>🔒 Stripe Financial Connections Widget Ready</p>
+            <small style={{ color: "#64748b" }}>Test Client Secret Generated Successfully</small>
+          </div>
+          <button onClick={() => setPaymentMode("overview")} className={styles.backLinkBtn}>← Back to Payment Options</button>
+        </div>
+      )}
+
+      {paymentMode === "billpay" && (
+        <div style={{ background: "#f8fafc", padding: "15px", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
+          <h4 style={{ margin: "0 0 8px 0" }}>🏦 Fee-Free Bank Bill-Pay</h4>
+          <p style={{ fontSize: "0.85rem", color: "#475569", lineHeight: "1.4", margin: "0 0 10px 0" }}>
+            Set up Town Central HOA as a payee inside your personal banking app to push payments with zero fees:
+          </p>
+          <ul style={{ fontSize: "0.8rem", color: "#334155", paddingLeft: "16px", margin: "0 0 12px 0", lineHeight: "1.4" }}>
+            <li><strong>Payee:</strong> Town Central HOA</li>
+            <li><strong>Routing / Account:</strong> [HOA Business Bank Routing & Account]</li>
+            <li><strong>Memo / Reference:</strong> <em>{duesInfo?.street_address || user?.address}</em></li>
+          </ul>
+          <button onClick={() => setPaymentMode("overview")} className={styles.backLinkBtn}>← Back to Payment Options</button>
+        </div>
+      )}
+
+      {paymentMode === "check" && (
+        <div style={{ background: "#f8fafc", padding: "15px", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
+          <h4 style={{ margin: "0 0 8px 0" }}>✉️ Physical Check Instructions</h4>
+          <p style={{ fontSize: "0.85rem", color: "#475569", lineHeight: "1.4", margin: "0 0 10px 0" }}>
+            Make checks payable to <strong>Town Central HOA</strong> and mail or drop them off at the management lockbox:
+          </p>
+          <p style={{ fontSize: "0.85rem", fontWeight: "600", color: "#0f172a", background: "white", padding: "8px", borderRadius: "6px", border: "1px solid #e2e8f0", margin: "0 0 12px 0" }}>
+            Town Central HOA Lockbox<br />
+            123 Community Way, Piedmont, OK 73078<br />
+            <em>Memo: {duesInfo?.street_address || user?.address}</em>
+          </p>
+          <button onClick={() => setPaymentMode("overview")} className={styles.backLinkBtn}>← Back to Payment Options</button>
+        </div>
+      )}
     </div>
   );
 }

@@ -862,7 +862,7 @@ export default function CommunityAlerts({ user }) {
 
       const res = await fetch(`${API_URL}/api/alerts`, {
         method: "POST",
-        body: formData, // FormData automatically sets correct multipart headers
+        body: formData,
       });
 
       if (res.ok) {
@@ -1007,15 +1007,39 @@ export default function CommunityAlerts({ user }) {
                 />
               </div>
 
-              {/* Image Upload Input */}
+              {/* CONSISTENT DRAG & DROP FILE UPLOAD ZONE */}
               <div className={styles.inputGroup}>
                 <label>Attach Photo (Optional - Great for Lost Pets)</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setSelectedFile(e.target.files[0] || null)}
-                  style={{ fontSize: "0.85rem", padding: "6px" }}
-                />
+                <div 
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (e.dataTransfer.files.length > 0) {
+                      setSelectedFile(e.dataTransfer.files[0]);
+                    }
+                  }}
+                  onClick={() => document.getElementById("alert-file-input").click()}
+                  style={{ 
+                    border: "2px dashed #cbd5e1", 
+                    borderRadius: "12px", 
+                    padding: "20px", 
+                    textAlign: "center", 
+                    background: selectedFile ? "#f0fdf4" : "#f8fafc", 
+                    cursor: "pointer",
+                    transition: "all 0.2s ease"
+                  }}
+                >
+                  <p style={{ margin: 0, fontSize: "0.9rem", fontWeight: "600", color: "#475569" }}>
+                    {selectedFile ? `📷 Selected: ${selectedFile.name}` : "📁 Drag & Drop photo here, or click to browse"}
+                  </p>
+                  <input 
+                    id="alert-file-input"
+                    type="file" 
+                    accept="image/*"
+                    hidden 
+                    onChange={(e) => setSelectedFile(e.target.files[0] || null)} 
+                  />
+                </div>
               </div>
 
               <div className={styles.modalButtonGroup}>
