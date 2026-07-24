@@ -328,14 +328,6 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
             <div className={styles.socialWelcomeCard}>
               <h2>Welcome back, {user?.first_name}! 👋</h2>
               <p>Catch up on the latest neighborhood updates, social alerts, and upcoming events.</p>
-              <div style={{ marginTop: "15px" }}>
-                <button 
-                  className={styles.quickPayBtn}
-                  onClick={() => setActiveTab("dues")}
-                >
-                  💳 View Assessment Status
-                </button>
-              </div>
             </div>
 
             {/* Unified Social Stream Timeline */}

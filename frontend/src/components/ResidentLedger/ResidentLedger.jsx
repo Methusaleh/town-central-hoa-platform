@@ -16,7 +16,7 @@ export default function ResidentLedger({ user }) {
 
   return (
     <div className={styles.ledgerContainer}>
-      <h3>Transaction History</h3>
+      <h3>Dues History</h3>
       <div className={styles.scrollArea}>
         <table className={styles.table}>
           <thead>

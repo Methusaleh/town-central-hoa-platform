@@ -57,7 +57,7 @@ export default function DuesCard({ user }) {
   return (
     <div className={styles.card}>
       <div className={styles.header}>
-        <h3>Annual Assessments</h3>
+        <h3>Annual Dues</h3>
         <span
           className={
             duesInfo?.status === "Paid" ? styles.paidTag : styles.pendingTag
