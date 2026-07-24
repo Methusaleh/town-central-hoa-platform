@@ -81,7 +81,7 @@ export default function DuesCard({ user }) {
             <p>Last Payment: <strong>{duesInfo?.last_payment_date ? new Date(duesInfo.last_payment_date).toLocaleDateString() : "N/A"}</strong></p>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "15px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "15px" }}>
             <button 
               className={styles.payBtn} 
               onClick={initStripeACH}
@@ -108,27 +108,26 @@ export default function DuesCard({ user }) {
       )}
 
       {paymentMode === "stripe" && (
-        <div style={{ background: "#f8fafc", padding: "15px", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
-          <h4>Secure Digital Bank Transfer</h4>
-          <p style={{ fontSize: "0.85rem", color: "#64748b" }}>
+        <div style={{ background: "#f8fafc", padding: "18px", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
+          <h4 style={{ margin: "0 0 6px 0", color: "#0f172a" }}>Secure Digital Bank Transfer</h4>
+          <p style={{ fontSize: "0.85rem", color: "#64748b", margin: "0 0 15px 0", lineHeight: "1.4" }}>
             A flat $5.00 processing fee applies to automated digital checkouts. Your balance will update instantly upon completion.
           </p>
-          {/* Stripe Element or Sandbox confirmation placeholder */}
-          <div style={{ background: "white", padding: "15px", borderRadius: "8px", border: "1px dashed #cbd5e1", textAlign: "center", margin: "15px 0" }}>
-            <p style={{ margin: 0, fontWeight: "600", color: "#0f172a" }}>🔒 Stripe Financial Connections Widget Ready</p>
-            <small style={{ color: "#64748b" }}>Test Client Secret Generated Successfully</small>
+          <div style={{ background: "white", padding: "20px", borderRadius: "10px", border: "1px dashed #cbd5e1", textAlign: "center", margin: "15px 0" }}>
+            <p style={{ margin: "0 0 4px 0", fontWeight: "600", color: "#0f172a" }}>🔒 Stripe Financial Connections Widget Ready</p>
+            <small style={{ color: "#94a3b8" }}>Test Client Secret Generated Successfully</small>
           </div>
           <button onClick={() => setPaymentMode("overview")} className={styles.backLinkBtn}>← Back to Payment Options</button>
         </div>
       )}
 
       {paymentMode === "billpay" && (
-        <div style={{ background: "#f8fafc", padding: "15px", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
-          <h4 style={{ margin: "0 0 8px 0" }}>🏦 Fee-Free Bank Bill-Pay</h4>
+        <div style={{ background: "#f8fafc", padding: "18px", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
+          <h4 style={{ margin: "0 0 8px 0", color: "#0f172a" }}>🏦 Fee-Free Bank Bill-Pay</h4>
           <p style={{ fontSize: "0.85rem", color: "#475569", lineHeight: "1.4", margin: "0 0 10px 0" }}>
             Set up Town Central HOA as a payee inside your personal banking app to push payments with zero fees:
           </p>
-          <ul style={{ fontSize: "0.8rem", color: "#334155", paddingLeft: "16px", margin: "0 0 12px 0", lineHeight: "1.4" }}>
+          <ul style={{ fontSize: "0.85rem", color: "#334155", paddingLeft: "16px", margin: "0 0 15px 0", lineHeight: "1.5" }}>
             <li><strong>Payee:</strong> Town Central HOA</li>
             <li><strong>Routing / Account:</strong> [HOA Business Bank Routing & Account]</li>
             <li><strong>Memo / Reference:</strong> <em>{duesInfo?.street_address || user?.address}</em></li>
@@ -138,12 +137,12 @@ export default function DuesCard({ user }) {
       )}
 
       {paymentMode === "check" && (
-        <div style={{ background: "#f8fafc", padding: "15px", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
-          <h4 style={{ margin: "0 0 8px 0" }}>✉️ Physical Check Instructions</h4>
+        <div style={{ background: "#f8fafc", padding: "18px", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
+          <h4 style={{ margin: "0 0 8px 0", color: "#0f172a" }}>✉️ Physical Check Instructions</h4>
           <p style={{ fontSize: "0.85rem", color: "#475569", lineHeight: "1.4", margin: "0 0 10px 0" }}>
             Make checks payable to <strong>Town Central HOA</strong> and mail or drop them off at the management lockbox:
           </p>
-          <p style={{ fontSize: "0.85rem", fontWeight: "600", color: "#0f172a", background: "white", padding: "8px", borderRadius: "6px", border: "1px solid #e2e8f0", margin: "0 0 12px 0" }}>
+          <p style={{ fontSize: "0.85rem", fontWeight: "600", color: "#0f172a", background: "white", padding: "12px", borderRadius: "8px", border: "1px solid #e2e8f0", margin: "0 0 15px 0", lineHeight: "1.5" }}>
             Town Central HOA Lockbox<br />
             123 Community Way, Piedmont, OK 73078<br />
             <em>Memo: {duesInfo?.street_address || user?.address}</em>
