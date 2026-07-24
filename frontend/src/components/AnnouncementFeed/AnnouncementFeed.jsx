@@ -12,6 +12,8 @@ export default function AnnouncementFeed({ showCreateModal, onCloseCreateModal }
   // State for creating a new alert right from the dashboard
   const [newAlertTitle, setNewAlertTitle] = useState("");
   const [newAlertContent, setNewAlertContent] = useState("");
+  const [newAlertCategory, setNewAlertCategory] = useState("Lost Pet");
+  const [posting, setPosting] = useState(false);
 
   const AVAILABLE_EMOJIS = ["👍", "❤️", "🎉", "💡", "⚠️"];
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
@@ -64,22 +66,34 @@ export default function AnnouncementFeed({ showCreateModal, onCloseCreateModal }
     }));
   };
 
-  const handleCreateAlertSubmit = (e) => {
+  const handleCreateAlertSubmit = async (e) => {
     e.preventDefault();
-    if (!newAlertTitle || !newAlertContent) return;
+    if (!newAlertContent.trim()) return;
 
-    const newPost = {
-      id: Date.now(),
-      title: newAlertTitle,
-      content: newAlertContent,
-      channel_type: "critical_email",
-      created_at: new Date().toISOString(),
-    };
+    setPosting(true);
+    try {
+      const res = await fetch(`${API_URL}/api/alerts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          category: newAlertCategory,
+          author: `${window.currentUserFirstName || "Resident"}`,
+          content: newAlertContent.trim(),
+        }),
+      });
 
-    setNotifications([newPost, ...notifications]);
-    setNewAlertTitle("");
-    setNewAlertContent("");
-    onCloseCreateModal();
+      if (res.ok) {
+        const newPost = await res.json();
+        setNotifications([newPost, ...notifications]);
+        setNewAlertTitle("");
+        setNewAlertContent("");
+        onCloseCreateModal();
+      }
+    } catch (err) {
+      console.error("Error posting alert:", err);
+    } finally {
+      setPosting(false);
+    }
   };
 
   return (

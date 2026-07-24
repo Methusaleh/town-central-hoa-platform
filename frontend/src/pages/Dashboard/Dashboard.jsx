@@ -31,6 +31,7 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
   const [showContactModal, setShowContactModal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [sending, setSending] = useState(false);
+  const [showDashboardAlertModal, setShowDashboardAlertModal] = useState(false);
   // Add this with your other UI/Form states
   const [rosterForm, setRosterForm] = useState({ first_name: "", last_name: "", email: "", street_address: "" });
   const [rosterStatus, setRosterStatus] = useState({ text: "", type: "" });
@@ -297,12 +298,6 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
             Community Documents
           </button>
           <button
-            className={`${styles.navItem} ${activeTab === "alerts" ? styles.activeNav : ""}`}
-            onClick={() => setActiveTab("alerts")}
-          >
-            Community Alerts
-          </button>
-          <button
             onClick={() => setShowContactModal(true)}
             className={styles.navItem}
           >
@@ -321,18 +316,29 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
       </aside>
 
       <main className={styles.main}>
-        {/* --- RESIDENT VIEWS (Standard IDs) --- */}
         {activeTab === "feed" && (
           <div className={styles.socialStreamContainer}>
-            {/* Social Welcome Banner */}
-            <div className={styles.socialWelcomeCard}>
-              <h2>Welcome back, {user?.first_name}! 👋</h2>
-              <p>Catch up on the latest neighborhood updates, social alerts, and upcoming events.</p>
+            {/* Social Welcome Banner with the '+' Post Alert Button */}
+            <div className={styles.socialWelcomeCard} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", textAlign: "left" }}>
+              <div>
+                <h2>Welcome back, {user?.first_name}! 👋</h2>
+                <p>Catch up on the latest neighborhood updates, social alerts, and upcoming events.</p>
+              </div>
+              <button 
+                onClick={() => setShowDashboardAlertModal(true)}
+                className={styles.quickPayBtn}
+                title="Post Community Alert"
+              >
+                ➕ Post Alert
+              </button>
             </div>
 
             {/* Unified Social Stream Timeline */}
             <NeighborhoodCalendar />
-            <AnnouncementFeed />
+            <AnnouncementFeed 
+              showCreateModal={showDashboardAlertModal} 
+              onCloseCreateModal={() => setShowDashboardAlertModal(false)} 
+            />
           </div>
         )}
         {activeTab === "maintenance" && <div className={styles.fadeContent}><RequestForm user={user} /></div>}
