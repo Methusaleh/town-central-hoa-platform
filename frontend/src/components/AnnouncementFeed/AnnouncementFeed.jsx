@@ -5,11 +5,15 @@ export default function AnnouncementFeed() {
   const [notifications, setNotifications] = useState([]);
   const [alerts, setAlerts] = useState([]);
   const [reactions, setReactions] = useState({}); 
-  const [comments, setComments] = useState({}); 
+  const [comments, setComments] = useState({}); // { [itemId]: [{ author, text }, ...] }
   const [activePicker, setActivePicker] = useState(null); 
   const [commentsOpen, setCommentsOpen] = useState({});
   
-  // Modal state for creating a new alert right from the alerts section
+  // Alert Editing States
+  const [editingAlertId, setEditingAlertId] = useState(null);
+  const [editContentText, setEditContentText] = useState("");
+
+  // Modal state for creating a new alert
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newAlertCategory, setNewAlertCategory] = useState("Lost Pet");
   const [newAlertContent, setNewAlertContent] = useState("");
@@ -93,6 +97,7 @@ export default function AnnouncementFeed() {
 
       if (res.ok) {
         const newAlert = await res.json();
+        // Stick new or edited alert to the top of the array
         setAlerts([newAlert, ...alerts]);
         setNewAlertContent("");
         setSelectedFile(null);
@@ -105,6 +110,31 @@ export default function AnnouncementFeed() {
     } finally {
       setPosting(false);
     }
+  };
+
+  const handleSaveEdit = (alertId) => {
+    if (!editContentText.trim()) return;
+
+    setAlerts((prevAlerts) => {
+      const updatedList = prevAlerts.map((alert) => {
+        if (alert.id === alertId) {
+          return {
+            ...alert,
+            content: editContentText.trim(),
+            is_edited: true,
+          };
+        }
+        return alert;
+      });
+
+      // Find the edited alert and stick it to the very top of the list
+      const editedItem = updatedList.find((a) => a.id === alertId);
+      const remainingItems = updatedList.filter((a) => a.id !== alertId);
+      return [editedItem, ...remainingItems];
+    });
+
+    setEditingAlertId(null);
+    setEditContentText("");
   };
 
   const getPriorityClass = (channelType) => {
@@ -123,7 +153,7 @@ export default function AnnouncementFeed() {
   return (
     <div className={styles.feedContainer}>
       
-      {/* SECTION 1: COMMUNITY ALERTS STREAM WITH THE '+' POST BUTTON */}
+      {/* SECTION 1: COMMUNITY ALERTS STREAM */}
       <div style={{ marginBottom: "24px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
           <h3 className={styles.feedTitle} style={{ margin: 0 }}>🚨 Community Alerts & Notices</h3>
@@ -141,35 +171,132 @@ export default function AnnouncementFeed() {
             <p style={{ margin: 0 }}>No active community alerts right now.</p>
           </div>
         ) : (
-          alerts.map((alert) => (
-            <div key={`alert-${alert.id}`} className={styles.announcementCard} style={{ borderLeft: "6px solid #f59e0b", marginBottom: "12px" }}>
-              <div className={styles.cardHeader}>
-                <span style={{ fontSize: "0.75rem", fontWeight: "700", textTransform: "uppercase", background: "#fef3c7", color: "#b45309", padding: "4px 10px", borderRadius: "20px" }}>
-                  {alert.category}
-                </span>
-                <span className={styles.date}>
-                  {new Date(alert.created_at).toLocaleDateString()}
-                </span>
-              </div>
-              <p style={{ marginTop: "10px" }}>{alert.content}</p>
-              
-              {alert.image_url && (
-                <div style={{ marginTop: "10px", borderRadius: "8px", overflow: "hidden", maxHeight: "200px" }}>
-                  <a href={alert.image_url} target="_blank" rel="noopener noreferrer">
-                    <img src={alert.image_url} alt="Alert attachment" style={{ width: "100%", maxHeight: "200px", objectFit: "cover" }} />
-                  </a>
-                </div>
-              )}
+          alerts.map((alert) => {
+            const alertComments = comments[`alert-${alert.id}`] || [];
+            const isCommentOpen = commentsOpen[`alert-${alert.id}`];
+            const isEditing = editingAlertId === alert.id;
 
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "12px", paddingTop: "8px", borderTop: "1px solid #f1f5f9", fontSize: "0.8rem", color: "#64748b" }}>
-                <span>Posted by {alert.author}</span>
+            return (
+              <div key={`alert-${alert.id}`} className={styles.announcementCard} style={{ borderLeft: "6px solid #f59e0b", marginBottom: "12px" }}>
+                <div className={styles.cardHeader}>
+                  <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                    <span style={{ fontSize: "0.75rem", fontWeight: "700", textTransform: "uppercase", background: "#fef3c7", color: "#b45309", padding: "4px 10px", borderRadius: "20px" }}>
+                      {alert.category}
+                    </span>
+                    {alert.is_edited && (
+                      <span style={{ fontSize: "0.7rem", fontWeight: "600", background: "#f1f5f9", color: "#64748b", padding: "2px 8px", borderRadius: "10px" }}>
+                        ✏️ Edited
+                      </span>
+                    )}
+                  </div>
+                  <span className={styles.date}>
+                    {new Date(alert.created_at).toLocaleDateString()}
+                  </span>
+                </div>
+
+                {/* Edit Form or Normal Content */}
+                {isEditing ? (
+                  <div style={{ marginTop: "12px", display: "flex", flexDirection: "column", gap: "8px" }}>
+                    <textarea
+                      value={editContentText}
+                      onChange={(e) => setEditContentText(e.target.value)}
+                      className={styles.commentInput}
+                      style={{ height: "70px", resize: "vertical" }}
+                      autoFocus
+                    />
+                    <div style={{ display: "flex", gap: "8px" }}>
+                      <button 
+                        onClick={() => handleSaveEdit(alert.id)}
+                        className={styles.socialActionBtn}
+                        style={{ background: "#2ecc71", color: "white", border: "none", padding: "4px 12px" }}
+                      >
+                        Save Edit
+                      </button>
+                      <button 
+                        onClick={() => setEditingAlertId(null)}
+                        className={styles.socialActionBtn}
+                        style={{ padding: "4px 12px" }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <p style={{ marginTop: "10px" }}>{alert.content}</p>
+                )}
+                
+                {alert.image_url && (
+                  <div style={{ marginTop: "10px", borderRadius: "8px", overflow: "hidden", maxHeight: "200px" }}>
+                    <a href={alert.image_url} target="_blank" rel="noopener noreferrer">
+                      <img src={alert.image_url} alt="Alert attachment" style={{ width: "100%", maxHeight: "200px", objectFit: "cover" }} />
+                    </a>
+                  </div>
+                )}
+
+                {/* Live Comment Stream for Alerts */}
+                {alertComments.length > 0 && (
+                  <div className={styles.commentsSection}>
+                    {alertComments.map((c, idx) => (
+                      <div key={idx} className={styles.commentBubble}>
+                        <span><strong className={styles.commentAuthor}>{c.author}:</strong> {c.text}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Footer Actions (Reply & Edit) */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "12px", paddingTop: "8px", borderTop: "1px solid #f1f5f9", fontSize: "0.8rem", color: "#64748b" }}>
+                  <span>Posted by {alert.author}</span>
+                  
+                  <div style={{ display: "flex", gap: "10px" }}>
+                    <button
+                      onClick={() => {
+                        setEditingAlertId(alert.id);
+                        setEditContentText(alert.content);
+                      }}
+                      style={{ background: "none", border: "none", color: "#3b82f6", cursor: "pointer", fontWeight: "600", fontSize: "0.8rem" }}
+                    >
+                      ✏️ Edit
+                    </button>
+                    <button
+                      className={styles.reactionBadge}
+                      onClick={() =>
+                        setCommentsOpen((prev) => ({ ...prev, [`alert-${alert.id}`]: !isCommentOpen }))
+                      }
+                    >
+                      💬 Reply
+                    </button>
+                  </div>
+                </div>
+
+                {/* Expandable Comment Input for Alerts */}
+                {isCommentOpen && (
+                  <div className={styles.commentInputWrapper}>
+                    <input
+                      type="text"
+                      placeholder="Write a reply to this alert... (Press Enter)"
+                      className={styles.commentInput}
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          handleAddComment(`alert-${alert.id}`, e.target.value);
+                          e.target.value = "";
+                          setCommentsOpen((prev) => ({ ...prev, [`alert-${alert.id}`]: false }));
+                        }
+                        if (e.key === "Escape") {
+                          setCommentsOpen((prev) => ({ ...prev, [`alert-${alert.id}`]: false }));
+                        }
+                      }}
+                    />
+                  </div>
+                )}
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 
-      {/* SECTION 2: OFFICIAL BOARD ANNOUNCEMENTS & STREAM (WITH COLOR-CODED SPINES RESTORED) */}
+      {/* SECTION 2: OFFICIAL BOARD ANNOUNCEMENTS & STREAM */}
       <div>
         <h3 className={styles.feedTitle}>💬 Neighborhood Stream & Updates</h3>
         {notifications.length === 0 ? (
@@ -283,12 +410,11 @@ export default function AnnouncementFeed() {
         )}
       </div>
 
-      {/* Modal to Post New Alert Right From Alerts Section */}
+      {/* Modal to Post New Alert */}
       {showCreateModal && (
         <div className={styles.modalBackdrop} onClick={() => setShowCreateModal(false)}>
           <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
             <h3>🚨 Post Community Alert</h3>
-            <p style={{ fontSize: "0.875rem", color: "#64748b", marginTop: "5px" }}>Share a community alert with your neighbors</p>
             <form onSubmit={handleCreateAlertSubmit} style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "15px" }}>
               <div>
                 <label style={{ fontSize: "0.75rem", fontWeight: "700", color: "#64748b", textTransform: "uppercase" }}>Category</label>
