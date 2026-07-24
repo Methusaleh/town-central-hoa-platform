@@ -315,27 +315,15 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
       <main className={styles.main}>
         {activeTab === "feed" && (
           <div className={styles.socialStreamContainer}>
-            {/* Social Welcome Banner with the '+' Post Alert Button */}
-            <div className={styles.socialWelcomeCard} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", textAlign: "left" }}>
-              <div>
-                <h2>Welcome back, {user?.first_name}! 👋</h2>
-                <p>Catch up on the latest neighborhood updates, social alerts, and upcoming events.</p>
-              </div>
-              <button 
-                onClick={() => setShowDashboardAlertModal(true)}
-                className={styles.quickPayBtn}
-                title="Post Community Alert"
-              >
-                ➕ Post Alert
-              </button>
+            {/* Clean Welcome Banner (Top "+ Post Alert" button removed) */}
+            <div className={styles.socialWelcomeCard}>
+              <h2>Welcome back, {user?.first_name}! 👋</h2>
+              <p>Catch up on the latest neighborhood updates, social alerts, and upcoming events.</p>
             </div>
 
-            {/* Unified Social Stream Timeline */}
+            {/* Unified Social Stream Timeline (Houses Calendar and AnnouncementFeed with the active alert post button) */}
             <NeighborhoodCalendar />
-            <AnnouncementFeed 
-              showCreateModal={showDashboardAlertModal} 
-              onCloseCreateModal={() => setShowDashboardAlertModal(false)} 
-            />
+            <AnnouncementFeed />
           </div>
         )}
         {activeTab === "maintenance" && <div className={styles.fadeContent}><RequestForm user={user} /></div>}
