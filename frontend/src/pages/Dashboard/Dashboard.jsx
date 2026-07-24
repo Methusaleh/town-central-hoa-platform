@@ -12,7 +12,6 @@ import RequestForm from "../../components/RequestForm/RequestForm";
 import VendorDirectory from "../../components/VendorDirectory/VendorDirectory";
 import DocumentCenter from "../../components/DocumentCenter/DocumentCenter";
 import DocumentManager from "../../components/BoardPortal/subcomponents/DocumentManager";
-import CommunityAlerts from "../../components/CommunityAlerts/CommunityAlerts";
 import styles from "./Dashboard.module.css";
 
 export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
@@ -32,7 +31,7 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
   const [showSettings, setShowSettings] = useState(false);
   const [sending, setSending] = useState(false);
   const [showDashboardAlertModal, setShowDashboardAlertModal] = useState(false);
-  // Add this with your other UI/Form states
+  
   const [rosterForm, setRosterForm] = useState({ first_name: "", last_name: "", email: "", street_address: "" });
   const [rosterStatus, setRosterStatus] = useState({ text: "", type: "" });
 
@@ -158,8 +157,6 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
 
   const handleOnboardResident = async (e, sendWelcomePacket) => {
     e.preventDefault();
-    
-    // 1. Generate a 6-character random token
     const generatedToken = Math.random().toString(36).substring(2, 8).toUpperCase();
     
     try {
@@ -175,8 +172,8 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
 
       if (response.ok) {
         alert(`Property added! Claim Code: ${generatedToken}`);
-        fetchRosterData(); // Refresh the list
-        setShowForm(false); // Close the modal
+        fetchRosterData();
+        setShowForm(false);
         setRosterForm({ first_name: "", last_name: "", email: "", street_address: "" });
       }
     } catch (err) {
@@ -351,7 +348,7 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
         {activeTab === "vendors" && <div className={styles.fadeContent}><VendorDirectory /></div>}
         {activeTab === "documents" && <div className={styles.fadeContent}><DocumentCenter user={user} /></div>}
 
-        {/* --- ADMIN VIEWS (Unique Admin IDs) --- */}
+        {/* --- ADMIN VIEWS --- */}
         {activeTab === "mission-control" && <div className={styles.fadeContent}><MissionControl onNavigate={setActiveTab} /></div>}
         {activeTab === "requests" && (
           <div className={styles.fadeContent}>
@@ -360,11 +357,8 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
               requests={requests} 
               loading={loading} 
               handleResolve={handleResolve} 
-              
-              // Pass the value and the toggle function explicitly
               viewMode={viewMode} 
               onToggleView={() => setViewMode(viewMode === "active" ? "archived" : "active")}
-              
               formProps={{
                 showForm, setShowForm,
                 showEventForm, setShowEventForm,
@@ -385,17 +379,14 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
               setShowRosterModal={setShowForm}
               rosterForm={rosterForm || {}} 
               setRosterForm={setRosterForm}
-              rosterStatus={financeStatus} // Or your specific rosterStatus state
+              rosterStatus={financeStatus}
               handleOnboardResident={handleOnboardResident}
             />
           </div>
         )}
         {activeTab === "financials" && <div className={styles.fadeContent}><FinancialLedger onBack={() => setActiveTab("mission-control")} masterRoster={masterRoster} financeForm={financeForm} setFinanceForm={setFinanceForm} financeStatus={financeStatus} /></div>}
-        
-        {/* These specific IDs now ensure you don't route to the resident versions */}
         {activeTab === "admin-vendors" && <div className={styles.fadeContent}><VendorControls onBack={() => setActiveTab("mission-control")} vendorsList={vendorsList} /></div>}
         {activeTab === "admin-documents" && <div className={styles.fadeContent}><DocumentManager user={user} onBack={() => setActiveTab("mission-control")} /></div>}
-        {activeTab === "alerts" && <div className={styles.fadeContent}><CommunityAlerts user={user} /></div>}
       </main>
 
       {showContactModal && (

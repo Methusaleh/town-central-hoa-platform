@@ -567,13 +567,20 @@ FILE: ./frontend/src/components/AnnouncementFeed/AnnouncementFeed.jsx
 import { useEffect, useState } from "react";
 import styles from "./AnnouncementFeed.module.css";
 
-export default function AnnouncementFeed() {
+export default function AnnouncementFeed({ showCreateModal, onCloseCreateModal }) {
   const [notifications, setNotifications] = useState([]);
-  const [reactions, setReactions] = useState({}); // { [itemId]: { '👍': { count: 1, users: ['Aaron'] }, ... } }
-  const [activePicker, setActivePicker] = useState(null); // Tracks item ID for open emoji popover
+  const [reactions, setReactions] = useState({}); 
+  const [comments, setComments] = useState({}); // { [itemId]: [{ author, text }, ...] }
+  const [activePicker, setActivePicker] = useState(null); 
   const [commentsOpen, setCommentsOpen] = useState({});
-  const [activeReactorsModal, setActiveReactorsModal] = useState(null); // { itemId, emoji }
+  const [activeReactorsModal, setActiveReactorsModal] = useState(null); 
   
+  // State for creating a new alert right from the dashboard
+  const [newAlertTitle, setNewAlertTitle] = useState("");
+  const [newAlertContent, setNewAlertContent] = useState("");
+  const [newAlertCategory, setNewAlertCategory] = useState("Lost Pet");
+  const [posting, setPosting] = useState(false);
+
   const AVAILABLE_EMOJIS = ["👍", "❤️", "🎉", "💡", "⚠️"];
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
@@ -584,7 +591,7 @@ export default function AnnouncementFeed() {
       .catch((err) => console.error("Error fetching notifications:", err));
   }, [API_URL]);
 
-  const handleEmojiClick = (itemId, emoji, userName = "Current Resident") => {
+  const handleEmojiClick = (itemId, emoji, userName = "Aaron") => {
     setReactions((prev) => {
       const itemReactions = prev[itemId] || {};
       const emojiData = itemReactions[emoji] || { count: 0, users: [], reactedByMe: false };
@@ -596,7 +603,6 @@ export default function AnnouncementFeed() {
       
       const newCount = emojiData.count + (alreadyReacted ? -1 : 1);
 
-      // If count drops to 0, remove that emoji key entirely
       if (newCount <= 0) {
         const copy = { ...itemReactions };
         delete copy[emoji];
@@ -618,32 +624,56 @@ export default function AnnouncementFeed() {
     setActivePicker(null);
   };
 
-  const getPriorityClass = (channelType) => {
-    switch (channelType) {
-      case "critical_email":
-        return styles.urgent;
-      case "sms_notice":
-        return styles.event;
-      case "newsletter":
-        return styles.newsletterStyle;
-      default:
-        return styles.normal;
+  const handleAddComment = (itemId, text) => {
+    if (!text.trim()) return;
+    setComments((prev) => ({
+      ...prev,
+      [itemId]: [...(prev[itemId] || []), { author: "Aaron", text: text.trim() }],
+    }));
+  };
+
+  const handleCreateAlertSubmit = async (e) => {
+    e.preventDefault();
+    if (!newAlertContent.trim()) return;
+
+    setPosting(true);
+    try {
+      const res = await fetch(`${API_URL}/api/alerts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          category: newAlertCategory,
+          author: `${window.currentUserFirstName || "Resident"}`,
+          content: newAlertContent.trim(),
+        }),
+      });
+
+      if (res.ok) {
+        const newPost = await res.json();
+        setNotifications([newPost, ...notifications]);
+        setNewAlertTitle("");
+        setNewAlertContent("");
+        onCloseCreateModal();
+      }
+    } catch (err) {
+      console.error("Error posting alert:", err);
+    } finally {
+      setPosting(false);
     }
   };
 
   return (
     <div className={styles.feedContainer}>
       <h3 className={styles.feedTitle}>💬 Neighborhood Stream</h3>
+      
       {notifications.map((item) => {
         const itemReactions = reactions[item.id] || {};
+        const itemComments = comments[item.id] || [];
         const isCommentOpen = commentsOpen[item.id];
         const isPickerOpen = activePicker === item.id;
 
         return (
-          <div
-            key={item.id}
-            className={`${styles.announcementCard} ${getPriorityClass(item.channel_type)}`}
-          >
+          <div key={item.id} className={styles.announcementCard}>
             <div className={styles.cardHeader}>
               <h4>{item.title}</h4>
               <span className={styles.date}>
@@ -652,22 +682,30 @@ export default function AnnouncementFeed() {
             </div>
             <p>{item.message || item.content}</p>
 
+            {/* Live Comment Stream Render */}
+            {itemComments.length > 0 && (
+              <div className={styles.commentsSection}>
+                {itemComments.map((c, idx) => (
+                  <div key={idx} className={styles.commentBubble}>
+                    <span><strong className={styles.commentAuthor}>{c.author}:</strong> {c.text}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* Reactions & Reply Action Bar */}
             <div className={styles.reactionsContainer}>
-              {/* Render active reaction badges */}
               {Object.entries(itemReactions).map(([emoji, data]) => (
                 <button
                   key={emoji}
                   className={`${styles.reactionBadge} ${data.reactedByMe ? styles.active : ""}`}
                   onClick={() => handleEmojiClick(item.id, emoji)}
-                  title={`Clicked by: ${data.users.join(", ")}`}
                 >
                   <span>{emoji}</span>
                   <span>{data.count}</span>
                 </button>
               ))}
 
-              {/* Add Reaction Button & Popover */}
               <div style={{ position: "relative" }}>
                 <button
                   className={styles.addReactionBtn}
@@ -703,22 +741,17 @@ export default function AnnouncementFeed() {
               </button>
             </div>
 
-            {/* Expandable Comment Box with Auto-Close functionality */}
+            {/* Expandable Comment Input (No pop-up alerts, saves directly) */}
             {isCommentOpen && (
               <div className={styles.commentInputWrapper}>
                 <input
                   type="text"
-                  placeholder="Write a neighborly reply (Press Escape or click away to close)..."
+                  placeholder="Write a neighborly reply... (Press Enter)"
                   className={styles.commentInput}
                   autoFocus
-                  onBlur={() => {
-                    setTimeout(() => {
-                      setCommentsOpen((prev) => ({ ...prev, [item.id]: false }));
-                    }, 200);
-                  }}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter" && e.target.value.trim()) {
-                      alert(`Reply posted: "${e.target.value}"`);
+                    if (e.key === "Enter") {
+                      handleAddComment(item.id, e.target.value);
                       e.target.value = "";
                       setCommentsOpen((prev) => ({ ...prev, [item.id]: false }));
                     }
@@ -732,6 +765,36 @@ export default function AnnouncementFeed() {
           </div>
         );
       })}
+
+      {/* Modal to Post New Alert Right From Dashboard */}
+      {showCreateModal && (
+        <div className={styles.modalBackdrop} onClick={onCloseCreateModal}>
+          <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+            <h3>🚨 Post Community Alert</h3>
+            <form onSubmit={handleCreateAlertSubmit} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              <input
+                type="text"
+                placeholder="Alert Title (e.g., Gate Maintenance)"
+                value={newAlertTitle}
+                onChange={(e) => setNewAlertTitle(e.target.value)}
+                className={styles.commentInput}
+                required
+              />
+              <textarea
+                placeholder="Describe the alert details..."
+                value={newAlertContent}
+                onChange={(e) => setNewAlertContent(e.target.value)}
+                style={{ ...styles.commentInput, height: "80px", resize: "vertical" }}
+                required
+              />
+              <div style={{ display: "flex", gap: "8px", marginTop: "10px" }}>
+                <button type="submit" className={styles.quickPayBtn} style={{ flex: 1 }}>Post Alert</button>
+                <button type="button" className={styles.modalCloseBtn} style={{ flex: 1 }} onClick={onCloseCreateModal}>Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -5049,6 +5112,7 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
   const [showContactModal, setShowContactModal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [sending, setSending] = useState(false);
+  const [showDashboardAlertModal, setShowDashboardAlertModal] = useState(false);
   // Add this with your other UI/Form states
   const [rosterForm, setRosterForm] = useState({ first_name: "", last_name: "", email: "", street_address: "" });
   const [rosterStatus, setRosterStatus] = useState({ text: "", type: "" });
@@ -5315,12 +5379,6 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
             Community Documents
           </button>
           <button
-            className={`${styles.navItem} ${activeTab === "alerts" ? styles.activeNav : ""}`}
-            onClick={() => setActiveTab("alerts")}
-          >
-            Community Alerts
-          </button>
-          <button
             onClick={() => setShowContactModal(true)}
             className={styles.navItem}
           >
@@ -5339,18 +5397,29 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
       </aside>
 
       <main className={styles.main}>
-        {/* --- RESIDENT VIEWS (Standard IDs) --- */}
         {activeTab === "feed" && (
           <div className={styles.socialStreamContainer}>
-            {/* Social Welcome Banner */}
-            <div className={styles.socialWelcomeCard}>
-              <h2>Welcome back, {user?.first_name}! 👋</h2>
-              <p>Catch up on the latest neighborhood updates, social alerts, and upcoming events.</p>
+            {/* Social Welcome Banner with the '+' Post Alert Button */}
+            <div className={styles.socialWelcomeCard} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", textAlign: "left" }}>
+              <div>
+                <h2>Welcome back, {user?.first_name}! 👋</h2>
+                <p>Catch up on the latest neighborhood updates, social alerts, and upcoming events.</p>
+              </div>
+              <button 
+                onClick={() => setShowDashboardAlertModal(true)}
+                className={styles.quickPayBtn}
+                title="Post Community Alert"
+              >
+                ➕ Post Alert
+              </button>
             </div>
 
             {/* Unified Social Stream Timeline */}
             <NeighborhoodCalendar />
-            <AnnouncementFeed />
+            <AnnouncementFeed 
+              showCreateModal={showDashboardAlertModal} 
+              onCloseCreateModal={() => setShowDashboardAlertModal(false)} 
+            />
           </div>
         )}
         {activeTab === "maintenance" && <div className={styles.fadeContent}><RequestForm user={user} /></div>}
