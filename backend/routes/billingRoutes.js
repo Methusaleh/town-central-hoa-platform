@@ -1,10 +1,18 @@
 const express = require("express");
 const router = express.Router();
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+
+// Safely initialize Stripe only if the secret key exists in the environment
+const stripeSecret = process.env.STRIPE_SECRET_KEY;
+const stripe = stripeSecret ? require("stripe")(stripeSecret) : null;
+
 const db = require("../db");
 
 // POST /api/billing/create-intent - Initialize Stripe payment/setup for ACH
 router.post("/create-intent", async (req, res) => {
+  if (!stripe) {
+    return res.status(503).json({ error: "Stripe billing is not yet configured or activated." });
+  }
+
   const { email, amount, street_address } = req.body;
 
   if (!email || !amount || !street_address) {
@@ -36,6 +44,10 @@ router.post("/create-intent", async (req, res) => {
 
 // Stripe Webhook Endpoint to automate database updates when payment succeeds
 router.post("/webhook", express.raw({ type: "application/json" }), async (req, res) => {
+  if (!stripe) {
+    return res.status(503).send("Stripe webhook is not active.");
+  }
+
   const sig = req.headers["stripe-signature"];
   let event;
 
