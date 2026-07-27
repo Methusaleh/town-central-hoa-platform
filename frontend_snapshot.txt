@@ -567,28 +567,38 @@ FILE: ./frontend/src/components/AnnouncementFeed/AnnouncementFeed.jsx
 import { useEffect, useState } from "react";
 import styles from "./AnnouncementFeed.module.css";
 
-export default function AnnouncementFeed({ showCreateModal, onCloseCreateModal }) {
+export default function AnnouncementFeed() {
   const [notifications, setNotifications] = useState([]);
+  const [alerts, setAlerts] = useState([]);
   const [reactions, setReactions] = useState({}); 
   const [comments, setComments] = useState({}); // { [itemId]: [{ author, text }, ...] }
   const [activePicker, setActivePicker] = useState(null); 
   const [commentsOpen, setCommentsOpen] = useState({});
-  const [activeReactorsModal, setActiveReactorsModal] = useState(null); 
   
-  // State for creating a new alert right from the dashboard
-  const [newAlertTitle, setNewAlertTitle] = useState("");
-  const [newAlertContent, setNewAlertContent] = useState("");
+  // Alert Editing States
+  const [editingAlertId, setEditingAlertId] = useState(null);
+  const [editContentText, setEditContentText] = useState("");
+
+  // Modal state for creating a new alert
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [newAlertCategory, setNewAlertCategory] = useState("Lost Pet");
+  const [newAlertContent, setNewAlertContent] = useState("");
+  const [selectedFile, setSelectedFile] = useState(null);
   const [posting, setPosting] = useState(false);
 
   const AVAILABLE_EMOJIS = ["👍", "❤️", "🎉", "💡", "⚠️"];
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
   useEffect(() => {
-    fetch(`${API_URL}/api/notifications`)
-      .then((res) => res.json())
-      .then((data) => setNotifications(data))
-      .catch((err) => console.error("Error fetching notifications:", err));
+    Promise.all([
+      fetch(`${API_URL}/api/notifications`).then((res) => res.json()),
+      fetch(`${API_URL}/api/alerts`).then((res) => res.json())
+    ])
+      .then(([notifData, alertData]) => {
+        setNotifications(Array.isArray(notifData) ? notifData : []);
+        setAlerts(Array.isArray(alertData) ? alertData : []);
+      })
+      .catch((err) => console.error("Error fetching feed stream data:", err));
   }, [API_URL]);
 
   const handleEmojiClick = (itemId, emoji, userName = "Aaron") => {
@@ -638,158 +648,381 @@ export default function AnnouncementFeed({ showCreateModal, onCloseCreateModal }
 
     setPosting(true);
     try {
+      const formData = new FormData();
+      formData.append("category", newAlertCategory);
+      formData.append("author", "Aaron Resident");
+      formData.append("content", newAlertContent.trim());
+      if (selectedFile) {
+        formData.append("image", selectedFile);
+      }
+
       const res = await fetch(`${API_URL}/api/alerts`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          category: newAlertCategory,
-          author: `${window.currentUserFirstName || "Resident"}`,
-          content: newAlertContent.trim(),
-        }),
+        body: formData,
       });
 
       if (res.ok) {
-        const newPost = await res.json();
-        setNotifications([newPost, ...notifications]);
-        setNewAlertTitle("");
+        const newAlert = await res.json();
+        // Stick new or edited alert to the top of the array
+        setAlerts([newAlert, ...alerts]);
         setNewAlertContent("");
-        onCloseCreateModal();
+        setSelectedFile(null);
+        setShowCreateModal(false);
+      } else {
+        alert("Failed to publish alert.");
       }
     } catch (err) {
-      console.error("Error posting alert:", err);
+      console.error("Network error posting alert:", err);
     } finally {
       setPosting(false);
     }
   };
 
+  const handleSaveEdit = (alertId) => {
+    if (!editContentText.trim()) return;
+
+    setAlerts((prevAlerts) => {
+      const updatedList = prevAlerts.map((alert) => {
+        if (alert.id === alertId) {
+          return {
+            ...alert,
+            content: editContentText.trim(),
+            is_edited: true,
+          };
+        }
+        return alert;
+      });
+
+      // Find the edited alert and stick it to the very top of the list
+      const editedItem = updatedList.find((a) => a.id === alertId);
+      const remainingItems = updatedList.filter((a) => a.id !== alertId);
+      return [editedItem, ...remainingItems];
+    });
+
+    setEditingAlertId(null);
+    setEditContentText("");
+  };
+
+  const getPriorityClass = (channelType) => {
+    switch (channelType) {
+      case "critical_email":
+        return styles.urgent;
+      case "sms_notice":
+        return styles.event;
+      case "newsletter":
+        return styles.newsletterStyle;
+      default:
+        return styles.normal;
+    }
+  };
+
   return (
     <div className={styles.feedContainer}>
-      <h3 className={styles.feedTitle}>💬 Neighborhood Stream</h3>
       
-      {notifications.map((item) => {
-        const itemReactions = reactions[item.id] || {};
-        const itemComments = comments[item.id] || [];
-        const isCommentOpen = commentsOpen[item.id];
-        const isPickerOpen = activePicker === item.id;
+      {/* SECTION 1: COMMUNITY ALERTS STREAM */}
+      <div style={{ marginBottom: "24px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+          <h3 className={styles.feedTitle} style={{ margin: 0 }}>🚨 Community Alerts & Notices</h3>
+          <button 
+            onClick={() => setShowCreateModal(true)}
+            className={styles.socialActionBtn}
+            style={{ background: "#2ecc71", color: "white", border: "none", fontWeight: "700" }}
+          >
+            ➕ Post Alert
+          </button>
+        </div>
 
-        return (
-          <div key={item.id} className={styles.announcementCard}>
-            <div className={styles.cardHeader}>
-              <h4>{item.title}</h4>
-              <span className={styles.date}>
-                {new Date(item.created_at).toLocaleDateString()}
-              </span>
-            </div>
-            <p>{item.message || item.content}</p>
+        {alerts.length === 0 ? (
+          <div className={styles.announcementCard} style={{ textAlign: "center", color: "#94a3b8", fontStyle: "italic" }}>
+            <p style={{ margin: 0 }}>No active community alerts right now.</p>
+          </div>
+        ) : (
+          alerts.map((alert) => {
+            const alertComments = comments[`alert-${alert.id}`] || [];
+            const isCommentOpen = commentsOpen[`alert-${alert.id}`];
+            const isEditing = editingAlertId === alert.id;
 
-            {/* Live Comment Stream Render */}
-            {itemComments.length > 0 && (
-              <div className={styles.commentsSection}>
-                {itemComments.map((c, idx) => (
-                  <div key={idx} className={styles.commentBubble}>
-                    <span><strong className={styles.commentAuthor}>{c.author}:</strong> {c.text}</span>
+            return (
+              <div key={`alert-${alert.id}`} className={styles.announcementCard} style={{ borderLeft: "6px solid #f59e0b", marginBottom: "12px" }}>
+                <div className={styles.cardHeader}>
+                  <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                    <span style={{ fontSize: "0.75rem", fontWeight: "700", textTransform: "uppercase", background: "#fef3c7", color: "#b45309", padding: "4px 10px", borderRadius: "20px" }}>
+                      {alert.category}
+                    </span>
+                    {alert.is_edited && (
+                      <span style={{ fontSize: "0.7rem", fontWeight: "600", background: "#f1f5f9", color: "#64748b", padding: "2px 8px", borderRadius: "10px" }}>
+                        ✏️ Edited
+                      </span>
+                    )}
                   </div>
-                ))}
-              </div>
-            )}
+                  <span className={styles.date}>
+                    {new Date(alert.created_at).toLocaleDateString()}
+                  </span>
+                </div>
 
-            {/* Reactions & Reply Action Bar */}
-            <div className={styles.reactionsContainer}>
-              {Object.entries(itemReactions).map(([emoji, data]) => (
-                <button
-                  key={emoji}
-                  className={`${styles.reactionBadge} ${data.reactedByMe ? styles.active : ""}`}
-                  onClick={() => handleEmojiClick(item.id, emoji)}
-                >
-                  <span>{emoji}</span>
-                  <span>{data.count}</span>
-                </button>
-              ))}
-
-              <div style={{ position: "relative" }}>
-                <button
-                  className={styles.addReactionBtn}
-                  onClick={() => setActivePicker(isPickerOpen ? null : item.id)}
-                  title="Add reaction"
-                >
-                  ➕
-                </button>
-
-                {isPickerOpen && (
-                  <div className={styles.emojiPopover}>
-                    {AVAILABLE_EMOJIS.map((emoji) => (
-                      <button
-                        key={emoji}
-                        className={styles.emojiOption}
-                        onClick={() => handleEmojiClick(item.id, emoji)}
+                {/* Edit Form or Normal Content */}
+                {isEditing ? (
+                  <div style={{ marginTop: "12px", display: "flex", flexDirection: "column", gap: "8px" }}>
+                    <textarea
+                      value={editContentText}
+                      onChange={(e) => setEditContentText(e.target.value)}
+                      className={styles.commentInput}
+                      style={{ height: "70px", resize: "vertical" }}
+                      autoFocus
+                    />
+                    <div style={{ display: "flex", gap: "8px" }}>
+                      <button 
+                        onClick={() => handleSaveEdit(alert.id)}
+                        className={styles.socialActionBtn}
+                        style={{ background: "#2ecc71", color: "white", border: "none", padding: "4px 12px" }}
                       >
-                        {emoji}
+                        Save Edit
                       </button>
+                      <button 
+                        onClick={() => setEditingAlertId(null)}
+                        className={styles.socialActionBtn}
+                        style={{ padding: "4px 12px" }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <p style={{ marginTop: "10px" }}>{alert.content}</p>
+                )}
+                
+                {alert.image_url && (
+                  <div style={{ marginTop: "10px", borderRadius: "8px", overflow: "hidden", maxHeight: "200px" }}>
+                    <a href={alert.image_url} target="_blank" rel="noopener noreferrer">
+                      <img src={alert.image_url} alt="Alert attachment" style={{ width: "100%", maxHeight: "200px", objectFit: "cover" }} />
+                    </a>
+                  </div>
+                )}
+
+                {/* Live Comment Stream for Alerts */}
+                {alertComments.length > 0 && (
+                  <div className={styles.commentsSection}>
+                    {alertComments.map((c, idx) => (
+                      <div key={idx} className={styles.commentBubble}>
+                        <span><strong className={styles.commentAuthor}>{c.author}:</strong> {c.text}</span>
+                      </div>
                     ))}
                   </div>
                 )}
-              </div>
 
-              <button
-                className={`${styles.reactionBadge} ${isCommentOpen ? styles.active : ""}`}
-                style={{ marginLeft: "auto" }}
-                onClick={() =>
-                  setCommentsOpen((prev) => ({ ...prev, [item.id]: !isCommentOpen }))
-                }
-              >
-                💬 Reply
-              </button>
-            </div>
+                {/* Footer Actions (Reply & Edit) */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "12px", paddingTop: "8px", borderTop: "1px solid #f1f5f9", fontSize: "0.8rem", color: "#64748b" }}>
+                  <span>Posted by {alert.author}</span>
+                  
+                  <div style={{ display: "flex", gap: "10px" }}>
+                    <button
+                      onClick={() => {
+                        setEditingAlertId(alert.id);
+                        setEditContentText(alert.content);
+                      }}
+                      style={{ background: "none", border: "none", color: "#3b82f6", cursor: "pointer", fontWeight: "600", fontSize: "0.8rem" }}
+                    >
+                      ✏️ Edit
+                    </button>
+                    <button
+                      className={styles.reactionBadge}
+                      onClick={() =>
+                        setCommentsOpen((prev) => ({ ...prev, [`alert-${alert.id}`]: !isCommentOpen }))
+                      }
+                    >
+                      💬 Reply
+                    </button>
+                  </div>
+                </div>
 
-            {/* Expandable Comment Input (No pop-up alerts, saves directly) */}
-            {isCommentOpen && (
-              <div className={styles.commentInputWrapper}>
-                <input
-                  type="text"
-                  placeholder="Write a neighborly reply... (Press Enter)"
-                  className={styles.commentInput}
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      handleAddComment(item.id, e.target.value);
-                      e.target.value = "";
-                      setCommentsOpen((prev) => ({ ...prev, [item.id]: false }));
-                    }
-                    if (e.key === "Escape") {
-                      setCommentsOpen((prev) => ({ ...prev, [item.id]: false }));
-                    }
-                  }}
-                />
+                {/* Expandable Comment Input for Alerts */}
+                {isCommentOpen && (
+                  <div className={styles.commentInputWrapper}>
+                    <input
+                      type="text"
+                      placeholder="Write a reply to this alert... (Press Enter)"
+                      className={styles.commentInput}
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          handleAddComment(`alert-${alert.id}`, e.target.value);
+                          e.target.value = "";
+                          setCommentsOpen((prev) => ({ ...prev, [`alert-${alert.id}`]: false }));
+                        }
+                        if (e.key === "Escape") {
+                          setCommentsOpen((prev) => ({ ...prev, [`alert-${alert.id}`]: false }));
+                        }
+                      }}
+                    />
+                  </div>
+                )}
               </div>
-            )}
+            );
+          })
+        )}
+      </div>
+
+      {/* SECTION 2: OFFICIAL BOARD ANNOUNCEMENTS & STREAM */}
+      <div>
+        <h3 className={styles.feedTitle}>💬 Neighborhood Stream & Updates</h3>
+        {notifications.length === 0 ? (
+          <div className={styles.announcementCard} style={{ textAlign: "center", color: "#94a3b8", fontStyle: "italic" }}>
+            <p style={{ margin: 0 }}>No neighborhood updates posted yet.</p>
           </div>
-        );
-      })}
+        ) : (
+          notifications.map((item) => {
+            const itemReactions = reactions[item.id] || {};
+            const itemComments = comments[item.id] || [];
+            const isCommentOpen = commentsOpen[item.id];
+            const isPickerOpen = activePicker === item.id;
 
-      {/* Modal to Post New Alert Right From Dashboard */}
+            return (
+              <div 
+                key={`notif-${item.id}`} 
+                className={`${styles.announcementCard} ${getPriorityClass(item.channel_type)}`}
+                style={{ marginBottom: "12px" }}
+              >
+                <div className={styles.cardHeader}>
+                  <h4>{item.title}</h4>
+                  <span className={styles.date}>
+                    {new Date(item.created_at).toLocaleDateString()}
+                  </span>
+                </div>
+                <p>{item.message || item.content}</p>
+
+                {/* Live Comment Stream Render */}
+                {itemComments.length > 0 && (
+                  <div className={styles.commentsSection}>
+                    {itemComments.map((c, idx) => (
+                      <div key={idx} className={styles.commentBubble}>
+                        <span><strong className={styles.commentAuthor}>{c.author}:</strong> {c.text}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Reactions & Reply Action Bar */}
+                <div className={styles.reactionsContainer}>
+                  {Object.entries(itemReactions).map(([emoji, data]) => (
+                    <button
+                      key={emoji}
+                      className={`${styles.reactionBadge} ${data.reactedByMe ? styles.active : ""}`}
+                      onClick={() => handleEmojiClick(item.id, emoji)}
+                    >
+                      <span>{emoji}</span>
+                      <span>{data.count}</span>
+                    </button>
+                  ))}
+
+                  <div style={{ position: "relative" }}>
+                    <button
+                      className={styles.addReactionBtn}
+                      onClick={() => setActivePicker(isPickerOpen ? null : item.id)}
+                      title="Add reaction"
+                    >
+                      ➕
+                    </button>
+
+                    {isPickerOpen && (
+                      <div className={styles.emojiPopover}>
+                        {AVAILABLE_EMOJIS.map((emoji) => (
+                          <button
+                            key={emoji}
+                            className={styles.emojiOption}
+                            onClick={() => handleEmojiClick(item.id, emoji)}
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <button
+                    className={`${styles.reactionBadge} ${isCommentOpen ? styles.active : ""}`}
+                    style={{ marginLeft: "auto" }}
+                    onClick={() =>
+                      setCommentsOpen((prev) => ({ ...prev, [item.id]: !isCommentOpen }))
+                    }
+                  >
+                    💬 Reply
+                  </button>
+                </div>
+
+                {/* Expandable Comment Input */}
+                {isCommentOpen && (
+                  <div className={styles.commentInputWrapper}>
+                    <input
+                      type="text"
+                      placeholder="Write a neighborly reply... (Press Enter)"
+                      className={styles.commentInput}
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          handleAddComment(item.id, e.target.value);
+                          e.target.value = "";
+                          setCommentsOpen((prev) => ({ ...prev, [item.id]: false }));
+                        }
+                        if (e.key === "Escape") {
+                          setCommentsOpen((prev) => ({ ...prev, [item.id]: false }));
+                        }
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* Modal to Post New Alert */}
       {showCreateModal && (
-        <div className={styles.modalBackdrop} onClick={onCloseCreateModal}>
+        <div className={styles.modalBackdrop} onClick={() => setShowCreateModal(false)}>
           <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
             <h3>🚨 Post Community Alert</h3>
-            <form onSubmit={handleCreateAlertSubmit} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              <input
-                type="text"
-                placeholder="Alert Title (e.g., Gate Maintenance)"
-                value={newAlertTitle}
-                onChange={(e) => setNewAlertTitle(e.target.value)}
-                className={styles.commentInput}
-                required
-              />
-              <textarea
-                placeholder="Describe the alert details..."
-                value={newAlertContent}
-                onChange={(e) => setNewAlertContent(e.target.value)}
-                style={{ ...styles.commentInput, height: "80px", resize: "vertical" }}
-                required
-              />
+            <form onSubmit={handleCreateAlertSubmit} style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "15px" }}>
+              <div>
+                <label style={{ fontSize: "0.75rem", fontWeight: "700", color: "#64748b", textTransform: "uppercase" }}>Category</label>
+                <select
+                  value={newAlertCategory}
+                  onChange={(e) => setNewAlertCategory(e.target.value)}
+                  style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", marginTop: "4px" }}
+                >
+                  <option value="Lost Pet">🐾 Lost / Found Pet</option>
+                  <option value="Traffic / Party">🎉 Block Party / Traffic Warning</option>
+                  <option value="Safety Alert">⚠️ Urgent Safety / Weather</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ fontSize: "0.75rem", fontWeight: "700", color: "#64748b", textTransform: "uppercase" }}>Details</label>
+                <textarea
+                  placeholder="Describe the notice details..."
+                  value={newAlertContent}
+                  onChange={(e) => setNewAlertContent(e.target.value)}
+                  style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", height: "90px", resize: "vertical", marginTop: "4px", boxSizing: "border-box" }}
+                  required
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: "0.75rem", fontWeight: "700", color: "#64748b", textTransform: "uppercase" }}>Attach Photo (Optional)</label>
+                <input 
+                  type="file" 
+                  accept="image/*"
+                  onChange={(e) => setSelectedFile(e.target.files[0] || null)}
+                  style={{ width: "100%", marginTop: "4px", fontSize: "0.9rem" }}
+                />
+              </div>
+
               <div style={{ display: "flex", gap: "8px", marginTop: "10px" }}>
-                <button type="submit" className={styles.quickPayBtn} style={{ flex: 1 }}>Post Alert</button>
-                <button type="button" className={styles.modalCloseBtn} style={{ flex: 1 }} onClick={onCloseCreateModal}>Cancel</button>
+                <button type="submit" className={styles.socialActionBtn} style={{ flex: 1, justifyContent: "center", background: "#2ecc71", color: "white", border: "none" }} disabled={posting}>
+                  {posting ? "Publishing..." : "Publish Instantly"}
+                </button>
+                <button type="button" className={styles.modalCloseBtn} style={{ flex: 1 }} onClick={() => setShowCreateModal(false)}>
+                  Cancel
+                </button>
               </div>
             </form>
           </div>
@@ -5093,7 +5326,6 @@ import RequestForm from "../../components/RequestForm/RequestForm";
 import VendorDirectory from "../../components/VendorDirectory/VendorDirectory";
 import DocumentCenter from "../../components/DocumentCenter/DocumentCenter";
 import DocumentManager from "../../components/BoardPortal/subcomponents/DocumentManager";
-import CommunityAlerts from "../../components/CommunityAlerts/CommunityAlerts";
 import styles from "./Dashboard.module.css";
 
 export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
@@ -5113,7 +5345,7 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
   const [showSettings, setShowSettings] = useState(false);
   const [sending, setSending] = useState(false);
   const [showDashboardAlertModal, setShowDashboardAlertModal] = useState(false);
-  // Add this with your other UI/Form states
+  
   const [rosterForm, setRosterForm] = useState({ first_name: "", last_name: "", email: "", street_address: "" });
   const [rosterStatus, setRosterStatus] = useState({ text: "", type: "" });
 
@@ -5239,8 +5471,6 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
 
   const handleOnboardResident = async (e, sendWelcomePacket) => {
     e.preventDefault();
-    
-    // 1. Generate a 6-character random token
     const generatedToken = Math.random().toString(36).substring(2, 8).toUpperCase();
     
     try {
@@ -5256,8 +5486,8 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
 
       if (response.ok) {
         alert(`Property added! Claim Code: ${generatedToken}`);
-        fetchRosterData(); // Refresh the list
-        setShowForm(false); // Close the modal
+        fetchRosterData();
+        setShowForm(false);
         setRosterForm({ first_name: "", last_name: "", email: "", street_address: "" });
       }
     } catch (err) {
@@ -5399,27 +5629,15 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
       <main className={styles.main}>
         {activeTab === "feed" && (
           <div className={styles.socialStreamContainer}>
-            {/* Social Welcome Banner with the '+' Post Alert Button */}
-            <div className={styles.socialWelcomeCard} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", textAlign: "left" }}>
-              <div>
-                <h2>Welcome back, {user?.first_name}! 👋</h2>
-                <p>Catch up on the latest neighborhood updates, social alerts, and upcoming events.</p>
-              </div>
-              <button 
-                onClick={() => setShowDashboardAlertModal(true)}
-                className={styles.quickPayBtn}
-                title="Post Community Alert"
-              >
-                ➕ Post Alert
-              </button>
+            {/* Clean Welcome Banner (Top "+ Post Alert" button removed) */}
+            <div className={styles.socialWelcomeCard}>
+              <h2>Welcome back, {user?.first_name}! 👋</h2>
+              <p>Catch up on the latest neighborhood updates, social alerts, and upcoming events.</p>
             </div>
 
-            {/* Unified Social Stream Timeline */}
+            {/* Unified Social Stream Timeline (Houses Calendar and AnnouncementFeed with the active alert post button) */}
             <NeighborhoodCalendar />
-            <AnnouncementFeed 
-              showCreateModal={showDashboardAlertModal} 
-              onCloseCreateModal={() => setShowDashboardAlertModal(false)} 
-            />
+            <AnnouncementFeed />
           </div>
         )}
         {activeTab === "maintenance" && <div className={styles.fadeContent}><RequestForm user={user} /></div>}
@@ -5432,7 +5650,7 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
         {activeTab === "vendors" && <div className={styles.fadeContent}><VendorDirectory /></div>}
         {activeTab === "documents" && <div className={styles.fadeContent}><DocumentCenter user={user} /></div>}
 
-        {/* --- ADMIN VIEWS (Unique Admin IDs) --- */}
+        {/* --- ADMIN VIEWS --- */}
         {activeTab === "mission-control" && <div className={styles.fadeContent}><MissionControl onNavigate={setActiveTab} /></div>}
         {activeTab === "requests" && (
           <div className={styles.fadeContent}>
@@ -5441,11 +5659,8 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
               requests={requests} 
               loading={loading} 
               handleResolve={handleResolve} 
-              
-              // Pass the value and the toggle function explicitly
               viewMode={viewMode} 
               onToggleView={() => setViewMode(viewMode === "active" ? "archived" : "active")}
-              
               formProps={{
                 showForm, setShowForm,
                 showEventForm, setShowEventForm,
@@ -5466,17 +5681,14 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
               setShowRosterModal={setShowForm}
               rosterForm={rosterForm || {}} 
               setRosterForm={setRosterForm}
-              rosterStatus={financeStatus} // Or your specific rosterStatus state
+              rosterStatus={financeStatus}
               handleOnboardResident={handleOnboardResident}
             />
           </div>
         )}
         {activeTab === "financials" && <div className={styles.fadeContent}><FinancialLedger onBack={() => setActiveTab("mission-control")} masterRoster={masterRoster} financeForm={financeForm} setFinanceForm={setFinanceForm} financeStatus={financeStatus} /></div>}
-        
-        {/* These specific IDs now ensure you don't route to the resident versions */}
         {activeTab === "admin-vendors" && <div className={styles.fadeContent}><VendorControls onBack={() => setActiveTab("mission-control")} vendorsList={vendorsList} /></div>}
         {activeTab === "admin-documents" && <div className={styles.fadeContent}><DocumentManager user={user} onBack={() => setActiveTab("mission-control")} /></div>}
-        {activeTab === "alerts" && <div className={styles.fadeContent}><CommunityAlerts user={user} /></div>}
       </main>
 
       {showContactModal && (
@@ -5515,7 +5727,6 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
     </div>
   );
 }
-
 ==================================================
 FILE: ./frontend/src/pages/Profile/Profile.jsx
 ==================================================

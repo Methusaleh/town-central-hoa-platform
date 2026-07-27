@@ -2010,6 +2010,35 @@ router.patch("/:id/flag", async (req, res) => {
   }
 });
 
+// PATCH: Edit an existing community alert
+router.patch("/:id/edit", async (req, res) => {
+  const { id } = req.params;
+  const { content } = req.body;
+
+  if (!content) {
+    return res.status(400).json({ error: "Content is required for editing." });
+  }
+
+  try {
+    const query = `
+      UPDATE community_alerts 
+      SET content = $1, is_edited = true, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $2 
+      RETURNING *;
+    `;
+    const { rows } = await db.query(query, [content.trim(), id]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "Alert not found." });
+    }
+
+    res.json(rows[0]);
+  } catch (err) {
+    console.error("Error editing alert:", err.message);
+    res.status(500).json({ error: "Server error updating alert." });
+  }
+});
+
 module.exports = router;
 ==================================================
 FILE: ./backend/routes/duesRoutes.js
