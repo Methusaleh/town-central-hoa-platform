@@ -8,9 +8,11 @@ export default function NeighborhoodCalendar() {
   const [selectedEvents, setSelectedEvents] = useState([]);
   const [events, setEvents] = useState([]);
 
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+
   // 1. Fetch live events AND trigger today's selection
   useEffect(() => {
-    fetch("https://town-central-hoa-platform-469564564131.us-central1.run.app/api/events")
+    fetch(`${API_URL}/api/events`)
       .then((res) => res.json())
       .then((data) => {
         setEvents(data);
@@ -26,7 +28,7 @@ export default function NeighborhoodCalendar() {
         setSelectedEvents(todaysEvents);
       })
       .catch((err) => console.error("Calendar fetch error:", err));
-  }, []);
+  }, [API_URL]);
 
   // Helper to normalize dates for comparison
   const formatDate = (dateInput) => {

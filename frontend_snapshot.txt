@@ -6297,6 +6297,7 @@ import styles from "./Claim.module.css";
 
 export default function Claim({ onBack, onClaimSuccess }) {
   const [step, setStep] = useState(1);
+  const [residentId, setResidentId] = useState(null);
   const [formData, setFormData] = useState({ 
     street_address: "", 
     onboarding_token: "", 
@@ -6306,38 +6307,61 @@ export default function Claim({ onBack, onClaimSuccess }) {
     last_name: "" 
   });
 
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+
   const handleVerify = async (e) => {
     e.preventDefault();
-    // Verifies the address and token exist as a non-claimed entry
-    const res = await fetch(`/api/residents/verify`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ 
-        street_address: formData.street_address, 
-        onboarding_token: formData.onboarding_token 
-      })
-    });
+    try {
+      const res = await fetch(`${API_URL}/api/residents/verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          street_address: formData.street_address, 
+          onboarding_token: formData.onboarding_token 
+        })
+      });
 
-    if (res.ok) {
-      setStep(2);
-    } else {
-      alert("Invalid address or claim code. Please double-check your welcome letter.");
+      const data = await res.json();
+
+      if (res.ok) {
+        setResidentId(data.residentId);
+        setStep(2);
+      } else {
+        alert(data.error || "Invalid address or claim code. Please double-check your welcome letter.");
+      }
+    } catch (err) {
+      console.error("Verification error:", err);
+      alert("Network error during verification.");
     }
   };
 
   const handleFinalize = async (e) => {
     e.preventDefault();
-    // Finalizes account creation (maps to existing /api/register logic)
-    const res = await fetch(`/api/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(formData)
-    });
+    try {
+      const res = await fetch(`${API_URL}/api/residents/claim`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...formData,
+          residentId
+        })
+      });
 
-    if (res.ok) {
-      onClaimSuccess();
-    } else {
-      alert("There was an issue creating your account. Please try again.");
+      const data = await res.json();
+
+      if (res.ok) {
+        onClaimSuccess({
+          first_name: formData.first_name,
+          email: formData.email,
+          role: "resident",
+          address: formData.street_address
+        });
+      } else {
+        alert(data.error || "There was an issue creating your account. Please try again.");
+      }
+    } catch (err) {
+      console.error("Claim finalization error:", err);
+      alert("Network error. Please check your connection.");
     }
   };
 

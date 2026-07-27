@@ -9,13 +9,15 @@ export default function RequestForm({ user }) {
   });
   const [status, setStatus] = useState(null);
 
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setStatus(null); // Clear previous status before a new attempt
 
     try {
       const response = await fetch(
-        "https://town-central-hoa-platform-469564564131.us-central1.run.app/api/requests",
+        `${API_URL}/api/requests`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
