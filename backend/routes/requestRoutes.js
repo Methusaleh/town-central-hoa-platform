@@ -21,7 +21,7 @@ router.post("/", async (req, res) => {
     if (type === "Board Message") {
       const mailOptions = {
         from: `"Town Central Portal" <${process.env.EMAIL_USER}>`,
-        to: "board@towncentralhoa.com", // Destination real-world board inbox
+        to: "board@towncentralhoa.org", // Updated to official custom domain inbox
         subject: `[Portal Contact Form] ${subject}`,
         text: `Message from ${first_name}:\n\n${description}`, // Plain text fallback
         html: `
