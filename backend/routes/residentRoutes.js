@@ -1,6 +1,19 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../db");
+const crypto = require("crypto");
+const nodemailer = require("nodemailer");
+
+// Initialize secure Zoho backend mail carrier using environment variables
+const transporter = nodemailer.createTransport({
+  host: "smtp.zoho.com",
+  port: 465,
+  secure: true,
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS 
+  }
+});
 
 // POST /api/residents/login - Authenticate registered users securely
 router.post("/login", async (req, res) => {
@@ -12,7 +25,7 @@ router.post("/login", async (req, res) => {
 
   try {
     const { rows } = await db.query(
-      "SELECT id, first_name, last_name, email, address, role FROM users WHERE email = $1 AND password = $2",
+      "SELECT id, first_name, last_name, email, address, role FROM users WHERE email = $1 AND password_hash = $2",
       [email.trim().toLowerCase(), password]
     );
 
@@ -81,9 +94,9 @@ router.post("/claim", async (req, res) => {
   try {
     await db.query("BEGIN");
 
-    // 1. Create the user account
+    // 1. Create the user account (using password_hash)
     await db.query(
-      `INSERT INTO users (first_name, last_name, email, password, address) VALUES ($1, $2, $3, $4, $5)`,
+      `INSERT INTO users (first_name, last_name, email, password_hash, address) VALUES ($1, $2, $3, $4, $5)`,
       [first_name, last_name, email, password, street_address]
     );
 
@@ -149,8 +162,6 @@ router.post("/invite", async (req, res) => {
       [email, inviteToken, primary_resident_id, address]
     );
 
-    // 2. Send the email with the link containing the token
-    // (We can use your existing nodemailer setup from requestRoutes.js)[cite: 3]
     res.status(201).json({ success: true, message: "Invitation sent!" });
   } catch (err) {
     res.status(500).json({ error: "Failed to generate invitation." });
@@ -252,9 +263,9 @@ router.post("/invite/accept", async (req, res) => {
     
     const { email, address } = inviteRes.rows[0];
 
-    // 2. Create the new user attached to the primary resident's address
+    // 2. Create the new user attached to the primary resident's address (using password_hash)
     await db.query(
-      "INSERT INTO users (first_name, last_name, email, password, address) VALUES ($1, $2, $3, $4, $5)",
+      "INSERT INTO users (first_name, last_name, email, password_hash, address) VALUES ($1, $2, $3, $4, $5)",
       [first_name, last_name, email, password, address]
     );
 
@@ -366,14 +377,6 @@ router.post("/broadcast", async (req, res) => {
     if (emailList.length === 0) {
       return res.status(404).json({ error: "No valid recipient email addresses found for this selection." });
     }
-
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-      }
-    });
 
     const mailOptions = {
       from: `"Town Central Executive Board" <${process.env.EMAIL_USER}>`,
