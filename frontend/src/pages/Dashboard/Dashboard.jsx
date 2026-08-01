@@ -5,6 +5,8 @@ import FinancialLedger from "../../components/BoardPortal/subcomponents/Financia
 import VendorControls from "../../components/BoardPortal/subcomponents/VendorControls";
 import OperationsDashboard from "../../components/BoardPortal/subcomponents/OperationsDashboard";
 import AnnouncementFeed from "../../components/AnnouncementFeed/AnnouncementFeed";
+import CommunityAlerts from "../../components/CommunityAlerts/CommunityAlerts";
+import WaterCooler from "../../components/WaterCooler/WaterCooler";
 import ResidentLedger from "../../components/ResidentLedger/ResidentLedger";
 import DuesCard from "../../components/DuesCard/DuesCard";
 import NeighborhoodCalendar from "../../components/NeighborhoodCalendar/NeighborhoodCalendar";
@@ -51,7 +53,7 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
         setLoading(false);
       })
       .catch((err) => console.error("Admin requests fetch error:", err));
-  }, []);
+  }, [API_BASE]);
 
   const fetchRosterData = async () => {
     try {
@@ -76,7 +78,7 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
   useEffect(() => {
     if (activeTab === "roster" || activeTab === "financials") fetchRosterData();
     if (activeTab === "vendors" || activeTab === "admin-vendors") fetchVendorsData();
-  }, [activeTab]);
+  }, [activeTab, API_BASE]);
 
   const handleResolve = async (requestId) => {
     try {
@@ -203,34 +205,58 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
             className={`${styles.navItem} ${activeTab === "feed" ? styles.activeNav : ""}`}
             onClick={() => setActiveTab("feed")}
           >
-            Home Dashboard
+            🏠 Home Dashboard
+          </button>
+          <button
+            className={`${styles.navItem} ${activeTab === "events" ? styles.activeNav : ""}`}
+            onClick={() => setActiveTab("events")}
+          >
+            🗓️ Events & Calendar
+          </button>
+          <button
+            className={`${styles.navItem} ${activeTab === "announcements" ? styles.activeNav : ""}`}
+            onClick={() => setActiveTab("announcements")}
+          >
+            📌 Announcements
+          </button>
+          <button
+            className={`${styles.navItem} ${activeTab === "alerts" ? styles.activeNav : ""}`}
+            onClick={() => setActiveTab("alerts")}
+          >
+            🚨 Community Alerts
+          </button>
+          <button
+            className={`${styles.navItem} ${activeTab === "watercooler" ? styles.activeNav : ""}`}
+            onClick={() => setActiveTab("watercooler")}
+          >
+            🌴 Water-Cooler
           </button>
           <button
             className={`${styles.navItem} ${activeTab === "maintenance" ? styles.activeNav : ""}`}
             onClick={() => setActiveTab("maintenance")}
           >
-            Maintenance & ARC
+            📋 Maintenance & ARC
           </button>
           <button
             className={`${styles.navItem} ${activeTab === "dues" ? styles.activeNav : ""}`}
             onClick={() => setActiveTab("dues")}
           >
-            My Dues
+            💰 My Dues
           </button>
           <button
             className={`${styles.navItem} ${activeTab === "vendors" ? styles.activeNav : ""}`}
             onClick={() => setActiveTab("vendors")}
           >
-            Trusted Companies
+            🏢 Trusted Companies
           </button>
           <button
             className={`${styles.navItem} ${activeTab === "documents" ? styles.activeNav : ""}`}
             onClick={() => setActiveTab("documents")}
           >
-            Community Documents
+            📄 Community Documents
           </button>
           <button onClick={() => setShowContactModal(true)} className={styles.navItem}>
-            Contact the Board
+            ✉️ Contact the Board
           </button>
 
           {(user?.role === "board_member" || user?.role === "super_admin") && (
@@ -238,7 +264,7 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
               className={`${styles.navItem} ${activeTab === "mission-control" ? styles.activeNav : ""}`}
               onClick={() => setActiveTab("mission-control")}
             >
-              Admin Tools
+              🛡️ Admin Tools
             </button>
           )}
         </nav>
@@ -252,11 +278,15 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
               <p>Catch up on the latest neighborhood updates, social alerts, and upcoming events.</p>
             </div>
 
-            {/* NeighborhoodCalendar now receives user prop for board event creation */}
             <NeighborhoodCalendar user={user} />
             <AnnouncementFeed user={user} />
           </div>
         )}
+
+        {activeTab === "events" && <div className={styles.fadeContent}><NeighborhoodCalendar user={user} /></div>}
+        {activeTab === "announcements" && <div className={styles.fadeContent}><AnnouncementFeed user={user} /></div>}
+        {activeTab === "alerts" && <div className={styles.fadeContent}><CommunityAlerts user={user} /></div>}
+        {activeTab === "watercooler" && <div className={styles.fadeContent}><WaterCooler user={user} /></div>}
         {activeTab === "maintenance" && <div className={styles.fadeContent}><RequestForm user={user} /></div>}
         {activeTab === "dues" && (
           <div className={styles.fadeContent} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
