@@ -1,7 +1,8 @@
+// frontend/src/pages/Login/Login.jsx
 import { useState } from "react";
 import styles from "./Login.module.css";
 
-export default function Login({ onBack, onLoginSuccess }) {
+export default function Login({ onBack, onLoginSuccess, onNavigateToClaim }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -73,6 +74,17 @@ export default function Login({ onBack, onLoginSuccess }) {
             {loading ? "Authenticating..." : "Sign In"}
           </button>
         </form>
+
+        {/* Subtext Prompt to Claim Profile */}
+        <div style={{ marginTop: "20px", textAlign: "center", fontSize: "0.85rem", color: "#64748b", borderTop: "1px solid #f1f5f9", paddingTop: "15px" }}>
+          Are you a resident and need to{" "}
+          <button 
+            onClick={onNavigateToClaim}
+            style={{ background: "none", border: "none", color: "#2ecc71", fontWeight: "700", cursor: "pointer", padding: 0, font: "inherit" }}
+          >
+            claim your profile?
+          </button>
+        </div>
       </div>
     </div>
   );

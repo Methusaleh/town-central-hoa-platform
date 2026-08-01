@@ -46,6 +46,7 @@ export default function App() {
         <Login 
           onBack={goToLanding} 
           onLoginSuccess={handleLoginSuccess} 
+          onNavigateToClaim={goToClaim} // Links to the claim page view
         />
       )}
 
