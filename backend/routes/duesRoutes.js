@@ -78,55 +78,82 @@ router.put("/update-balance", async (req, res) => {
   }
 });
 
-// POST /api/dues/manual-payment - Admin logs a Check, Zelle, or ACH
+// POST /api/dues/manual-payment - Admin logs a Payment or Issue Charge
 router.post("/manual-payment", async (req, res) => {
-  const { street_address, amount, payment_method, reference_note, admin_name } = req.body;
+  const { street_address, amount, payment_method, reference_note, admin_name, transaction_type } = req.body;
 
-  // Basic validation to ensure required fields aren't missing
-  if (!street_address || !amount || !payment_method) {
-    return res.status(400).json({ error: "Address, amount, and payment method are required." });
+  if (!street_address || !amount) {
+    return res.status(400).json({ error: "Street address and amount are required fields." });
   }
+
+  const txType = transaction_type || "payment"; // 'payment', 'charge', or 'opening_balance'
 
   try {
     await db.query("BEGIN");
 
-    // 1. Log the transaction in the ledger
+    // 1. Log the transaction in the shared address ledger
     await db.query(
       `INSERT INTO ledger_transactions 
       (address, amount, transaction_type, payment_method, reference_note, created_by) 
-      VALUES ($1, $2, 'payment', $3, $4, $5)`,
-      [street_address.trim(), amount, payment_method, reference_note, admin_name]
+      VALUES ($1, $2, $3, $4, $5, $6)`,
+      [
+        street_address.trim(), 
+        amount, 
+        txType === "charge" || txType === "opening_balance" ? "charge" : "payment", 
+        payment_method || (txType === "charge" ? "system" : "check"), 
+        reference_note, 
+        admin_name
+      ]
     );
 
-    // 2. Update the resident's running balance and last payment date
-    const updateRes = await db.query(
-      `UPDATE resident_dues 
-       SET balance = balance - $1, 
-           last_payment_date = CURRENT_DATE,
-           status = CASE WHEN (balance - $1) <= 0 THEN 'paid' ELSE 'partial' END
-       WHERE street_address = $2
-       RETURNING balance, status`,
-      [amount, street_address.trim()]
-    );
+    // 2. Update the shared resident_dues balance for this address
+    let updateQuery = "";
+    if (txType === "charge" || txType === "opening_balance") {
+      updateQuery = `
+        UPDATE resident_dues 
+        SET balance = balance + $1, 
+            status = 'Pending'
+        WHERE street_address = $2
+        RETURNING balance, status
+      `;
+    } else {
+      updateQuery = `
+        UPDATE resident_dues 
+        SET balance = balance - $1, 
+            last_payment_date = CURRENT_DATE,
+            status = CASE WHEN (balance - $1) <= 0 THEN 'Paid' ELSE 'Partial' END
+        WHERE street_address = $2
+        RETURNING balance, status
+      `;
+    }
 
-    // 3. Safety check: ensure the property actually existed in resident_dues to be updated
+    const updateRes = await db.query(updateQuery, [amount, street_address.trim()]);
+
+    // If the address hasn't been initialized in resident_dues yet, create it automatically
     if (updateRes.rows.length === 0) {
-      throw new Error("Property not found in resident_dues table. Please initialize ledger first.");
+      const initialBalance = txType === "charge" || txType === "opening_balance" ? amount : -amount;
+      const initRes = await db.query(
+        `INSERT INTO resident_dues (street_address, balance, status) 
+         VALUES ($1, $2, $3) 
+         RETURNING balance, status`,
+        [street_address.trim(), initialBalance, initialBalance > 0 ? "Pending" : "Paid"]
+      );
+      updateRes.rows = initRes.rows;
     }
 
     await db.query("COMMIT");
 
     res.json({ 
       success: true, 
-      message: "Payment logged successfully.",
+      message: "Ledger transaction recorded successfully.",
       new_balance: updateRes.rows[0].balance,
       new_status: updateRes.rows[0].status
     });
 
   } catch (err) {
     await db.query("ROLLBACK");
-    console.error("Payment entry error:", err);
-    res.status(500).json({ error: err.message || "Failed to process manual payment." });
+    console.error("Ledger transaction error:", err);
+    res.status(500).json({ error: err.message || "Failed to process ledger entry." });
   }
 });
 

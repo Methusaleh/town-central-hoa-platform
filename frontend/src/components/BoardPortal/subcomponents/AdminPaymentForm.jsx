@@ -3,6 +3,7 @@ import styles from "./AdminPaymentForm.module.css";
 
 export default function AdminPaymentForm({ user, street_address, onPaymentSuccess }) {
   const [formData, setFormData] = useState({
+    transaction_type: "payment", // "payment" or "charge"
     amount: "",
     payment_method: "check",
     reference_note: ""
@@ -22,17 +23,15 @@ export default function AdminPaymentForm({ user, street_address, onPaymentSucces
         body: JSON.stringify({
           street_address,
           ...formData,
-          admin_name: user?.first_name || "Board Member"
+          admin_name: user?.first_name || "Board Treasurer"
         })
       });
 
       const data = await res.json();
 
       if (res.ok) {
-        setStatus(`✅ Success! Payment applied.`);
-        setFormData({ amount: "", payment_method: "check", reference_note: "" });
-        
-        // Notify the parent (FinancialLedger) that data needs to be refreshed
+        setStatus(`✅ Success! Record applied.`);
+        setFormData({ transaction_type: "payment", amount: "", payment_method: "check", reference_note: "" });
         if (onPaymentSuccess) onPaymentSuccess();
       } else {
         setStatus(`❌ Error: ${data.error}`);
@@ -44,8 +43,19 @@ export default function AdminPaymentForm({ user, street_address, onPaymentSucces
 
   return (
     <div className={styles.formContainer}>
-      <h4>Log Payment for {street_address}</h4>
+      <h4>Manage Ledger for {street_address}</h4>
       <form onSubmit={handleSubmit} className={styles.form}>
+        <div className={styles.inputGroup}>
+          <label>Transaction Type</label>
+          <select 
+            value={formData.transaction_type}
+            onChange={(e) => setFormData({...formData, transaction_type: e.target.value})}
+          >
+            <option value="payment">Record Incoming Payment</option>
+            <option value="charge">Issue Opening / Special Charge</option>
+          </select>
+        </div>
+
         <div className={styles.inputGroup}>
           <label>Amount ($)</label>
           <input 
@@ -58,29 +68,33 @@ export default function AdminPaymentForm({ user, street_address, onPaymentSucces
           />
         </div>
 
-        <div className={styles.inputGroup}>
-          <label>Method</label>
-          <select 
-            value={formData.payment_method}
-            onChange={(e) => setFormData({...formData, payment_method: e.target.value})}
-          >
-            <option value="check">Paper Check</option>
-            <option value="zelle">Zelle (Business)</option>
-            <option value="ach">ACH Transfer</option>
-          </select>
-        </div>
+        {formData.transaction_type === "payment" && (
+          <div className={styles.inputGroup}>
+            <label>Payment Method</label>
+            <select 
+              value={formData.payment_method}
+              onChange={(e) => setFormData({...formData, payment_method: e.target.value})}
+            >
+              <option value="check">Paper Check</option>
+              <option value="zelle">Zelle (Business)</option>
+              <option value="ach">ACH Transfer</option>
+            </select>
+          </div>
+        )}
 
         <div className={styles.inputGroup}>
           <label>Reference / Note</label>
           <input 
             type="text" 
-            placeholder="e.g. Check #1042" 
+            placeholder={formData.transaction_type === "charge" ? "e.g. 2026 Opening Balance or Special Assessment" : "e.g. Check #1042"} 
             value={formData.reference_note}
             onChange={(e) => setFormData({...formData, reference_note: e.target.value})}
           />
         </div>
 
-        <button type="submit" className={styles.submitBtn}>Apply Payment</button>
+        <button type="submit" className={styles.submitBtn}>
+          {formData.transaction_type === "charge" ? "Post Charge to Account" : "Apply Payment"}
+        </button>
       </form>
       {status && <p className={styles.statusMessage}>{status}</p>}
     </div>

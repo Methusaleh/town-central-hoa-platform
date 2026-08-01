@@ -81,6 +81,7 @@ export default function App() {
         <Login 
           onBack={goToLanding} 
           onLoginSuccess={handleLoginSuccess} 
+          onNavigateToClaim={goToClaim} // Links to the claim page view
         />
       )}
 
@@ -4558,9 +4559,14 @@ export default function Landing({ onLogin, onRegisterClick, onContactClick }) {
       <div className={styles.heroWrapper}>
         <nav className={styles.topNav}>
           <div className={styles.logo}>Town Central HOA</div>
-          <button className={styles.loginBtn} onClick={onLogin}>
-            Resident Login
-          </button>
+          <div className={styles.navButtons}>
+            <button className={styles.secondaryNavBtn} onClick={onRegisterClick}>
+              Claim Profile
+            </button>
+            <button className={styles.loginBtn} onClick={onLogin}>
+              Resident Login
+            </button>
+          </div>
         </nav>
 
         <main className={styles.mainContent}>
@@ -4568,15 +4574,9 @@ export default function Landing({ onLogin, onRegisterClick, onContactClick }) {
           <p className={styles.subtitle}>
             The official resident portal for Town Central.
           </p>
-          <div className={styles.ctaContainer}>
-            <button className={styles.primaryAction} onClick={onRegisterClick}>
-              Claim Your Profile
-            </button>
-          </div>
         </main>
       </div>
 
-      {/* Footer handles the navigation to the Guide/Contact page */}
       <Footer onContactClick={onContactClick} />
     </div>
   );
@@ -6569,10 +6569,11 @@ FILE: ./frontend/src/pages/Login/Login.module.css
 ==================================================
 FILE: ./frontend/src/pages/Login/Login.jsx
 ==================================================
+// frontend/src/pages/Login/Login.jsx
 import { useState } from "react";
 import styles from "./Login.module.css";
 
-export default function Login({ onBack, onLoginSuccess }) {
+export default function Login({ onBack, onLoginSuccess, onNavigateToClaim }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -6644,6 +6645,17 @@ export default function Login({ onBack, onLoginSuccess }) {
             {loading ? "Authenticating..." : "Sign In"}
           </button>
         </form>
+
+        {/* Subtext Prompt to Claim Profile */}
+        <div style={{ marginTop: "20px", textAlign: "center", fontSize: "0.85rem", color: "#64748b", borderTop: "1px solid #f1f5f9", paddingTop: "15px" }}>
+          Are you a resident and need to{" "}
+          <button 
+            onClick={onNavigateToClaim}
+            style={{ background: "none", border: "none", color: "#2ecc71", fontWeight: "700", cursor: "pointer", padding: 0, font: "inherit" }}
+          >
+            claim your profile?
+          </button>
+        </div>
       </div>
     </div>
   );
