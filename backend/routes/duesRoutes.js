@@ -78,7 +78,7 @@ router.put("/update-balance", async (req, res) => {
   }
 });
 
-// POST /api/dues/manual-payment - Admin logs a Payment or Issue Charge
+// POST /api/dues/manual-payment - Admin logs a Payment or Issue Charge (Activates property in resident_dues)
 router.post("/manual-payment", async (req, res) => {
   const { street_address, amount, payment_method, reference_note, admin_name, transaction_type } = req.body;
 
@@ -86,12 +86,12 @@ router.post("/manual-payment", async (req, res) => {
     return res.status(400).json({ error: "Street address and amount are required fields." });
   }
 
-  const txType = transaction_type || "payment"; // 'payment', 'charge', or 'opening_balance'
+  const txType = transaction_type || "payment";
 
   try {
     await db.query("BEGIN");
 
-    // 1. Log the transaction in the shared address ledger
+    // 1. Log the transaction in the ledger
     await db.query(
       `INSERT INTO ledger_transactions 
       (address, amount, transaction_type, payment_method, reference_note, created_by) 
@@ -106,46 +106,32 @@ router.post("/manual-payment", async (req, res) => {
       ]
     );
 
-    // 2. Update the shared resident_dues balance for this address
-    let updateQuery = "";
-    if (txType === "charge" || txType === "opening_balance") {
-      updateQuery = `
-        UPDATE resident_dues 
-        SET balance = balance + $1, 
-            status = 'Pending'
-        WHERE street_address = $2
-        RETURNING balance, status
-      `;
-    } else {
-      updateQuery = `
-        UPDATE resident_dues 
-        SET balance = balance - $1, 
-            last_payment_date = CURRENT_DATE,
-            status = CASE WHEN (balance - $1) <= 0 THEN 'Paid' ELSE 'Partial' END
-        WHERE street_address = $2
-        RETURNING balance, status
-      `;
-    }
+    // 2. Update or Initialize the resident_dues record (Activates the property)
+    let updateRes = await db.query(
+      `UPDATE resident_dues 
+       SET balance = balance ${txType === "charge" || txType === "opening_balance" ? "+" : "-"} $1, 
+           status = CASE WHEN (balance ${txType === "charge" || txType === "opening_balance" ? "+" : "-"} $1) <= 0 THEN 'Paid' ELSE 'Pending' END
+       WHERE street_address = $2
+       RETURNING balance, status`,
+      [amount, street_address.trim()]
+    );
 
-    const updateRes = await db.query(updateQuery, [amount, street_address.trim()]);
-
-    // If the address hasn't been initialized in resident_dues yet, create it automatically
+    // If the property wasn't in resident_dues yet, this initialization creates it and activates it
     if (updateRes.rows.length === 0) {
       const initialBalance = txType === "charge" || txType === "opening_balance" ? amount : -amount;
-      const initRes = await db.query(
+      updateRes = await db.query(
         `INSERT INTO resident_dues (street_address, balance, status) 
          VALUES ($1, $2, $3) 
          RETURNING balance, status`,
         [street_address.trim(), initialBalance, initialBalance > 0 ? "Pending" : "Paid"]
       );
-      updateRes.rows = initRes.rows;
     }
 
     await db.query("COMMIT");
 
     res.json({ 
       success: true, 
-      message: "Ledger transaction recorded successfully.",
+      message: "Ledger transaction recorded and property activated successfully.",
       new_balance: updateRes.rows[0].balance,
       new_status: updateRes.rows[0].status
     });

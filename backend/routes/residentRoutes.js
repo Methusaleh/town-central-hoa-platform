@@ -202,7 +202,7 @@ router.put("/avatar", async (req, res) => {
 
 // Updated POST /api/residents/admin-add inside residentRoutes.js
 router.post("/admin-add", async (req, res) => {
-  const { email, street_address } = req.body;
+  const { email, street_address, onboarding_token } = req.body;
 
   if (!street_address) {
     return res.status(400).json({ error: "Street Address is required." });
@@ -210,13 +210,14 @@ router.post("/admin-add", async (req, res) => {
 
   try {
     const insertQuery = `
-      INSERT INTO neighborhood_roster (first_name, last_name, email, street_address, is_claimed)
-      VALUES ('Pending', 'Resident', $1, $2, false)
-      RETURNING id, street_address;
+      INSERT INTO neighborhood_roster (first_name, last_name, email, street_address, onboarding_token, is_claimed)
+      VALUES ('Pending', 'Resident', $1, $2, $3, false)
+      RETURNING id, street_address, onboarding_token;
     `;
     const { rows } = await db.query(insertQuery, [
       email ? email.trim().toLowerCase() : null,
-      street_address.trim()
+      street_address.trim(),
+      onboarding_token || Math.random().toString(36).substring(2, 8).toUpperCase()
     ]);
 
     res.status(201).json({ success: true, resident: rows[0] });
