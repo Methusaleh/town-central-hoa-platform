@@ -1,3 +1,4 @@
+// frontend/src/pages/Landing/Landing.jsx
 import Footer from "../../components/Footer/Footer";
 import styles from "./Landing.module.css";
 
@@ -20,9 +21,6 @@ export default function Landing({ onLogin, onRegisterClick, onContactClick }) {
           <div className={styles.ctaContainer}>
             <button className={styles.primaryAction} onClick={onRegisterClick}>
               Claim Your Profile
-            </button>
-            <button className={styles.secondaryAction} onClick={onLogin}>
-              Direct Login (Demo)
             </button>
           </div>
         </main>

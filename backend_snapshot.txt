@@ -2916,6 +2916,65 @@ router.get("/master-list-placeholder", async (req, res) => {
   }
 });
 
+// POST /api/residents/broadcast - Admin tool to email selected, single, or batch recipients
+router.post("/broadcast", async (req, res) => {
+  const { targetType, selectedEmails, subject, message } = req.body;
+
+  if (!subject || !message || !targetType) {
+    return res.status(400).json({ error: "Target type, subject, and message are required fields." });
+  }
+
+  try {
+    let emailList = [];
+
+    if (targetType === "selected") {
+      emailList = (selectedEmails || []).filter(e => e && e.includes("@"));
+    } else if (targetType === "all") {
+      const { rows } = await db.query("SELECT DISTINCT email FROM neighborhood_roster WHERE email IS NOT NULL AND email != ''");
+      emailList = rows.map(r => r.email);
+    } else if (targetType === "unclaimed") {
+      const { rows } = await db.query("SELECT email FROM neighborhood_roster WHERE is_claimed = false AND email IS NOT NULL AND email != ''");
+      emailList = rows.map(r => r.email);
+    } else if (targetType === "claimed") {
+      const { rows } = await db.query("SELECT email FROM neighborhood_roster WHERE is_claimed = true AND email IS NOT NULL AND email != ''");
+      emailList = rows.map(r => r.email);
+    }
+
+    if (emailList.length === 0) {
+      return res.status(404).json({ error: "No valid recipient email addresses found for this selection." });
+    }
+
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+      }
+    });
+
+    const mailOptions = {
+      from: `"Town Central Executive Board" <${process.env.EMAIL_USER}>`,
+      to: process.env.EMAIL_USER,
+      bcc: emailList,
+      subject: `[Town Central Board Broadcast] ${subject}`,
+      html: `
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
+          <h3 style="color: #2c3e50; margin-top: 0;">Official Neighborhood Communication</h3>
+          <p style="color: #475569; font-size: 1rem; line-height: 1.6; white-space: pre-wrap;">${message}</p>
+          <hr style="border: 0; border-top: 1px solid #f1f5f9; margin: 20px 0;" />
+          <p style="font-size: 0.75rem; color: #94a3b8; text-align: center;">Town Central HOA Executive Board</p>
+        </div>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+    res.json({ success: true, count: emailList.length, message: `Broadcast successfully sent to ${emailList.length} recipient(s).` });
+  } catch (err) {
+    console.error("Broadcast transmission fault:", err.message);
+    res.status(500).json({ error: "Server error while dispatching broadcast emails." });
+  }
+});
+
 module.exports = router;
 ==================================================
 FILE: ./backend/routes/billingRoutes.js
