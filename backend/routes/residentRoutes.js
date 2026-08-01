@@ -2,6 +2,40 @@ const express = require("express");
 const router = express.Router();
 const db = require("../db");
 
+// POST /api/residents/login - Authenticate registered users securely
+router.post("/login", async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ error: "Email and password are required." });
+  }
+
+  try {
+    const { rows } = await db.query(
+      "SELECT id, first_name, last_name, email, address, role FROM users WHERE email = $1 AND password = $2",
+      [email.trim().toLowerCase(), password]
+    );
+
+    if (rows.length === 0) {
+      return res.status(401).json({ error: "Invalid email or password." });
+    }
+
+    const user = rows[0];
+
+    // Assign super_admin role dynamically if logging in as admin
+    if (user.email === "admin@towncentralhoa.org") {
+      user.role = "super_admin";
+    } else if (!user.role) {
+      user.role = "resident";
+    }
+
+    res.json({ success: true, user });
+  } catch (err) {
+    console.error("Login verification fault:", err.message);
+    res.status(500).json({ error: "Server error during login processing." });
+  }
+});
+
 // POST /api/residents/lookup - Search the master roster by exact or partial address
 router.post("/lookup", async (req, res) => {
   const { address } = req.body;
