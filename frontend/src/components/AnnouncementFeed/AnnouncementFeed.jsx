@@ -1,41 +1,53 @@
 import { useEffect, useState } from "react";
 import styles from "./AnnouncementFeed.module.css";
 
-export default function AnnouncementFeed() {
-  const [notifications, setNotifications] = useState([]);
-  const [alerts, setAlerts] = useState([]);
-  const [reactions, setReactions] = useState({}); 
-  const [comments, setComments] = useState({}); // { [itemId]: [{ author, text }, ...] }
-  const [activePicker, setActivePicker] = useState(null); 
+export default function AnnouncementFeed({ user }) {
+  const [announcements, setAnnouncements] = useState([]);
+  const [commentsMap, setCommentsMap] = useState({});
+  const [reactions, setReactions] = useState({});
+  const [activePicker, setActivePicker] = useState(null);
   const [commentsOpen, setCommentsOpen] = useState({});
-  
-  // Alert Editing States
-  const [editingAlertId, setEditingAlertId] = useState(null);
-  const [editContentText, setEditContentText] = useState("");
+  const [replyInputs, setReplyInputs] = useState({});
 
-  // Modal state for creating a new alert
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [newAlertCategory, setNewAlertCategory] = useState("Lost Pet");
-  const [newAlertContent, setNewAlertContent] = useState("");
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [posting, setPosting] = useState(false);
+  // Moderation Modal State
+  const [modModalId, setModModalId] = useState(null);
+  const [removalReason, setRemovalReason] = useState("Violates community guidelines");
+
+  const STOCK_REASONS = [
+    "Violates community guidelines",
+    "Off-topic / Individual grievance",
+    "Unsafe or unauthorized media",
+    "Unkind or disrespectful tone"
+  ];
 
   const AVAILABLE_EMOJIS = ["👍", "❤️", "🎉", "💡", "⚠️"];
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+  const isAdmin = user?.role === "board_member" || user?.role === "super_admin";
+
+  const fetchAnnouncements = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/announcements`);
+      const data = await res.json();
+      if (res.ok) {
+        setAnnouncements(data.announcements || []);
+        
+        const map = {};
+        (data.comments || []).forEach(c => {
+          if (!map[c.announcement_id]) map[c.announcement_id] = [];
+          map[c.announcement_id].push(c);
+        });
+        setCommentsMap(map);
+      }
+    } catch (err) {
+      console.error("Error fetching announcements:", err);
+    }
+  };
 
   useEffect(() => {
-    Promise.all([
-      fetch(`${API_URL}/api/notifications`).then((res) => res.json()),
-      fetch(`${API_URL}/api/alerts`).then((res) => res.json())
-    ])
-      .then(([notifData, alertData]) => {
-        setNotifications(Array.isArray(notifData) ? notifData : []);
-        setAlerts(Array.isArray(alertData) ? alertData : []);
-      })
-      .catch((err) => console.error("Error fetching feed stream data:", err));
+    fetchAnnouncements();
   }, [API_URL]);
 
-  const handleEmojiClick = (itemId, emoji, userName = "Aaron") => {
+  const handleEmojiClick = (itemId, emoji, userName = user?.first_name || "Resident") => {
     setReactions((prev) => {
       const itemReactions = prev[itemId] || {};
       const emojiData = itemReactions[emoji] || { count: 0, users: [], reactedByMe: false };
@@ -68,397 +80,215 @@ export default function AnnouncementFeed() {
     setActivePicker(null);
   };
 
-  const handleAddComment = (itemId, text) => {
-    if (!text.trim()) return;
-    setComments((prev) => ({
-      ...prev,
-      [itemId]: [...(prev[itemId] || []), { author: "Aaron", text: text.trim() }],
-    }));
-  };
+  const handleAddComment = async (announcementId) => {
+    const text = replyInputs[announcementId];
+    if (!text?.trim()) return;
 
-  const handleCreateAlertSubmit = async (e) => {
-    e.preventDefault();
-    if (!newAlertContent.trim()) return;
-
-    setPosting(true);
     try {
-      const formData = new FormData();
-      formData.append("category", newAlertCategory);
-      formData.append("author", "Aaron Resident");
-      formData.append("content", newAlertContent.trim());
-      if (selectedFile) {
-        formData.append("image", selectedFile);
-      }
-
-      const res = await fetch(`${API_URL}/api/alerts`, {
+      const res = await fetch(`${API_URL}/api/announcements/${announcementId}/comments`, {
         method: "POST",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          author_name: user?.first_name || "Resident",
+          content: text.trim()
+        })
       });
 
       if (res.ok) {
-        const newAlert = await res.json();
-        // Stick new or edited alert to the top of the array
-        setAlerts([newAlert, ...alerts]);
-        setNewAlertContent("");
-        setSelectedFile(null);
-        setShowCreateModal(false);
-      } else {
-        alert("Failed to publish alert.");
+        setReplyInputs({ ...replyInputs, [announcementId]: "" });
+        fetchAnnouncements();
       }
     } catch (err) {
-      console.error("Network error posting alert:", err);
-    } finally {
-      setPosting(false);
+      console.error("Error posting comment:", err);
     }
   };
 
-  const handleSaveEdit = (alertId) => {
-    if (!editContentText.trim()) return;
-
-    setAlerts((prevAlerts) => {
-      const updatedList = prevAlerts.map((alert) => {
-        if (alert.id === alertId) {
-          return {
-            ...alert,
-            content: editContentText.trim(),
-            is_edited: true,
-          };
-        }
-        return alert;
+  const handleModerate = async () => {
+    if (!modModalId) return;
+    try {
+      const res = await fetch(`${API_URL}/api/announcements/${modModalId}/moderate`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ removal_reason: removalReason }),
       });
 
-      // Find the edited alert and stick it to the very top of the list
-      const editedItem = updatedList.find((a) => a.id === alertId);
-      const remainingItems = updatedList.filter((a) => a.id !== alertId);
-      return [editedItem, ...remainingItems];
-    });
-
-    setEditingAlertId(null);
-    setEditContentText("");
-  };
-
-  const getPriorityClass = (channelType) => {
-    switch (channelType) {
-      case "critical_email":
-        return styles.urgent;
-      case "sms_notice":
-        return styles.event;
-      case "newsletter":
-        return styles.newsletterStyle;
-      default:
-        return styles.normal;
+      if (res.ok) {
+        setModModalId(null);
+        fetchAnnouncements();
+      } else {
+        alert("Moderation action failed.");
+      }
+    } catch (err) {
+      console.error("Moderation network error:", err);
     }
   };
 
   return (
     <div className={styles.feedContainer}>
-      
-      {/* SECTION 1: COMMUNITY ALERTS STREAM */}
-      <div style={{ marginBottom: "24px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-          <h3 className={styles.feedTitle} style={{ margin: 0 }}>🚨 Community Alerts & Notices</h3>
-          <button 
-            onClick={() => setShowCreateModal(true)}
-            className={styles.socialActionBtn}
-            style={{ background: "#2ecc71", color: "white", border: "none", fontWeight: "700" }}
-          >
-            ➕ Post Alert
-          </button>
+      <h3 className={styles.feedTitle}>📌 Official Announcements & Neighborhood Feed</h3>
+
+      {announcements.length === 0 ? (
+        <div className={styles.announcementCard} style={{ textAlign: "center", color: "#94a3b8", fontStyle: "italic" }}>
+          <p style={{ margin: 0 }}>No announcements posted yet.</p>
         </div>
+      ) : (
+        announcements.map((item) => {
+          const itemReactions = reactions[item.id] || {};
+          const itemComments = commentsMap[item.id] || [];
+          const isCommentOpen = commentsOpen[item.id];
+          const isPickerOpen = activePicker === item.id;
 
-        {alerts.length === 0 ? (
-          <div className={styles.announcementCard} style={{ textAlign: "center", color: "#94a3b8", fontStyle: "italic" }}>
-            <p style={{ margin: 0 }}>No active community alerts right now.</p>
-          </div>
-        ) : (
-          alerts.map((alert) => {
-            const alertComments = comments[`alert-${alert.id}`] || [];
-            const isCommentOpen = commentsOpen[`alert-${alert.id}`];
-            const isEditing = editingAlertId === alert.id;
-
-            return (
-              <div key={`alert-${alert.id}`} className={styles.announcementCard} style={{ borderLeft: "6px solid #f59e0b", marginBottom: "12px" }}>
-                <div className={styles.cardHeader}>
-                  <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                    <span style={{ fontSize: "0.75rem", fontWeight: "700", textTransform: "uppercase", background: "#fef3c7", color: "#b45309", padding: "4px 10px", borderRadius: "20px" }}>
-                      {alert.category}
-                    </span>
-                    {alert.is_edited && (
-                      <span style={{ fontSize: "0.7rem", fontWeight: "600", background: "#f1f5f9", color: "#64748b", padding: "2px 8px", borderRadius: "10px" }}>
-                        ✏️ Edited
-                      </span>
-                    )}
-                  </div>
-                  <span className={styles.date}>
-                    {new Date(alert.created_at).toLocaleDateString()}
-                  </span>
-                </div>
-
-                {/* Edit Form or Normal Content */}
-                {isEditing ? (
-                  <div style={{ marginTop: "12px", display: "flex", flexDirection: "column", gap: "8px" }}>
-                    <textarea
-                      value={editContentText}
-                      onChange={(e) => setEditContentText(e.target.value)}
-                      className={styles.commentInput}
-                      style={{ height: "70px", resize: "vertical" }}
-                      autoFocus
-                    />
-                    <div style={{ display: "flex", gap: "8px" }}>
-                      <button 
-                        onClick={() => handleSaveEdit(alert.id)}
-                        className={styles.socialActionBtn}
-                        style={{ background: "#2ecc71", color: "white", border: "none", padding: "4px 12px" }}
-                      >
-                        Save Edit
-                      </button>
-                      <button 
-                        onClick={() => setEditingAlertId(null)}
-                        className={styles.socialActionBtn}
-                        style={{ padding: "4px 12px" }}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <p style={{ marginTop: "10px" }}>{alert.content}</p>
-                )}
-                
-                {alert.image_url && (
-                  <div style={{ marginTop: "10px", borderRadius: "8px", overflow: "hidden", maxHeight: "200px" }}>
-                    <a href={alert.image_url} target="_blank" rel="noopener noreferrer">
-                      <img src={alert.image_url} alt="Alert attachment" style={{ width: "100%", maxHeight: "200px", objectFit: "cover" }} />
-                    </a>
-                  </div>
-                )}
-
-                {/* Live Comment Stream for Alerts */}
-                {alertComments.length > 0 && (
-                  <div className={styles.commentsSection}>
-                    {alertComments.map((c, idx) => (
-                      <div key={idx} className={styles.commentBubble}>
-                        <span><strong className={styles.commentAuthor}>{c.author}:</strong> {c.text}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Footer Actions (Reply & Edit) */}
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "12px", paddingTop: "8px", borderTop: "1px solid #f1f5f9", fontSize: "0.8rem", color: "#64748b" }}>
-                  <span>Posted by {alert.author}</span>
-                  
-                  <div style={{ display: "flex", gap: "10px" }}>
-                    <button
-                      onClick={() => {
-                        setEditingAlertId(alert.id);
-                        setEditContentText(alert.content);
-                      }}
-                      style={{ background: "none", border: "none", color: "#3b82f6", cursor: "pointer", fontWeight: "600", fontSize: "0.8rem" }}
-                    >
-                      ✏️ Edit
-                    </button>
-                    <button
-                      className={styles.reactionBadge}
-                      onClick={() =>
-                        setCommentsOpen((prev) => ({ ...prev, [`alert-${alert.id}`]: !isCommentOpen }))
-                      }
-                    >
-                      💬 Reply
-                    </button>
-                  </div>
-                </div>
-
-                {/* Expandable Comment Input for Alerts */}
-                {isCommentOpen && (
-                  <div className={styles.commentInputWrapper}>
-                    <input
-                      type="text"
-                      placeholder="Write a reply to this alert... (Press Enter)"
-                      className={styles.commentInput}
-                      autoFocus
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          handleAddComment(`alert-${alert.id}`, e.target.value);
-                          e.target.value = "";
-                          setCommentsOpen((prev) => ({ ...prev, [`alert-${alert.id}`]: false }));
-                        }
-                        if (e.key === "Escape") {
-                          setCommentsOpen((prev) => ({ ...prev, [`alert-${alert.id}`]: false }));
-                        }
-                      }}
-                    />
-                  </div>
-                )}
-              </div>
-            );
-          })
-        )}
-      </div>
-
-      {/* SECTION 2: OFFICIAL BOARD ANNOUNCEMENTS & STREAM */}
-      <div>
-        <h3 className={styles.feedTitle}>💬 Neighborhood Stream & Updates</h3>
-        {notifications.length === 0 ? (
-          <div className={styles.announcementCard} style={{ textAlign: "center", color: "#94a3b8", fontStyle: "italic" }}>
-            <p style={{ margin: 0 }}>No neighborhood updates posted yet.</p>
-          </div>
-        ) : (
-          notifications.map((item) => {
-            const itemReactions = reactions[item.id] || {};
-            const itemComments = comments[item.id] || [];
-            const isCommentOpen = commentsOpen[item.id];
-            const isPickerOpen = activePicker === item.id;
-
-            return (
-              <div 
-                key={`notif-${item.id}`} 
-                className={`${styles.announcementCard} ${getPriorityClass(item.channel_type)}`}
-                style={{ marginBottom: "12px" }}
-              >
-                <div className={styles.cardHeader}>
+          return (
+            <div 
+              key={`announcement-${item.id}`} 
+              className={`${styles.announcementCard} ${item.is_sticky ? styles.stickyCard : ""}`}
+              style={{ marginBottom: "16px" }}
+            >
+              <div className={styles.cardHeader}>
+                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                  {item.is_sticky && (
+                    <span className={styles.stickyBadge}>📌 Pinned Announcement</span>
+                  )}
                   <h4>{item.title}</h4>
-                  <span className={styles.date}>
-                    {new Date(item.created_at).toLocaleDateString()}
-                  </span>
                 </div>
-                <p>{item.message || item.content}</p>
+                <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                  <span className={styles.date}>{new Date(item.created_at).toLocaleDateString()}</span>
+                  {isAdmin && !item.is_removed && (
+                    <button onClick={() => setModModalId(item.id)} className={styles.removeBtn}>🛡️ Remove</button>
+                  )}
+                </div>
+              </div>
 
-                {/* Live Comment Stream Render */}
-                {itemComments.length > 0 && (
-                  <div className={styles.commentsSection}>
-                    {itemComments.map((c, idx) => (
-                      <div key={idx} className={styles.commentBubble}>
-                        <span><strong className={styles.commentAuthor}>{c.author}:</strong> {c.text}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
+              <p className={item.is_removed ? styles.removedText : ""}>{item.content}</p>
 
-                {/* Reactions & Reply Action Bar */}
-                <div className={styles.reactionsContainer}>
-                  {Object.entries(itemReactions).map(([emoji, data]) => (
-                    <button
-                      key={emoji}
-                      className={`${styles.reactionBadge} ${data.reactedByMe ? styles.active : ""}`}
-                      onClick={() => handleEmojiClick(item.id, emoji)}
-                    >
-                      <span>{emoji}</span>
-                      <span>{data.count}</span>
-                    </button>
+              {item.image_url && !item.is_removed && (
+                <div style={{ marginTop: "12px", borderRadius: "12px", overflow: "hidden", maxHeight: "250px" }}>
+                  <a href={item.image_url} target="_blank" rel="noopener noreferrer">
+                    <img src={item.image_url} alt="Announcement attachment" style={{ width: "100%", maxHeight: "250px", objectFit: "cover" }} />
+                  </a>
+                </div>
+              )}
+
+              {item.removal_reason && (
+                <div className={styles.removalNotice}>
+                  ⚠️ Removal Reason: {item.removal_reason}
+                </div>
+              )}
+
+              {/* COMMENTS STREAM */}
+              {itemComments.length > 0 && (
+                <div className={styles.commentsSection}>
+                  {itemComments.map((c, idx) => (
+                    <div key={idx} className={styles.commentBubble}>
+                      <span><strong className={styles.commentAuthor}>{c.author_name}:</strong> {c.content}</span>
+                    </div>
                   ))}
+                </div>
+              )}
 
-                  <div style={{ position: "relative" }}>
-                    <button
-                      className={styles.addReactionBtn}
-                      onClick={() => setActivePicker(isPickerOpen ? null : item.id)}
-                      title="Add reaction"
-                    >
-                      ➕
-                    </button>
-
-                    {isPickerOpen && (
-                      <div className={styles.emojiPopover}>
-                        {AVAILABLE_EMOJIS.map((emoji) => (
-                          <button
-                            key={emoji}
-                            className={styles.emojiOption}
-                            onClick={() => handleEmojiClick(item.id, emoji)}
-                          >
-                            {emoji}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
+              {/* REACTIONS & REPLY ACTION BAR */}
+              <div className={styles.reactionsContainer}>
+                {Object.entries(itemReactions).map(([emoji, data]) => (
                   <button
-                    className={`${styles.reactionBadge} ${isCommentOpen ? styles.active : ""}`}
-                    style={{ marginLeft: "auto" }}
-                    onClick={() =>
-                      setCommentsOpen((prev) => ({ ...prev, [item.id]: !isCommentOpen }))
-                    }
+                    key={emoji}
+                    className={`${styles.reactionBadge} ${data.reactedByMe ? styles.active : ""}`}
+                    onClick={() => handleEmojiClick(item.id, emoji)}
                   >
-                    💬 Reply
+                    <span>{emoji}</span>
+                    <span>{data.count}</span>
                   </button>
+                ))}
+
+                <div style={{ position: "relative" }}>
+                  <button
+                    className={styles.addReactionBtn}
+                    onClick={() => setActivePicker(isPickerOpen ? null : item.id)}
+                    title="Add reaction"
+                  >
+                    ➕
+                  </button>
+
+                  {isPickerOpen && (
+                    <div className={styles.emojiPopover}>
+                      {AVAILABLE_EMOJIS.map((emoji) => (
+                        <button
+                          key={emoji}
+                          className={styles.emojiOption}
+                          onClick={() => handleEmojiClick(item.id, emoji)}
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
-                {/* Expandable Comment Input */}
-                {isCommentOpen && (
-                  <div className={styles.commentInputWrapper}>
-                    <input
-                      type="text"
-                      placeholder="Write a neighborly reply... (Press Enter)"
-                      className={styles.commentInput}
-                      autoFocus
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          handleAddComment(item.id, e.target.value);
-                          e.target.value = "";
-                          setCommentsOpen((prev) => ({ ...prev, [item.id]: false }));
-                        }
-                        if (e.key === "Escape") {
-                          setCommentsOpen((prev) => ({ ...prev, [item.id]: false }));
-                        }
-                      }}
-                    />
-                  </div>
-                )}
-              </div>
-            );
-          })
-        )}
-      </div>
-
-      {/* Modal to Post New Alert */}
-      {showCreateModal && (
-        <div className={styles.modalBackdrop} onClick={() => setShowCreateModal(false)}>
-          <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
-            <h3>🚨 Post Community Alert</h3>
-            <form onSubmit={handleCreateAlertSubmit} style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "15px" }}>
-              <div>
-                <label style={{ fontSize: "0.75rem", fontWeight: "700", color: "#64748b", textTransform: "uppercase" }}>Category</label>
-                <select
-                  value={newAlertCategory}
-                  onChange={(e) => setNewAlertCategory(e.target.value)}
-                  style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", marginTop: "4px" }}
+                <button
+                  className={`${styles.reactionBadge} ${isCommentOpen ? styles.active : ""}`}
+                  style={{ marginLeft: "auto" }}
+                  onClick={() => setCommentsOpen((prev) => ({ ...prev, [item.id]: !isCommentOpen }))}
                 >
-                  <option value="Lost Pet">🐾 Lost / Found Pet</option>
-                  <option value="Traffic / Party">🎉 Block Party / Traffic Warning</option>
-                  <option value="Safety Alert">⚠️ Urgent Safety / Weather</option>
-                </select>
-              </div>
-
-              <div>
-                <label style={{ fontSize: "0.75rem", fontWeight: "700", color: "#64748b", textTransform: "uppercase" }}>Details</label>
-                <textarea
-                  placeholder="Describe the notice details..."
-                  value={newAlertContent}
-                  onChange={(e) => setNewAlertContent(e.target.value)}
-                  style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", height: "90px", resize: "vertical", marginTop: "4px", boxSizing: "border-box" }}
-                  required
-                />
-              </div>
-
-              <div>
-                <label style={{ fontSize: "0.75rem", fontWeight: "700", color: "#64748b", textTransform: "uppercase" }}>Attach Photo (Optional)</label>
-                <input 
-                  type="file" 
-                  accept="image/*"
-                  onChange={(e) => setSelectedFile(e.target.files[0] || null)}
-                  style={{ width: "100%", marginTop: "4px", fontSize: "0.9rem" }}
-                />
-              </div>
-
-              <div style={{ display: "flex", gap: "8px", marginTop: "10px" }}>
-                <button type="submit" className={styles.socialActionBtn} style={{ flex: 1, justifyContent: "center", background: "#2ecc71", color: "white", border: "none" }} disabled={posting}>
-                  {posting ? "Publishing..." : "Publish Instantly"}
-                </button>
-                <button type="button" className={styles.modalCloseBtn} style={{ flex: 1 }} onClick={() => setShowCreateModal(false)}>
-                  Cancel
+                  💬 Reply
                 </button>
               </div>
-            </form>
+
+              {/* EXPANDABLE COMMENT INPUT */}
+              {isCommentOpen && !item.is_removed && (
+                <div className={styles.commentInputWrapper}>
+                  <input
+                    type="text"
+                    placeholder="Write a reply... (Press Enter)"
+                    value={replyInputs[item.id] || ""}
+                    onChange={(e) => setReplyInputs({ ...replyInputs, [item.id]: e.target.value })}
+                    className={styles.commentInput}
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleAddComment(item.id);
+                        setCommentsOpen((prev) => ({ ...prev, [item.id]: false }));
+                      }
+                      if (e.key === "Escape") {
+                        setCommentsOpen((prev) => ({ ...prev, [item.id]: false }));
+                      }
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+          );
+        })
+      )}
+
+      {/* ADMIN REMOVAL MODAL */}
+      {modModalId && (
+        <div className={styles.modalBackdrop} onClick={() => setModModalId(null)}>
+          <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+            <h3>🛡️ Moderate Announcement</h3>
+            <p>Select a stock reason for removing this announcement:</p>
+            
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px", margin: "15px 0" }}>
+              {STOCK_REASONS.map((reason, idx) => (
+                <label key={idx} style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.9rem", cursor: "pointer" }}>
+                  <input 
+                    type="radio" 
+                    name="removalReason" 
+                    value={reason} 
+                    checked={removalReason === reason} 
+                    onChange={(e) => setRemovalReason(e.target.value)} 
+                  />
+                  {reason}
+                </label>
+              ))}
+            </div>
+
+            <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>
+              <button onClick={handleModerate} style={{ flex: 1, background: "#ef4444", color: "white", border: "none", padding: "10px", borderRadius: "8px", fontWeight: "700", cursor: "pointer" }}>
+                Confirm Removal
+              </button>
+              <button onClick={() => setModModalId(null)} style={{ flex: 1, background: "#f1f5f9", border: "1px solid #e2e8f0", padding: "10px", borderRadius: "8px", fontWeight: "600", cursor: "pointer" }}>
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}
