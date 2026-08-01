@@ -1,16 +1,32 @@
+// Replace ./frontend/src/components/BoardPortal/subcomponents/AdminPaymentForm.jsx
 import { useState } from "react";
 import styles from "./AdminPaymentForm.module.css";
 
 export default function AdminPaymentForm({ user, street_address, onPaymentSuccess }) {
   const [formData, setFormData] = useState({
-    transaction_type: "payment", // "payment" or "charge"
+    transaction_type: "payment",
     amount: "",
     payment_method: "check",
     reference_note: ""
   });
+  const [displayAmount, setDisplayAmount] = useState("");
   const [status, setStatus] = useState("");
 
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+
+  // Handles raw number typing and auto-formats to two decimal places
+  const handleAmountChange = (e) => {
+    const rawValue = e.target.value.replace(/\D/g, ""); // Strip non-digits
+    if (!rawValue) {
+      setDisplayAmount("");
+      setFormData({ ...formData, amount: "" });
+      return;
+    }
+
+    const numericValue = (parseInt(rawValue, 10) / 100).toFixed(2);
+    setDisplayAmount(numericValue);
+    setFormData({ ...formData, amount: numericValue });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -32,6 +48,7 @@ export default function AdminPaymentForm({ user, street_address, onPaymentSucces
       if (res.ok) {
         setStatus(`✅ Success! Record applied.`);
         setFormData({ transaction_type: "payment", amount: "", payment_method: "check", reference_note: "" });
+        setDisplayAmount("");
         if (onPaymentSuccess) onPaymentSuccess();
       } else {
         setStatus(`❌ Error: ${data.error}`);
@@ -59,11 +76,10 @@ export default function AdminPaymentForm({ user, street_address, onPaymentSucces
         <div className={styles.inputGroup}>
           <label>Amount ($)</label>
           <input 
-            type="number" 
-            step="0.01" 
+            type="text" 
             placeholder="0.00" 
-            value={formData.amount}
-            onChange={(e) => setFormData({...formData, amount: e.target.value})}
+            value={displayAmount}
+            onChange={handleAmountChange}
             required
           />
         </div>

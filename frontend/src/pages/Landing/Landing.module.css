@@ -89,3 +89,19 @@
   border-radius: 30px;
   cursor: pointer;
 }
+
+/* Add to ./frontend/src/pages/Landing/Landing.module.css */
+.secondaryNavBtn {
+  background: transparent;
+  border: 1px solid white;
+  color: white;
+  padding: 8px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.secondaryNavBtn:hover {
+  background: white;
+  color: black;
+}
