@@ -11,13 +11,19 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 } 
 });
 
-// GET: Fetch all active alerts
+// GET: Fetch all active alerts and their comments
 router.get("/", async (req, res) => {
   try {
-    const { rows } = await db.query(
-      "SELECT * FROM community_alerts ORDER BY created_at DESC"
-    );
-    res.json(rows);
+    const alertsQuery = "SELECT * FROM community_alerts ORDER BY created_at DESC";
+    const alertsRes = await db.query(alertsQuery);
+
+    const commentsQuery = "SELECT * FROM alert_comments ORDER BY created_at ASC";
+    const commentsRes = await db.query(commentsQuery);
+
+    res.json({
+      alerts: alertsRes.rows,
+      comments: commentsRes.rows
+    });
   } catch (err) {
     console.error("Error fetching community alerts:", err.message);
     res.status(500).json({ error: "Server error while fetching community alerts." });
@@ -41,14 +47,14 @@ router.post("/", upload.single("image"), async (req, res) => {
     }
 
     const query = `
-      INSERT INTO community_alerts (category, author, content, image_url)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO community_alerts (category, author, content, image_url, reactions)
+      VALUES ($1, $2, $3, $4, '{}'::jsonb)
       RETURNING *;
     `;
     const { rows } = await db.query(query, [
       category, 
       author || "Verified Resident", 
-      content, 
+      content.trim(), 
       imageUrl
     ]);
 
@@ -56,6 +62,29 @@ router.post("/", upload.single("image"), async (req, res) => {
   } catch (err) {
     console.error("Error creating alert with image:", err.message);
     res.status(500).json({ error: "Server error while posting community alert." });
+  }
+});
+
+// POST: Add a comment/reply to a community alert
+router.post("/:alertId/comments", async (req, res) => {
+  const { alertId } = req.params;
+  const { author_name, content } = req.body;
+
+  if (!content || !content.trim()) {
+    return res.status(400).json({ error: "Comment content is required." });
+  }
+
+  try {
+    const query = `
+      INSERT INTO alert_comments (alert_id, author_name, content)
+      VALUES ($1, $2, $3)
+      RETURNING *;
+    `;
+    const { rows } = await db.query(query, [alertId, author_name || "Resident", content.trim()]);
+    res.status(201).json(rows[0]);
+  } catch (err) {
+    console.error("Error adding alert comment:", err.message);
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -116,6 +145,32 @@ router.patch("/:id/edit", async (req, res) => {
   } catch (err) {
     console.error("Error editing alert:", err.message);
     res.status(500).json({ error: "Server error updating alert." });
+  }
+});
+
+// PATCH: Admin stock-reason moderation removal
+router.patch("/:id/moderate", async (req, res) => {
+  const { id } = req.params;
+  const { removal_reason } = req.body;
+  const replacementText = "[This alert has been removed by an admin for violating community guidelines.]";
+
+  try {
+    const query = `
+      UPDATE community_alerts 
+      SET is_removed = true, 
+          removal_reason = $1,
+          content = $2,
+          image_url = NULL
+      WHERE id = $3 
+      RETURNING *;
+    `;
+    const { rows } = await db.query(query, [removal_reason || "Violates community guidelines", replacementText, id]);
+
+    if (rows.length === 0) return res.status(404).json({ error: "Alert not found." });
+    res.json({ success: true, item: rows[0] });
+  } catch (err) {
+    console.error("Moderation error:", err.message);
+    res.status(500).json({ error: err.message });
   }
 });
 
