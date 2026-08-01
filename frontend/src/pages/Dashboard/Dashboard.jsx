@@ -19,7 +19,6 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
   const [activeTab, setActiveTab] = useState("feed");
 
   // --- GUIDELINES WALL STATE ---
-  // If the user object says they haven't agreed, show the modal immediately
   const [showGuidelinesModal, setShowGuidelinesModal] = useState(!user?.agreed_to_guidelines);
 
   // Data States
@@ -31,41 +30,16 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
   // UI States
   const [viewMode, setViewMode] = useState("active");
   const [showForm, setShowForm] = useState(false);
-  const [showEventForm, setShowEventForm] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [sending, setSending] = useState(false);
-  const [showDashboardAlertModal, setShowDashboardAlertModal] = useState(false);
   
   const [rosterForm, setRosterForm] = useState({ first_name: "", last_name: "", email: "", street_address: "" });
-  const [rosterStatus, setRosterStatus] = useState({ text: "", type: "" });
-
-  // Form States
-  const [announcement, setAnnouncement] = useState({
-    title: "",
-    content: "",
-    priority: "normal",
-    channel_type: "general",
-  });
-  const [newEvent, setNewEvent] = useState({
-    title: "",
-    event_date: "",
-    event_time: "",
-    location: "",
-    description: "",
-    attachment_url: "",
-    attachment_name: "",
-  });
-  const [financeForm, setFinanceForm] = useState({
-    street_address: "",
-    balance: "",
-    status: "Pending",
-  });
+  const [financeForm, setFinanceForm] = useState({ street_address: "", balance: "", status: "Pending" });
   const [financeStatus, setFinanceStatus] = useState({ text: "", type: "" });
   const [contactForm, setContactForm] = useState({ subject: "", message: "" });
 
-  const API_BASE =
-    "https://town-central-hoa-platform-469564564131.us-central1.run.app";
+  const API_BASE = "https://town-central-hoa-platform-469564564131.us-central1.run.app";
   const settingsRef = useRef(null);
 
   // Data Fetching Logic
@@ -81,9 +55,7 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
 
   const fetchRosterData = async () => {
     try {
-      const response = await fetch(
-        `${API_BASE}/api/residents/master-list-placeholder`,
-      );
+      const response = await fetch(`${API_BASE}/api/residents/master-list-placeholder`);
       const data = await response.json();
       setMasterRoster(data);
     } catch (err) {
@@ -103,20 +75,16 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
 
   useEffect(() => {
     if (activeTab === "roster" || activeTab === "financials") fetchRosterData();
-    if (activeTab === "vendors" || activeTab === "admin-vendors")
-      fetchVendorsData();
+    if (activeTab === "vendors" || activeTab === "admin-vendors") fetchVendorsData();
   }, [activeTab]);
 
   const handleResolve = async (requestId) => {
     try {
-      const response = await fetch(
-        `${API_BASE}/api/requests/${requestId}/resolve`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ adminName: user?.first_name || "Admin" }),
-        },
-      );
+      const response = await fetch(`${API_BASE}/api/requests/${requestId}/resolve`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ adminName: user?.first_name || "Admin" }),
+      });
       if (response.ok) {
         setRequests(
           requests.map((req) =>
@@ -187,42 +155,6 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
     }
   };
 
-  const handlePostAnnouncement = async (e) => {
-    e.preventDefault();
-    try {
-      const response = await fetch(`${API_BASE}/api/announcements`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(announcement),
-      });
-      if (response.ok) {
-        alert("Announcement posted!");
-        setAnnouncement({ title: "", content: "", priority: "normal", channel_type: "general" });
-        setShowForm(false);
-      }
-    } catch (err) {
-      console.error("Announcement error:", err);
-    }
-  };
-
-  const handlePostEvent = async (e) => {
-    e.preventDefault();
-    try {
-      const response = await fetch(`${API_BASE}/api/events`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newEvent),
-      });
-      if (response.ok) {
-        alert("Event added to calendar!");
-        setNewEvent({ title: "", event_date: "", event_time: "", location: "", description: "", attachment_url: "", attachment_name: "" });
-        setShowEventForm(false);
-      }
-    } catch (err) {
-      console.error("Event error:", err);
-    }
-  };
-
   return (
     <div className={styles.layout}>
       {/* GUIDELINES ACCEPTANCE WALL OVERLAY */}
@@ -231,7 +163,6 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
           user={user} 
           onAgree={() => {
             setShowGuidelinesModal(false);
-            // Locally update user object status so they don't get prompted again this session
             if (user) user.agreed_to_guidelines = true;
           }} 
         />
@@ -244,11 +175,7 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
         <nav className={styles.nav}>
           <div className={styles.profileHeader} ref={settingsRef}>
             {user?.photo ? (
-              <img
-                src={user.photo}
-                alt="Avatar"
-                className={styles.userAvatarMini}
-              />
+              <img src={user.photo} alt="Avatar" className={styles.userAvatarMini} />
             ) : (
               <div className={styles.avatarPlaceholderMini}>
                 {user?.first_name?.charAt(0).toUpperCase()}
@@ -257,24 +184,15 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
             <div className={styles.userInfoMini}>
               <h4>{user?.first_name}</h4>
             </div>
-            <div
-              className={styles.settingsTrigger}
-              onClick={() => setShowSettings(!showSettings)}
-            >
+            <div className={styles.settingsTrigger} onClick={() => setShowSettings(!showSettings)}>
               ⚙️
             </div>
             {showSettings && (
               <div className={styles.settingsDropdown}>
-                <button
-                  className={styles.dropdownBtn}
-                  onClick={onNavigateToProfile}
-                >
+                <button className={styles.dropdownBtn} onClick={onNavigateToProfile}>
                   Settings
                 </button>
-                <button
-                  className={`${styles.dropdownBtn} ${styles.logoutText}`}
-                  onClick={onLogout}
-                >
+                <button className={`${styles.dropdownBtn} ${styles.logoutText}`} onClick={onLogout}>
                   Logout
                 </button>
               </div>
@@ -311,10 +229,7 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
           >
             Community Documents
           </button>
-          <button
-            onClick={() => setShowContactModal(true)}
-            className={styles.navItem}
-          >
+          <button onClick={() => setShowContactModal(true)} className={styles.navItem}>
             Contact the Board
           </button>
 
@@ -332,15 +247,14 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
       <main className={styles.main}>
         {activeTab === "feed" && (
           <div className={styles.socialStreamContainer}>
-            {/* Clean Welcome Banner (Top "+ Post Alert" button removed) */}
             <div className={styles.socialWelcomeCard}>
               <h2>Welcome back, {user?.first_name}! 👋</h2>
               <p>Catch up on the latest neighborhood updates, social alerts, and upcoming events.</p>
             </div>
 
-            {/* Unified Social Stream Timeline (Houses Calendar and AnnouncementFeed with the active alert post button) */}
-            <NeighborhoodCalendar />
-            <AnnouncementFeed />
+            {/* NeighborhoodCalendar now receives user prop for board event creation */}
+            <NeighborhoodCalendar user={user} />
+            <AnnouncementFeed user={user} />
           </div>
         )}
         {activeTab === "maintenance" && <div className={styles.fadeContent}><RequestForm user={user} /></div>}
@@ -364,14 +278,6 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
               handleResolve={handleResolve} 
               viewMode={viewMode} 
               onToggleView={() => setViewMode(viewMode === "active" ? "archived" : "active")}
-              formProps={{
-                showForm, setShowForm,
-                showEventForm, setShowEventForm,
-                announcement, setAnnouncement,
-                newEvent, setNewEvent
-              }}
-              handlePostAnnouncement={handlePostAnnouncement}
-              handlePostEvent={handlePostEvent}
             />
           </div>
         )}

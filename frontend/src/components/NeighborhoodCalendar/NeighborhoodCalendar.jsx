@@ -1,12 +1,15 @@
 import { useState, useEffect } from "react";
 import Calendar from "react-calendar";
+import EventCreationModal from "./EventCreationModal";
 import "react-calendar/dist/Calendar.css";
 import styles from "./NeighborhoodCalendar.module.css";
 
-export default function NeighborhoodCalendar() {
+export default function NeighborhoodCalendar({ user }) {
   const [date, setDate] = useState(new Date());
   const [selectedEvents, setSelectedEvents] = useState([]);
   const [events, setEvents] = useState([]);
+  const [showEventModal, setShowEventModal] = useState(false);
+  const isAdmin = user?.role === "board_member" || user?.role === "super_admin";
 
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
@@ -89,7 +92,6 @@ export default function NeighborhoodCalendar() {
   const formatEventTime = (timeStr) => {
     if (!timeStr) return "All Day";
     
-    // If it's already a full time string with seconds like "12:00:00"
     const parts = timeStr.split(":");
     if (parts.length >= 2) {
       let hours = parseInt(parts[0], 10);
@@ -97,7 +99,7 @@ export default function NeighborhoodCalendar() {
       const ampm = hours >= 12 ? "P.M." : "A.M.";
       
       hours = hours % 12;
-      hours = hours ? hours : 12; // convert '0' to '12'
+      hours = hours ? hours : 12; 
       
       return `${hours}:${minutes} ${ampm}`;
     }
@@ -116,7 +118,17 @@ export default function NeighborhoodCalendar() {
       </div>
 
       <div className={styles.eventDetail}>
-        <h3>Events for {date.toLocaleDateString()}</h3>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px" }}>
+          <h3 style={{ margin: 0 }}>Events for {date.toLocaleDateString()}</h3>
+          {isAdmin && (
+            <button 
+              onClick={() => setShowEventModal(true)}
+              style={{ background: "#2ecc71", color: "white", border: "none", padding: "6px 12px", borderRadius: "8px", fontWeight: "700", fontSize: "0.8rem", cursor: "pointer" }}
+            >
+              ➕ Create Event
+            </button>
+          )}
+        </div>
 
         {selectedEvents.length > 0 ? (
           <div className={styles.eventList}>
@@ -134,7 +146,6 @@ export default function NeighborhoodCalendar() {
                   📍 {event.location || "No location set"}
                 </a>
 
-                {/* Polished interactive paperclip link for attached neighborhood documents */}
                 {event.attachment_url && (
                   <div style={{ margin: "14px 0", padding: "2px 0" }}>
                     <a 
@@ -146,7 +157,7 @@ export default function NeighborhoodCalendar() {
                         alignItems: "center",
                         gap: "8px",
                         fontSize: "0.85rem",
-                        color: "#e67e22", // Standout orange accent theme for downloads
+                        color: "#e67e22",
                         fontWeight: "700",
                         textDecoration: "none",
                         backgroundColor: "#fff5eb",
@@ -154,14 +165,6 @@ export default function NeighborhoodCalendar() {
                         borderRadius: "6px",
                         border: "1px solid #fde6d2",
                         transition: "all 0.2s ease"
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = "#fdedde";
-                        e.currentTarget.style.transform = "translateY(-1px)";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = "#fff5eb";
-                        e.currentTarget.style.transform = "translateY(0)";
                       }}
                     >
                       📎 {event.attachment_name || "View Attached Document"}
@@ -194,6 +197,17 @@ export default function NeighborhoodCalendar() {
           <p className={styles.noEvent}>No events scheduled for this day.</p>
         )}
       </div>
+
+      {showEventModal && (
+        <EventCreationModal 
+          onClose={() => setShowEventModal(false)} 
+          onEventCreated={() => {
+            fetch(`${API_URL}/api/events`)
+              .then((res) => res.json())
+              .then((data) => setEvents(data));
+          }} 
+        />
+      )}
     </div>
   );
 }
