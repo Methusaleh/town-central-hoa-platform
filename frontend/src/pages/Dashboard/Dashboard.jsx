@@ -12,10 +12,15 @@ import RequestForm from "../../components/RequestForm/RequestForm";
 import VendorDirectory from "../../components/VendorDirectory/VendorDirectory";
 import DocumentCenter from "../../components/DocumentCenter/DocumentCenter";
 import DocumentManager from "../../components/BoardPortal/subcomponents/DocumentManager";
+import GuidelinesModal from "../../components/GuidelinesModal/GuidelinesModal";
 import styles from "./Dashboard.module.css";
 
 export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
   const [activeTab, setActiveTab] = useState("feed");
+
+  // --- GUIDELINES WALL STATE ---
+  // If the user object says they haven't agreed, show the modal immediately
+  const [showGuidelinesModal, setShowGuidelinesModal] = useState(!user?.agreed_to_guidelines);
 
   // Data States
   const [requests, setRequests] = useState([]);
@@ -220,6 +225,18 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
 
   return (
     <div className={styles.layout}>
+      {/* GUIDELINES ACCEPTANCE WALL OVERLAY */}
+      {showGuidelinesModal && (
+        <GuidelinesModal 
+          user={user} 
+          onAgree={() => {
+            setShowGuidelinesModal(false);
+            // Locally update user object status so they don't get prompted again this session
+            if (user) user.agreed_to_guidelines = true;
+          }} 
+        />
+      )}
+      
       <div className={styles.orb1}></div>
       <div className={styles.orb2}></div>
 

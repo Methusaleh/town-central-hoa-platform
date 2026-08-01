@@ -402,4 +402,33 @@ router.post("/broadcast", async (req, res) => {
   }
 });
 
+// POST /api/residents/agree-guidelines - Records user agreement to community rules
+router.post("/agree-guidelines", async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ error: "Email is required." });
+  }
+
+  try {
+    const query = `
+      UPDATE users 
+      SET agreed_to_guidelines = true, 
+          agreed_to_guidelines_at = CURRENT_TIMESTAMP 
+      WHERE email = $1 
+      RETURNING email, agreed_to_guidelines;
+    `;
+    const { rows } = await db.query(query, [email.trim().toLowerCase()]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "User account not found." });
+    }
+
+    res.json({ success: true, user: rows[0] });
+  } catch (err) {
+    console.error("Guidelines agreement error:", err.message);
+    res.status(500).json({ error: "Server error while saving guidelines status." });
+  }
+});
+
 module.exports = router;
