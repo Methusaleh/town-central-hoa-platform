@@ -77,6 +77,7 @@ FILE: ./backend/package-lock.json
       "license": "ISC",
       "dependencies": {
         "@aws-sdk/client-s3": "^3.1075.0",
+        "axios": "^1.19.0",
         "cors": "^2.8.6",
         "dotenv": "^17.4.2",
         "express": "^5.2.1",
@@ -648,11 +649,41 @@ FILE: ./backend/package-lock.json
         "node": ">= 0.6"
       }
     },
+    "node_modules/agent-base": {
+      "version": "6.0.2",
+      "resolved": "https://registry.npmjs.org/agent-base/-/agent-base-6.0.2.tgz",
+      "integrity": "sha512-RZNwNclF7+MS/8bDg70amg32dyeZGZxiDuQmZxKLAlQjr3jGyLx+4Kkk58UO7D2QdgFIQCovuSuZESne6RG6XQ==",
+      "license": "MIT",
+      "dependencies": {
+        "debug": "4"
+      },
+      "engines": {
+        "node": ">= 6.0.0"
+      }
+    },
     "node_modules/append-field": {
       "version": "1.0.0",
       "resolved": "https://registry.npmjs.org/append-field/-/append-field-1.0.0.tgz",
       "integrity": "sha512-klpgFSWLW1ZEs8svjfb7g4qWY0YS5imI82dTg+QahUvJ8YqAY0P10Uk8tTyh9ZGuYEZEMaeJYCF5BFuX552hsw==",
       "license": "MIT"
+    },
+    "node_modules/asynckit": {
+      "version": "0.4.0",
+      "resolved": "https://registry.npmjs.org/asynckit/-/asynckit-0.4.0.tgz",
+      "integrity": "sha512-Oei9OH4tRh0YqU3GxhX79dM/mwVgvbZJaSNaRk+bshkj0S5cfHcgYakreBjrHwatXKbz+IoIdYLxrKim2MjW0Q==",
+      "license": "MIT"
+    },
+    "node_modules/axios": {
+      "version": "1.19.0",
+      "resolved": "https://registry.npmjs.org/axios/-/axios-1.19.0.tgz",
+      "integrity": "sha512-ht/iuYZXEjFxLH/Hkezgd7m6JKlHHXEUSneaDz8uZe1Gj5QZtCnpyDsckvAiEnT89OEbCLmnte4R4sn7P0EKFw==",
+      "license": "MIT",
+      "dependencies": {
+        "follow-redirects": "^1.16.0",
+        "form-data": "^4.0.6",
+        "https-proxy-agent": "^5.0.1",
+        "proxy-from-env": "^2.1.0"
+      }
     },
     "node_modules/body-parser": {
       "version": "2.2.2",
@@ -737,6 +768,18 @@ FILE: ./backend/package-lock.json
       },
       "funding": {
         "url": "https://github.com/sponsors/ljharb"
+      }
+    },
+    "node_modules/combined-stream": {
+      "version": "1.0.8",
+      "resolved": "https://registry.npmjs.org/combined-stream/-/combined-stream-1.0.8.tgz",
+      "integrity": "sha512-FQN4MRfuJeHf7cBbBMJFXhKSDq+2kAArBlmRBvcvFE5BB1HZKXtSFASDhdlz9zOYwxh8lDdnvmMOe/+5cdoEdg==",
+      "license": "MIT",
+      "dependencies": {
+        "delayed-stream": "~1.0.0"
+      },
+      "engines": {
+        "node": ">= 0.8"
       }
     },
     "node_modules/concat-stream": {
@@ -828,6 +871,15 @@ FILE: ./backend/package-lock.json
         }
       }
     },
+    "node_modules/delayed-stream": {
+      "version": "1.0.0",
+      "resolved": "https://registry.npmjs.org/delayed-stream/-/delayed-stream-1.0.0.tgz",
+      "integrity": "sha512-ZySD7Nf91aLB0RxL4KGrKHBXl7Eds1DAmEdcoVawXnLD7SDhpNgtuII2aAkg7a7QS41jxPSZ17p4VdGnMHk3MQ==",
+      "license": "MIT",
+      "engines": {
+        "node": ">=0.4.0"
+      }
+    },
     "node_modules/depd": {
       "version": "2.0.0",
       "resolved": "https://registry.npmjs.org/depd/-/depd-2.0.0.tgz",
@@ -903,6 +955,21 @@ FILE: ./backend/package-lock.json
       "license": "MIT",
       "dependencies": {
         "es-errors": "^1.3.0"
+      },
+      "engines": {
+        "node": ">= 0.4"
+      }
+    },
+    "node_modules/es-set-tostringtag": {
+      "version": "2.1.0",
+      "resolved": "https://registry.npmjs.org/es-set-tostringtag/-/es-set-tostringtag-2.1.0.tgz",
+      "integrity": "sha512-j6vWzfrGVfyXxge+O0x5sh6cvxAog0a/4Rdd2K36zCMV5eJ+/+tOAngRO8cODMNWbVRdVlmGZQL2YS3yR8bIUA==",
+      "license": "MIT",
+      "dependencies": {
+        "es-errors": "^1.3.0",
+        "get-intrinsic": "^1.2.6",
+        "has-tostringtag": "^1.0.2",
+        "hasown": "^2.0.2"
       },
       "engines": {
         "node": ">= 0.4"
@@ -985,6 +1052,63 @@ FILE: ./backend/package-lock.json
       "funding": {
         "type": "opencollective",
         "url": "https://opencollective.com/express"
+      }
+    },
+    "node_modules/follow-redirects": {
+      "version": "1.16.0",
+      "resolved": "https://registry.npmjs.org/follow-redirects/-/follow-redirects-1.16.0.tgz",
+      "integrity": "sha512-y5rN/uOsadFT/JfYwhxRS5R7Qce+g3zG97+JrtFZlC9klX/W5hD7iiLzScI4nZqUS7DNUdhPgw4xI8W2LuXlUw==",
+      "funding": [
+        {
+          "type": "individual",
+          "url": "https://github.com/sponsors/RubenVerborgh"
+        }
+      ],
+      "license": "MIT",
+      "engines": {
+        "node": ">=4.0"
+      },
+      "peerDependenciesMeta": {
+        "debug": {
+          "optional": true
+        }
+      }
+    },
+    "node_modules/form-data": {
+      "version": "4.0.6",
+      "resolved": "https://registry.npmjs.org/form-data/-/form-data-4.0.6.tgz",
+      "integrity": "sha512-vKatAh4SlVfgbv+YtmhiRjhEMJsYpsG1Y2rMQtR+SVSbytsSD1YGzDIcrAJmdFec88u/+VoGmxnl+80gL1tRCQ==",
+      "license": "MIT",
+      "dependencies": {
+        "asynckit": "^0.4.0",
+        "combined-stream": "^1.0.8",
+        "es-set-tostringtag": "^2.1.0",
+        "hasown": "^2.0.4",
+        "mime-types": "^2.1.35"
+      },
+      "engines": {
+        "node": ">= 6"
+      }
+    },
+    "node_modules/form-data/node_modules/mime-db": {
+      "version": "1.52.0",
+      "resolved": "https://registry.npmjs.org/mime-db/-/mime-db-1.52.0.tgz",
+      "integrity": "sha512-sPU4uV7dYlvtWJxwwxHD0PuihVNiE7TyAbQ5SWxDCB9mUYvOgroQOwYQQOKPJ8CIbE+1ETVlOoK1UC2nU3gYvg==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.6"
+      }
+    },
+    "node_modules/form-data/node_modules/mime-types": {
+      "version": "2.1.35",
+      "resolved": "https://registry.npmjs.org/mime-types/-/mime-types-2.1.35.tgz",
+      "integrity": "sha512-ZDY+bPm5zTTF+YpCrAU9nK0UgICYPT0QtT1NZWFv4s++TNkcgVaT0g6+4R2uI4MjQjzysHB1zxuWL50hzaeXiw==",
+      "license": "MIT",
+      "dependencies": {
+        "mime-db": "1.52.0"
+      },
+      "engines": {
+        "node": ">= 0.6"
       }
     },
     "node_modules/forwarded": {
@@ -1075,10 +1199,25 @@ FILE: ./backend/package-lock.json
         "url": "https://github.com/sponsors/ljharb"
       }
     },
+    "node_modules/has-tostringtag": {
+      "version": "1.0.2",
+      "resolved": "https://registry.npmjs.org/has-tostringtag/-/has-tostringtag-1.0.2.tgz",
+      "integrity": "sha512-NqADB8VjPFLM2V0VvHUewwwsw0ZWBaIdgo+ieHtK3hasLz4qeCRjYcqfB6AQrBggRKppKF8L52/VqdVsO47Dlw==",
+      "license": "MIT",
+      "dependencies": {
+        "has-symbols": "^1.0.3"
+      },
+      "engines": {
+        "node": ">= 0.4"
+      },
+      "funding": {
+        "url": "https://github.com/sponsors/ljharb"
+      }
+    },
     "node_modules/hasown": {
-      "version": "2.0.3",
-      "resolved": "https://registry.npmjs.org/hasown/-/hasown-2.0.3.tgz",
-      "integrity": "sha512-ej4AhfhfL2Q2zpMmLo7U1Uv9+PyhIZpgQLGT1F9miIGmiCJIoCgSmczFdrc97mWT4kVY72KA+WnnhJ5pghSvSg==",
+      "version": "2.0.4",
+      "resolved": "https://registry.npmjs.org/hasown/-/hasown-2.0.4.tgz",
+      "integrity": "sha512-T2UbfbBEF32wiepXIsMlTW9+dDYC6wMh/t/vYA4tuOMKqWz/n3vr1NFSxQiyP+zk2mXsoMA/i/7qV6LKut1t1A==",
       "license": "MIT",
       "dependencies": {
         "function-bind": "^1.1.2"
@@ -1105,6 +1244,19 @@ FILE: ./backend/package-lock.json
       "funding": {
         "type": "opencollective",
         "url": "https://opencollective.com/express"
+      }
+    },
+    "node_modules/https-proxy-agent": {
+      "version": "5.0.1",
+      "resolved": "https://registry.npmjs.org/https-proxy-agent/-/https-proxy-agent-5.0.1.tgz",
+      "integrity": "sha512-dFcAjpTQFgoLMzC2VwU+C/CbS7uRL0lWmxDITmqm7C+7F0Odmj6s9l6alZc6AELXhrnggM2CeWSXHGOdX2YtwA==",
+      "license": "MIT",
+      "dependencies": {
+        "agent-base": "6",
+        "debug": "4"
+      },
+      "engines": {
+        "node": ">= 6"
       }
     },
     "node_modules/iconv-lite": {
@@ -1487,6 +1639,15 @@ FILE: ./backend/package-lock.json
         "node": ">= 0.10"
       }
     },
+    "node_modules/proxy-from-env": {
+      "version": "2.1.0",
+      "resolved": "https://registry.npmjs.org/proxy-from-env/-/proxy-from-env-2.1.0.tgz",
+      "integrity": "sha512-cJ+oHTW1VAEa8cJslgmUZrc+sjRKgAKl3Zyse6+PV38hZe/V6Z14TbCuXcan9F9ghlz4QrFr2c92TNF82UkYHA==",
+      "license": "MIT",
+      "engines": {
+        "node": ">=10"
+      }
+    },
     "node_modules/qs": {
       "version": "6.15.1",
       "resolved": "https://registry.npmjs.org/qs/-/qs-6.15.1.tgz",
@@ -1852,6 +2013,7 @@ FILE: ./backend/package.json
   "type": "commonjs",
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1075.0",
+    "axios": "^1.19.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
@@ -1917,7 +2079,6 @@ const checkImageSafety = async (imageUrl) => {
   const apiSecret = process.env.SIGHTENGINE_API_SECRET;
 
   if (!apiUser || !apiSecret) {
-    // Graceful fallback if keys aren't provided yet
     return { safe: true };
   }
 
@@ -1944,40 +2105,47 @@ const checkImageSafety = async (imageUrl) => {
     return { safe: true };
   } catch (err) {
     console.error("Sightengine API fault:", err.message);
-    return { safe: true }; // Fail open or closed depending on preference
+    return { safe: true };
   }
 };
 
 /**
- * Checks text content against Google Perspective API for toxicity/profanity
+ * Checks text content against OpenAI Moderation API for toxicity/harassment
  */
 const checkTextToxicity = async (text) => {
-  const apiKey = process.env.PERSPECTIVE_API_KEY;
+  const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey || !text) return { safe: true };
 
   try {
     const response = await axios.post(
-      `https://commentanalyzer.googleapis.com/v1alpha1/comments:analyze?key=${apiKey}`,
+      "https://api.openai.com/v1/moderations",
+      { input: text },
       {
-        comment: { text },
-        languages: ["en"],
-        requestedAttributes: { TOXICITY: {}, PROFANITY: {} },
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
       }
     );
 
-    const scores = response.data.attributeScores;
-    const toxicityScore = scores.TOXICITY?.summaryScore?.value || 0;
-    const profanityScore = scores.PROFANITY?.summaryScore?.value || 0;
+    const result = response.data.results[0];
+    if (result && result.flagged) {
+      // Find which categories were flagged to give a helpful reason
+      const flaggedCategories = Object.entries(result.categories)
+        .filter(([_, isFlagged]) => isFlagged)
+        .map(([category]) => category)
+        .join(", ");
 
-    // Threshold set at 0.75 (75% confidence)
-    if (toxicityScore > 0.75 || profanityScore > 0.75) {
-      return { safe: false, reason: "Content flagged for excessive toxicity or profanity." };
+      return { 
+        safe: false, 
+        reason: `Content flagged by community safety standards (${flaggedCategories.replace(/_/g, " ")}).` 
+      };
     }
 
     return { safe: true };
   } catch (err) {
-    console.error("Perspective API fault:", err.message);
-    return { safe: true };
+    console.error("OpenAI Moderation API fault:", err.message);
+    return { safe: true }; // Fail open if API encounters a temporary glitch
   }
 };
 
@@ -3544,17 +3712,16 @@ FILE: ./backend/routes/billingRoutes.js
 ==================================================
 const express = require("express");
 const router = express.Router();
+const db = require("../db");
 
 // Safely initialize Stripe only if the secret key exists in the environment
 const stripeSecret = process.env.STRIPE_SECRET_KEY;
 const stripe = stripeSecret ? require("stripe")(stripeSecret) : null;
 
-const db = require("../db");
-
 // POST /api/billing/create-intent - Initialize Stripe payment/setup for ACH
 router.post("/create-intent", async (req, res) => {
   if (!stripe) {
-    return res.status(503).json({ error: "Stripe billing is not yet configured or activated." });
+    return res.status(503).json({ error: "Stripe billing is not active. Please use bank bill-pay or a physical check." });
   }
 
   const { email, amount, street_address } = req.body;
@@ -3564,7 +3731,6 @@ router.post("/create-intent", async (req, res) => {
   }
 
   try {
-    // Add the flat $5 processing fee to the charge if desired, or process base amount
     const totalAmountCents = Math.round((parseFloat(amount) + 5.00) * 100);
 
     const paymentIntent = await stripe.paymentIntents.create({
@@ -3586,7 +3752,7 @@ router.post("/create-intent", async (req, res) => {
   }
 });
 
-// Stripe Webhook Endpoint to automate database updates when payment succeeds
+// Stripe Webhook Endpoint
 router.post("/webhook", express.raw({ type: "application/json" }), async (req, res) => {
   if (!stripe) {
     return res.status(503).send("Stripe webhook is not active.");
@@ -3604,17 +3770,15 @@ router.post("/webhook", express.raw({ type: "application/json" }), async (req, r
   if (event.type === "payment_intent.succeeded") {
     const paymentIntent = event.data.object;
     const { street_address, email } = paymentIntent.metadata;
-    const amountPaid = paymentIntent.amount_received / 100 - 5.00; // Subtract fee portion
+    const amountPaid = paymentIntent.amount_received / 100 - 5.00;
 
     try {
       await db.query("BEGIN");
-      // 1. Log transaction
       await db.query(
         `INSERT INTO ledger_transactions (address, amount, transaction_type, payment_method, reference_note, created_by) 
          VALUES ($1, $2, 'payment', 'stripe_ach', 'Automated Digital Checkout', 'Stripe System')`,
         [street_address, amountPaid]
       );
-      // 2. Update balance
       await db.query(
         `UPDATE resident_dues 
          SET balance = balance - $1, last_payment_date = CURRENT_DATE, status = CASE WHEN (balance - $1) <= 0 THEN 'Paid' ELSE 'Partial' END

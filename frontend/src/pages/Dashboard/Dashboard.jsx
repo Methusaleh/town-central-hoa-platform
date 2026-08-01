@@ -45,7 +45,7 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile, onUserU
   const [financeStatus, setFinanceStatus] = useState({ text: "", type: "" });
   const [contactForm, setContactForm] = useState({ subject: "", message: "" });
 
-  const API_BASE = "https://town-central-hoa-platform-469564564131.us-central1.run.app";
+  const API_BASE = import.meta.env.VITE_API_URL || "https://town-central-hoa-platform-469564564131.us-central1.run.app";
   const settingsRef = useRef(null);
 
   // Data Fetching Logic (Ensures dashboard widgets get live database data for Announcements, Alerts, & Water-Cooler)
