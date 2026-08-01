@@ -3,6 +3,7 @@ const router = express.Router();
 const multer = require("multer");
 const db = require("../db");
 const { uploadToR2 } = require("../utils/s3Storage");
+const { checkImageSafety, checkTextToxicity } = require("../utils/safetyFilter"); // Added safety filter import
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
@@ -33,7 +34,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-// POST: Publish a new water-cooler post (supports image file attachment)
+// POST: Publish a new water-cooler post (supports image file attachment & safety filters)
 router.post("/", upload.single("image"), async (req, res) => {
   const { author_name, author_email, content } = req.body;
 
@@ -42,10 +43,24 @@ router.post("/", upload.single("image"), async (req, res) => {
   }
 
   try {
+    // 1. Text Toxicity Check via Perspective API
+    const textCheck = await checkTextToxicity(content.trim());
+    if (!textCheck.safe) {
+      return res.status(400).json({ error: textCheck.reason });
+    }
+
     let imageUrl = req.body.image_url || null; // Can accept direct Tenor GIF URL or uploaded file
 
     if (req.file) {
       imageUrl = await uploadToR2(req.file.buffer, req.file.originalname, req.file.mimetype);
+    }
+
+    // 2. Image Safety Check via Sightengine API (if image/GIF URL is provided)
+    if (imageUrl) {
+      const imageCheck = await checkImageSafety(imageUrl);
+      if (!imageCheck.safe) {
+        return res.status(400).json({ error: imageCheck.reason });
+      }
     }
 
     const query = `
@@ -67,7 +82,7 @@ router.post("/", upload.single("image"), async (req, res) => {
   }
 });
 
-// POST: Add a comment/reply to a water-cooler post
+// POST: Add a comment/reply to a water-cooler post (supports safety filters)
 router.post("/:postId/comments", upload.single("image"), async (req, res) => {
   const { postId } = req.params;
   const { author_name, content } = req.body;
@@ -77,9 +92,23 @@ router.post("/:postId/comments", upload.single("image"), async (req, res) => {
   }
 
   try {
+    // 1. Text Toxicity Check for comments
+    const textCheck = await checkTextToxicity(content.trim());
+    if (!textCheck.safe) {
+      return res.status(400).json({ error: textCheck.reason });
+    }
+
     let imageUrl = req.body.image_url || null;
     if (req.file) {
       imageUrl = await uploadToR2(req.file.buffer, req.file.originalname, req.file.mimetype);
+    }
+
+    // 2. Image Safety Check for comment attachments
+    if (imageUrl) {
+      const imageCheck = await checkImageSafety(imageUrl);
+      if (!imageCheck.safe) {
+        return res.status(400).json({ error: imageCheck.reason });
+      }
     }
 
     const query = `

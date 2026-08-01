@@ -3,6 +3,7 @@ const router = express.Router();
 const multer = require("multer");
 const db = require("../db");
 const { uploadToR2 } = require("../utils/s3Storage");
+const { checkImageSafety, checkTextToxicity } = require("../utils/safetyFilter"); // Added safety filter import
 
 // Use memory storage for temporary file handling (max 5MB)
 const storage = multer.memoryStorage();
@@ -30,7 +31,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-// POST: Publish a new community alert with an optional image file attachment
+// POST: Publish a new community alert with an optional image file attachment & safety filters
 router.post("/", upload.single("image"), async (req, res) => {
   const { category, author, content } = req.body;
 
@@ -39,11 +40,25 @@ router.post("/", upload.single("image"), async (req, res) => {
   }
 
   try {
+    // 1. Text Toxicity Check via Perspective API
+    const textCheck = await checkTextToxicity(content.trim());
+    if (!textCheck.safe) {
+      return res.status(400).json({ error: textCheck.reason });
+    }
+
     let imageUrl = null;
 
     // If an image file was attached, send it to Cloudflare R2 storage
     if (req.file) {
       imageUrl = await uploadToR2(req.file.buffer, req.file.originalname, req.file.mimetype);
+    }
+
+    // 2. Image Safety Check via Sightengine API (if an image is attached)
+    if (imageUrl) {
+      const imageCheck = await checkImageSafety(imageUrl);
+      if (!imageCheck.safe) {
+        return res.status(400).json({ error: imageCheck.reason });
+      }
     }
 
     const query = `
@@ -65,7 +80,7 @@ router.post("/", upload.single("image"), async (req, res) => {
   }
 });
 
-// POST: Add a comment/reply to a community alert
+// POST: Add a comment/reply to a community alert with safety filters
 router.post("/:alertId/comments", async (req, res) => {
   const { alertId } = req.params;
   const { author_name, content } = req.body;
@@ -75,6 +90,12 @@ router.post("/:alertId/comments", async (req, res) => {
   }
 
   try {
+    // 1. Text Toxicity Check for comments
+    const textCheck = await checkTextToxicity(content.trim());
+    if (!textCheck.safe) {
+      return res.status(400).json({ error: textCheck.reason });
+    }
+
     const query = `
       INSERT INTO alert_comments (alert_id, author_name, content)
       VALUES ($1, $2, $3)
@@ -129,6 +150,11 @@ router.patch("/:id/edit", async (req, res) => {
   }
 
   try {
+    const textCheck = await checkTextToxicity(content.trim());
+    if (!textCheck.safe) {
+      return res.status(400).json({ error: textCheck.reason });
+    }
+
     const query = `
       UPDATE community_alerts 
       SET content = $1, is_edited = true, updated_at = CURRENT_TIMESTAMP

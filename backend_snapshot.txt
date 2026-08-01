@@ -2416,12 +2416,16 @@ FILE: ./backend/routes/eventRoutes.js
 ==================================================
 const express = require("express");
 const router = express.Router();
+const multer = require("multer");
 const db = require("../db");
+const { uploadToR2 } = require("../utils/s3Storage");
 
-// GET all events (Sorted by date - past and future)
+const storage = multer.memoryStorage();
+const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
+
+// GET: Fetch all neighborhood events sorted by date
 router.get("/", async (req, res) => {
   try {
-    // Removed the WHERE event_date >= CURRENT_DATE filter
     const { rows } = await db.query(
       "SELECT * FROM neighborhood_events ORDER BY event_date ASC",
     );
@@ -2431,32 +2435,47 @@ router.get("/", async (req, res) => {
   }
 });
 
-// POST a new event with optional document attachments
-router.post("/", async (req, res) => {
-  const { title, event_date, event_time, location, description, attachment_url, attachment_name } = req.body;
+// POST: Board-managed event creation with optional file attachment
+router.post("/", upload.single("attachment"), async (req, res) => {
+  const { title, event_date, event_time, location, description, category } = req.body;
+
+  if (!title || !event_date) {
+    return res.status(400).json({ error: "Title and event date are required fields." });
+  }
+
   try {
+    let attachmentUrl = req.body.attachment_url || null;
+    let attachmentName = req.body.attachment_name || null;
+
+    if (req.file) {
+      attachmentUrl = await uploadToR2(req.file.buffer, req.file.originalname, req.file.mimetype);
+      attachmentName = req.file.originalname;
+    }
+
     const query = `
-      INSERT INTO neighborhood_events (title, event_date, event_time, location, description, attachment_url, attachment_name)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      INSERT INTO neighborhood_events (title, event_date, event_time, location, description, category, attachment_url, attachment_name)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING *;
     `;
     const { rows } = await db.query(query, [
-      title,
+      title.trim(),
       event_date,
-      event_time,
-      location,
-      description,
-      attachment_url || null,   // Falls back gracefully if no file is attached
-      attachment_name || null
+      event_time || null,
+      location || null,
+      description || null,
+      category || "Community Event",
+      attachmentUrl,
+      attachmentName
     ]);
+
     res.status(201).json(rows[0]);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Event creation error:", err.message);
+    res.status(500).json({ error: "Server error while posting event." });
   }
 });
 
 module.exports = router;
-
 ==================================================
 FILE: ./backend/routes/requestRoutes.js
 ==================================================
