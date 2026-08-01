@@ -65,7 +65,8 @@ export default function App() {
         <Dashboard 
           user={user} 
           onNavigateToProfile={() => setView("profile")} 
-          onLogout={handleLogout} // <-- Connected to secure reset
+          onLogout={handleLogout}
+          onUserUpdate={(updatedUser) => setUser(updatedUser)} // <-- Add this prop
         />
       )}
 

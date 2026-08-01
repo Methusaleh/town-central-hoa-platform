@@ -30,6 +30,7 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile, onUserU
   const [vendorsList, setVendorsList] = useState([]);
   const [recentAlerts, setRecentAlerts] = useState([]);
   const [recentPosts, setRecentPosts] = useState([]);
+  const [recentAnnouncements, setRecentAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // UI States
@@ -47,7 +48,7 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile, onUserU
   const API_BASE = "https://town-central-hoa-platform-469564564131.us-central1.run.app";
   const settingsRef = useRef(null);
 
-  // Data Fetching Logic (Ensures dashboard widgets get live database data)
+  // Data Fetching Logic (Ensures dashboard widgets get live database data for Announcements, Alerts, & Water-Cooler)
   useEffect(() => {
     fetch(`${API_BASE}/api/requests/admin/all`)
       .then((res) => res.json())
@@ -70,6 +71,13 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile, onUserU
         setRecentPosts(data.posts || []);
       })
       .catch((err) => console.error("Watercooler preview fetch error:", err));
+
+    fetch(`${API_BASE}/api/announcements`)
+      .then((res) => res.json())
+      .then((data) => {
+        setRecentAnnouncements(data.announcements || data || []);
+      })
+      .catch((err) => console.error("Announcements preview fetch error:", err));
   }, [API_BASE]);
 
   const fetchRosterData = async () => {
@@ -321,10 +329,10 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile, onUserU
             {/* Calendar Widget */}
             <NeighborhoodCalendar user={user} />
 
-            {/* Quick-Look Widgets Grid for Alerts & Water-Cooler */}
+            {/* Larger Quick-Look Widgets Grid (Accommodating 4-5 items) */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
-              {/* Recent Alerts Quick Widget */}
-              <div style={{ background: "white", padding: "20px", borderRadius: "16px", border: "1px solid #e2e8f0" }}>
+              {/* Recent Alerts Quick Widget (Lists up to 5) */}
+              <div style={{ background: "white", padding: "20px", borderRadius: "16px", border: "1px solid #e2e8f0", minHeight: "220px", display: "flex", flexDirection: "column" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
                   <h4 style={{ margin: 0, fontSize: "1rem" }}>🚨 Recent Alerts</h4>
                   <button onClick={() => setActiveTab("alerts")} style={{ background: "none", border: "none", color: "#3b82f6", cursor: "pointer", fontSize: "0.8rem", fontWeight: "600" }}>View All →</button>
@@ -332,16 +340,18 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile, onUserU
                 {recentAlerts.length === 0 ? (
                   <p style={{ color: "#94a3b8", fontSize: "0.85rem", fontStyle: "italic" }}>No active alerts.</p>
                 ) : (
-                  recentAlerts.slice(0, 2).map(alert => (
-                    <div key={alert.id} style={{ padding: "8px 0", borderBottom: "1px solid #f1f5f9", fontSize: "0.85rem" }}>
-                      <strong>{alert.category}:</strong> {alert.content.substring(0, 60)}...
-                    </div>
-                  ))
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    {recentAlerts.slice(0, 5).map(alert => (
+                      <div key={alert.id} style={{ padding: "6px 0", borderBottom: "1px solid #f1f5f9", fontSize: "0.85rem" }}>
+                        <strong>{alert.category}:</strong> {alert.content.substring(0, 45)}...
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
 
-              {/* Water-Cooler Quick Widget */}
-              <div style={{ background: "white", padding: "20px", borderRadius: "16px", border: "1px solid #e2e8f0" }}>
+              {/* Water-Cooler Quick Widget (Lists up to 5) */}
+              <div style={{ background: "white", padding: "20px", borderRadius: "16px", border: "1px solid #e2e8f0", minHeight: "220px", display: "flex", flexDirection: "column" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
                   <h4 style={{ margin: 0, fontSize: "1rem" }}>🌴 Water-Cooler Chat</h4>
                   <button onClick={() => setActiveTab("watercooler")} style={{ background: "none", border: "none", color: "#3b82f6", cursor: "pointer", fontSize: "0.8rem", fontWeight: "600" }}>View All →</button>
@@ -349,17 +359,35 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile, onUserU
                 {recentPosts.length === 0 ? (
                   <p style={{ color: "#94a3b8", fontSize: "0.85rem", fontStyle: "italic" }}>No posts yet.</p>
                 ) : (
-                  recentPosts.slice(0, 2).map(post => (
-                    <div key={post.id} style={{ padding: "8px 0", borderBottom: "1px solid #f1f5f9", fontSize: "0.85rem" }}>
-                      <strong>{post.author_name}:</strong> {post.content.substring(0, 60)}...
-                    </div>
-                  ))
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    {recentPosts.slice(0, 5).map(post => (
+                      <div key={post.id} style={{ padding: "6px 0", borderBottom: "1px solid #f1f5f9", fontSize: "0.85rem" }}>
+                        <strong>{post.author_name}:</strong> {post.content.substring(0, 45)}...
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             </div>
 
-            {/* Full Announcement Feed */}
-            <AnnouncementFeed user={user} />
+            {/* Recent Announcements Quick Preview Widget (Lists up to 5) */}
+            <div style={{ background: "white", padding: "20px", borderRadius: "16px", border: "1px solid #e2e8f0", display: "flex", flexDirection: "column" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                <h4 style={{ margin: 0, fontSize: "1rem" }}>📌 Recent Announcements</h4>
+                <button onClick={() => setActiveTab("announcements")} style={{ background: "none", border: "none", color: "#3b82f6", cursor: "pointer", fontSize: "0.8rem", fontWeight: "600" }}>View All →</button>
+              </div>
+              {recentAnnouncements.length === 0 ? (
+                <p style={{ color: "#94a3b8", fontSize: "0.85rem", fontStyle: "italic" }}>No announcements posted yet.</p>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                  {recentAnnouncements.slice(0, 5).map(ann => (
+                    <div key={ann.id} style={{ padding: "8px 0", borderBottom: "1px solid #f1f5f9", fontSize: "0.9rem" }}>
+                      <strong>{ann.title}</strong> — <span style={{ color: "#64748b" }}>{ann.content.substring(0, 60)}...</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
