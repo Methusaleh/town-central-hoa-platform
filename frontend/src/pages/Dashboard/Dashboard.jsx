@@ -19,6 +19,7 @@ import styles from "./Dashboard.module.css";
 
 export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
   const [activeTab, setActiveTab] = useState("feed");
+  const [isFeedOpen, setIsFeedOpen] = useState(true); // Controls expandable sub-menu state
 
   // --- GUIDELINES WALL STATE ---
   const [showGuidelinesModal, setShowGuidelinesModal] = useState(!user?.agreed_to_guidelines);
@@ -78,7 +79,7 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
   useEffect(() => {
     if (activeTab === "roster" || activeTab === "financials") fetchRosterData();
     if (activeTab === "vendors" || activeTab === "admin-vendors") fetchVendorsData();
-  }, [activeTab, API_BASE]);
+  }, [activeTab]);
 
   const handleResolve = async (requestId) => {
     try {
@@ -207,30 +208,52 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile }) {
           >
             🏠 Home Dashboard
           </button>
-          <button
-            className={`${styles.navItem} ${activeTab === "events" ? styles.activeNav : ""}`}
-            onClick={() => setActiveTab("events")}
-          >
-            🗓️ Events & Calendar
-          </button>
-          <button
-            className={`${styles.navItem} ${activeTab === "announcements" ? styles.activeNav : ""}`}
-            onClick={() => setActiveTab("announcements")}
-          >
-            📌 Announcements
-          </button>
-          <button
-            className={`${styles.navItem} ${activeTab === "alerts" ? styles.activeNav : ""}`}
-            onClick={() => setActiveTab("alerts")}
-          >
-            🚨 Community Alerts
-          </button>
-          <button
-            className={`${styles.navItem} ${activeTab === "watercooler" ? styles.activeNav : ""}`}
-            onClick={() => setActiveTab("watercooler")}
-          >
-            🌴 Water-Cooler
-          </button>
+
+          {/* EXPANDABLE NEIGHBORHOOD FEED SECTION */}
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <button
+              className={styles.navItem}
+              onClick={() => setIsFeedOpen(!isFeedOpen)}
+              style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+            >
+              <span>🌐 Neighborhood Feed</span>
+              <span style={{ fontSize: "0.75rem" }}>{isFeedOpen ? "▲" : "▼"}</span>
+            </button>
+
+            {isFeedOpen && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px", paddingLeft: "15px", marginTop: "6px" }}>
+                <button
+                  className={`${styles.navItem} ${activeTab === "events" ? styles.activeNav : ""}`}
+                  onClick={() => setActiveTab("events")}
+                  style={{ padding: "10px 14px", fontSize: "0.85rem" }}
+                >
+                  🗓️ Events & Calendar
+                </button>
+                <button
+                  className={`${styles.navItem} ${activeTab === "announcements" ? styles.activeNav : ""}`}
+                  onClick={() => setActiveTab("announcements")}
+                  style={{ padding: "10px 14px", fontSize: "0.85rem" }}
+                >
+                  📌 Announcements
+                </button>
+                <button
+                  className={`${styles.navItem} ${activeTab === "alerts" ? styles.activeNav : ""}`}
+                  onClick={() => setActiveTab("alerts")}
+                  style={{ padding: "10px 14px", fontSize: "0.85rem" }}
+                >
+                  🚨 Community Alerts
+                </button>
+                <button
+                  className={`${styles.navItem} ${activeTab === "watercooler" ? styles.activeNav : ""}`}
+                  onClick={() => setActiveTab("watercooler")}
+                  style={{ padding: "10px 14px", fontSize: "0.85rem" }}
+                >
+                  🌴 Water-Cooler
+                </button>
+              </div>
+            )}
+          </div>
+
           <button
             className={`${styles.navItem} ${activeTab === "maintenance" ? styles.activeNav : ""}`}
             onClick={() => setActiveTab("maintenance")}
