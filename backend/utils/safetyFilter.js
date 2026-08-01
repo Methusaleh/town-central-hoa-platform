@@ -8,7 +8,6 @@ const checkImageSafety = async (imageUrl) => {
   const apiSecret = process.env.SIGHTENGINE_API_SECRET;
 
   if (!apiUser || !apiSecret) {
-    // Graceful fallback if keys aren't provided yet
     return { safe: true };
   }
 
@@ -35,40 +34,47 @@ const checkImageSafety = async (imageUrl) => {
     return { safe: true };
   } catch (err) {
     console.error("Sightengine API fault:", err.message);
-    return { safe: true }; // Fail open or closed depending on preference
+    return { safe: true };
   }
 };
 
 /**
- * Checks text content against Google Perspective API for toxicity/profanity
+ * Checks text content against OpenAI Moderation API for toxicity/harassment
  */
 const checkTextToxicity = async (text) => {
-  const apiKey = process.env.PERSPECTIVE_API_KEY;
+  const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey || !text) return { safe: true };
 
   try {
     const response = await axios.post(
-      `https://commentanalyzer.googleapis.com/v1alpha1/comments:analyze?key=${apiKey}`,
+      "https://api.openai.com/v1/moderations",
+      { input: text },
       {
-        comment: { text },
-        languages: ["en"],
-        requestedAttributes: { TOXICITY: {}, PROFANITY: {} },
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
       }
     );
 
-    const scores = response.data.attributeScores;
-    const toxicityScore = scores.TOXICITY?.summaryScore?.value || 0;
-    const profanityScore = scores.PROFANITY?.summaryScore?.value || 0;
+    const result = response.data.results[0];
+    if (result && result.flagged) {
+      // Find which categories were flagged to give a helpful reason
+      const flaggedCategories = Object.entries(result.categories)
+        .filter(([_, isFlagged]) => isFlagged)
+        .map(([category]) => category)
+        .join(", ");
 
-    // Threshold set at 0.75 (75% confidence)
-    if (toxicityScore > 0.75 || profanityScore > 0.75) {
-      return { safe: false, reason: "Content flagged for excessive toxicity or profanity." };
+      return { 
+        safe: false, 
+        reason: `Content flagged by community safety standards (${flaggedCategories.replace(/_/g, " ")}).` 
+      };
     }
 
     return { safe: true };
   } catch (err) {
-    console.error("Perspective API fault:", err.message);
-    return { safe: true };
+    console.error("OpenAI Moderation API fault:", err.message);
+    return { safe: true }; // Fail open if API encounters a temporary glitch
   }
 };
 
