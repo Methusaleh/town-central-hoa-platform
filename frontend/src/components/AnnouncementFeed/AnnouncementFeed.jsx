@@ -9,6 +9,17 @@ export default function AnnouncementFeed({ user }) {
   const [commentsOpen, setCommentsOpen] = useState({});
   const [replyInputs, setReplyInputs] = useState({});
 
+  // Board Announcement Creation Modal State
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newContent, setNewContent] = useState("");
+  const [channelType, setChannelType] = useState("general");
+  const [priority, setPriority] = useState("normal");
+  const [isSticky, setIsSticky] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [gifUrl, setGifUrl] = useState("");
+  const [posting, setPosting] = useState(false);
+
   // Moderation Modal State
   const [modModalId, setModModalId] = useState(null);
   const [removalReason, setRemovalReason] = useState("Violates community guidelines");
@@ -46,6 +57,46 @@ export default function AnnouncementFeed({ user }) {
   useEffect(() => {
     fetchAnnouncements();
   }, [API_URL]);
+
+  const handleCreateAnnouncement = async (e) => {
+    e.preventDefault();
+    if (!newTitle.trim() || !newContent.trim()) return;
+
+    setPosting(true);
+    try {
+      const formData = new FormData();
+      formData.append("title", newTitle.trim());
+      formData.append("content", newContent.trim());
+      formData.append("channel_type", channelType);
+      formData.append("priority", priority);
+      formData.append("is_sticky", isSticky);
+      if (selectedFile) formData.append("image", selectedFile);
+      if (gifUrl) formData.append("image_url", gifUrl);
+
+      const res = await fetch(`${API_URL}/api/announcements`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (res.ok) {
+        setNewTitle("");
+        setNewContent("");
+        setChannelType("general");
+        setPriority("normal");
+        setIsSticky(false);
+        setSelectedFile(null);
+        setGifUrl("");
+        setShowCreateModal(false);
+        fetchAnnouncements();
+      } else {
+        alert("Failed to post announcement.");
+      }
+    } catch (err) {
+      console.error("Network error posting announcement:", err);
+    } finally {
+      setPosting(false);
+    }
+  };
 
   const handleEmojiClick = (itemId, emoji, userName = user?.first_name || "Resident") => {
     setReactions((prev) => {
@@ -125,7 +176,18 @@ export default function AnnouncementFeed({ user }) {
 
   return (
     <div className={styles.feedContainer}>
-      <h3 className={styles.feedTitle}>📌 Official Announcements & Neighborhood Feed</h3>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+        <h3 className={styles.feedTitle} style={{ margin: 0 }}>📌 Official Announcements & Neighborhood Feed</h3>
+        {isAdmin && (
+          <button 
+            onClick={() => setShowCreateModal(true)}
+            className={styles.socialActionBtn}
+            style={{ background: "#2ecc71", color: "white", border: "none", fontWeight: "700" }}
+          >
+            ➕ Post Announcement
+          </button>
+        )}
+      </div>
 
       {announcements.length === 0 ? (
         <div className={styles.announcementCard} style={{ textAlign: "center", color: "#94a3b8", fontStyle: "italic" }}>
@@ -142,19 +204,21 @@ export default function AnnouncementFeed({ user }) {
             <div 
               key={`announcement-${item.id}`} 
               className={`${styles.announcementCard} ${item.is_sticky ? styles.stickyCard : ""}`}
-              style={{ marginBottom: "16px" }}
+              style={{ marginBottom: "16px", borderLeft: item.is_sticky ? "6px solid #eab308" : "6px solid #10b981" }}
             >
               <div className={styles.cardHeader}>
                 <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
                   {item.is_sticky && (
-                    <span className={styles.stickyBadge}>📌 Pinned Announcement</span>
+                    <span style={{ fontSize: "0.75rem", fontWeight: "700", background: "#fef08a", color: "#854d0e", padding: "4px 10px", borderRadius: "20px" }}>
+                      📌 Pinned Announcement
+                    </span>
                   )}
                   <h4>{item.title}</h4>
                 </div>
                 <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
                   <span className={styles.date}>{new Date(item.created_at).toLocaleDateString()}</span>
                   {isAdmin && !item.is_removed && (
-                    <button onClick={() => setModModalId(item.id)} className={styles.removeBtn}>🛡️ Remove</button>
+                    <button onClick={() => setModModalId(item.id)} className={styles.removeBtn} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontWeight: "600", fontSize: "0.8rem" }}>🛡️ Remove</button>
                   )}
                 </div>
               </div>
@@ -257,6 +321,99 @@ export default function AnnouncementFeed({ user }) {
             </div>
           );
         })
+      )}
+
+      {/* BOARD ANNOUNCEMENT CREATION MODAL */}
+      {showCreateModal && (
+        <div className={styles.modalBackdrop} onClick={() => setShowCreateModal(false)}>
+          <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+            <h3>📌 Post Official Announcement</h3>
+            <form onSubmit={handleCreateAnnouncement} style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "15px" }}>
+              <div>
+                <label style={{ fontSize: "0.75rem", fontWeight: "700", color: "#64748b", textTransform: "uppercase" }}>Title</label>
+                <input 
+                  type="text" 
+                  placeholder="Announcement Title..." 
+                  value={newTitle} 
+                  onChange={(e) => setNewTitle(e.target.value)} 
+                  style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", marginTop: "4px", boxSizing: "border-box" }}
+                  required 
+                />
+              </div>
+
+              <div style={{ display: "flex", gap: "10px" }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: "0.75rem", fontWeight: "700", color: "#64748b", textTransform: "uppercase" }}>Channel Type</label>
+                  <select 
+                    value={channelType} 
+                    onChange={(e) => setChannelType(e.target.value)}
+                    style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", marginTop: "4px", background: "white" }}
+                  >
+                    <option value="general">General Feed Post</option>
+                    <option value="critical_email">Critical Email Alert</option>
+                    <option value="sms_notice">SMS Notice</option>
+                    <option value="newsletter">Newsletter Archive</option>
+                  </select>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: "0.75rem", fontWeight: "700", color: "#64748b", textTransform: "uppercase" }}>Priority</label>
+                  <select 
+                    value={priority} 
+                    onChange={(e) => setPriority(e.target.value)}
+                    style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", marginTop: "4px", background: "white" }}
+                  >
+                    <option value="normal">Normal</option>
+                    <option value="important">Important</option>
+                    <option value="urgent">Urgent</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", margin: "4px 0" }}>
+                <input 
+                  type="checkbox" 
+                  id="modalSticky" 
+                  checked={isSticky} 
+                  onChange={(e) => setIsSticky(e.target.checked)} 
+                  style={{ width: "16px", height: "16px", cursor: "pointer" }}
+                />
+                <label htmlFor="modalSticky" style={{ cursor: "pointer", fontSize: "0.85rem", fontWeight: "600", color: "#1e293b" }}>
+                  📌 Pin to top of feed (Sticky Announcement)
+                </label>
+              </div>
+
+              <div>
+                <label style={{ fontSize: "0.75rem", fontWeight: "700", color: "#64748b", textTransform: "uppercase" }}>Content Details</label>
+                <textarea
+                  placeholder="Type announcement details..."
+                  value={newContent}
+                  onChange={(e) => setNewContent(e.target.value)}
+                  style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", height: "100px", resize: "vertical", marginTop: "4px", boxSizing: "border-box" }}
+                  required
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: "0.75rem", fontWeight: "700", color: "#64748b", textTransform: "uppercase" }}>Attach Image / GIF (Optional)</label>
+                <input 
+                  type="file" 
+                  accept="image/*"
+                  onChange={(e) => setSelectedFile(e.target.files[0] || null)}
+                  style={{ width: "100%", marginTop: "4px", fontSize: "0.85rem" }}
+                />
+              </div>
+
+              <div style={{ display: "flex", gap: "8px", marginTop: "10px" }}>
+                <button type="submit" className={styles.socialActionBtn} style={{ flex: 1, justifyContent: "center", background: "#2ecc71", color: "white", border: "none" }} disabled={posting}>
+                  {posting ? "Publishing..." : "Publish Announcement"}
+                </button>
+                <button type="button" className={styles.modalCloseBtn} style={{ flex: 1 }} onClick={() => setShowCreateModal(false)}>
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
       {/* ADMIN REMOVAL MODAL */}
