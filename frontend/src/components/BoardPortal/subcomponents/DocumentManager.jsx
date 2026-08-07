@@ -181,6 +181,38 @@ export default function DocumentManager({ user, onBack }) {
     }
   };
 
+  const handleSeedDemoData = async () => {
+    if (!confirm("This will load test folders and files into your current view. Proceed?")) return;
+    
+    try {
+      // 1. Create Sample Folders
+      const foldersToCreate = [
+        { name: "Financials", parent_id: currentFolderId },
+        { name: "Bylaws & Covenants", parent_id: currentFolderId },
+        { name: "Meeting Minutes", parent_id: currentFolderId }
+      ];
+
+      for (const f of foldersToCreate) {
+        await fetch(`${API_BASE}/api/documents/categories`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(f),
+        });
+      }
+
+      // Re-fetch to get the newly created folder IDs
+      const catsRes = await fetch(`${API_BASE}/api/documents/categories`);
+      const catsData = await catsRes.json();
+      setFolders(catsData || []);
+
+      alert("Demo folders seeded successfully! Refresh or navigate to see them.");
+      fetchData();
+    } catch (err) {
+      console.error("Seeding error:", err);
+      alert("Failed to seed demo data.");
+    }
+  };
+
   return (
     <div className={styles.formCard} style={{ marginTop: "10px", maxWidth: "100%", position: "min-height" }}>
       {/* TOP MISSION CONTROL & ACTION BAR */}
@@ -341,6 +373,13 @@ export default function DocumentManager({ user, onBack }) {
           {contextMenu.type === "bg" && (
             <>
               <button onClick={() => { setInputVal(""); setModalType("new-folder"); setContextMenu(null); }} style={{ width: "100%", textAlign: "left", background: "none", border: "none", padding: "8px 16px", fontSize: "0.85rem", fontWeight: "600", color: "#1e293b", cursor: "pointer" }}>📁 + Add New Folder</button>
+              <button 
+                onClick={handleSeedDemoData} 
+                className={styles.cancelBtn} 
+                style={{ background: "#fef3c7", borderColor: "#fde68a", color: "#b45309" }}
+              >
+                🌱 Load Demo Data
+              </button>
             </>
           )}
         </div>
