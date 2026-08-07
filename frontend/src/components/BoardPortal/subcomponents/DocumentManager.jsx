@@ -1,25 +1,28 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import styles from "../BoardPortal.module.css";
 
 export default function DocumentManager({ user, onBack }) {
   const [folders, setFolders] = useState([]);
   const [documents, setDocuments] = useState([]);
   
-  // Track which folder IDs are currently expanded in the tree view
-  const [expandedFolders, setExpandedFolders] = useState({});
-  const [selectedFolderId, setSelectedFolderId] = useState(null); // null = Root directory
+  // Navigation State (History for Back/Forward)
+  const [currentFolderId, setCurrentFolderId] = useState(null); // null = Root
+  const [history, setHistory] = useState([null]);
+  const [historyIndex, setHistoryIndex] = useState(0);
 
-  // Upload Form States
-  const [customTitle, setCustomTitle] = useState("");
-  const [selectedFiles, setSelectedFiles] = useState([]);
-  const [requiresBoardKey, setRequiresBoardKey] = useState(false);
+  // Sorting & Filtering
+  const [sortBy, setSortBy] = useState("name-asc"); // name-asc, name-desc, date-desc
+
+  // Context Menu State
+  const [contextMenu, setContextMenu] = useState(null); // { type, item, x, y }
+
+  // Modals State
+  const [modalType, setModalType] = useState(null); // "new-folder", "rename", "share"
+  const [modalData, setModalData] = useState(null);
+  const [inputVal, setInputVal] = useState("");
   const [uploading, setUploading] = useState(false);
 
-  // New Folder State
-  const [showNewFolderModal, setShowNewFolderModal] = useState(false);
-  const [newFolderName, setNewFolderName] = useState("");
-  const [parentFolderForNew, setParentFolderForNew] = useState(null);
-
+  const explorerRef = useRef(null);
   const API_BASE = import.meta.env.VITE_API_URL || "https://town-central-hoa-platform-469564564131.us-central1.run.app";
 
   const fetchData = async () => {
@@ -33,262 +36,334 @@ export default function DocumentManager({ user, onBack }) {
       setFolders(catsData || []);
       setDocuments(docsData || []);
     } catch (err) {
-      console.error("Error fetching document tree data:", err);
+      console.error("Error fetching explorer data:", err);
     }
   };
 
   useEffect(() => {
     fetchData();
+    const handleClickOutside = () => setContextMenu(null);
+    window.addEventListener("click", handleClickOutside);
+    return () => window.removeEventListener("click", handleClickOutside);
   }, [API_BASE]);
 
-  const toggleExpand = (folderId, e) => {
-    e.stopPropagation();
-    setExpandedFolders(prev => ({ ...prev, [folderId]: !prev[folderId] }));
+  // Navigation Handlers with History Support
+  const navigateToFolder = (folderId) => {
+    const newHistory = history.slice(0, historyIndex + 1);
+    newHistory.push(folderId);
+    setHistory(newHistory);
+    setHistoryIndex(newHistory.length - 1);
+    setCurrentFolderId(folderId);
+    setContextMenu(null);
   };
 
-  const handleCreateFolder = async (e) => {
-    e.preventDefault();
-    if (!newFolderName.trim()) return;
-
-    try {
-      const res = await fetch(`${API_BASE}/api/documents/categories`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newFolderName.trim(), parent_id: parentFolderForNew }),
-      });
-      if (res.ok) {
-        setNewFolderName("");
-        setShowNewFolderModal(false);
-        setParentFolderForNew(null);
-        fetchData();
-      }
-    } catch (err) {
-      console.error("Error creating folder:", err);
+  const handleBack = () => {
+    if (historyIndex > 0) {
+      const newIndex = historyIndex - 1;
+      setHistoryIndex(newIndex);
+      setCurrentFolderId(history[newIndex]);
     }
   };
 
-  const handleUploadToSelectedFolder = async (e) => {
+  const handleForward = () => {
+    if (historyIndex < history.length - 1) {
+      const newIndex = historyIndex + 1;
+      setHistoryIndex(newIndex);
+      setCurrentFolderId(history[newIndex]);
+    }
+  };
+
+  // Build Breadcrumb Chain from Root down to Current Folder
+  const getBreadcrumbs = () => {
+    const path = [{ id: null, name: "Root" }];
+    let currId = currentFolderId;
+    const tempPath = [];
+    while (currId !== null) {
+      const folder = folders.find(f => f.id === currId);
+      if (folder) {
+        tempPath.unshift(folder);
+        currId = folder.parent_id;
+      } else {
+        break;
+      }
+    }
+    return [...path, ...tempPath];
+  };
+
+  // Filter & Sort Items in Current View
+  const currentFolders = folders.filter(f => (currentFolderId === null ? !f.parent_id : f.parent_id === currentFolderId));
+  const currentDocs = documents.filter(d => (currentFolderId === null ? !d.category_id : d.category_id === currentFolderId));
+
+  const sortItems = (items, type) => {
+    return [...items].sort((a, b) => {
+      const nameA = (type === "folder" ? a.name : a.title).toLowerCase();
+      const nameB = (type === "folder" ? b.name : b.title).toLowerCase();
+      if (sortBy === "name-asc") return nameA.localeCompare(nameB);
+      if (sortBy === "name-desc") return nameB.localeCompare(nameA);
+      if (sortBy === "date-desc") return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+      return 0;
+    });
+  };
+
+  const displayedFolders = sortItems(currentFolders, "folder");
+  const displayedDocs = sortItems(currentDocs, "file");
+
+  // Direct Drag-and-Drop File Upload Handler
+  const handleDropUpload = async (e) => {
     e.preventDefault();
-    if (selectedFiles.length === 0) return alert("Please select files to upload.");
+    e.stopPropagation();
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length === 0) return;
 
     setUploading(true);
     try {
       const formData = new FormData();
-      if (customTitle.trim()) formData.append("title", customTitle.trim());
-      formData.append("category_id", selectedFolderId || "");
-      formData.append("requires_board_key", requiresBoardKey);
+      formData.append("category_id", currentFolderId || "");
+      formData.append("requires_board_key", false);
       if (user?.id) formData.append("uploaded_by", user.id);
 
-      for (const file of selectedFiles) {
-        formData.append("files", file);
-      }
+      files.forEach(file => formData.append("files", file));
 
       const res = await fetch(`${API_BASE}/api/documents`, { method: "POST", body: formData });
-      if (!res.ok) throw new Error("Upload failed");
-
-      alert("Documents successfully uploaded!");
-      setSelectedFiles([]);
-      setCustomTitle("");
-      setRequiresBoardKey(false);
-      fetchData();
+      if (res.ok) fetchData();
+      else alert("Upload failed.");
     } catch (err) {
-      alert(err.message);
+      console.error("Drop upload error:", err);
     } finally {
       setUploading(false);
     }
   };
 
-  const handleDeleteDoc = async (id) => {
-    if (!confirm("Are you sure? This will delete the file from storage forever.")) return;
+  // Right-Click Context Menu Trigger
+  const handleContextMenu = (e, type, item = null) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenu({
+      type, // "file", "folder", or "bg"
+      item,
+      x: e.pageX,
+      y: e.pageY
+    });
+  };
+
+  // CRUD Actions
+  const handleCreateFolderSubmit = async (e) => {
+    e.preventDefault();
+    if (!inputVal.trim()) return;
+
     try {
-      const res = await fetch(`${API_BASE}/api/documents/${id}`, { method: "DELETE" });
+      const res = await fetch(`${API_BASE}/api/documents/categories`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: inputVal.trim(), parent_id: currentFolderId }),
+      });
       if (res.ok) {
-        setDocuments(documents.filter(d => d.id !== id));
-      } else {
-        const errorData = await res.json();
-        alert(`Delete failed: ${errorData?.error || "Unknown error"}`);
+        setInputVal("");
+        setModalType(null);
+        fetchData();
       }
     } catch (err) {
-      console.error("Delete network error:", err);
+      console.error("Folder creation error:", err);
     }
   };
 
-  // Recursive Tree Node Renderer for Folders
-  const renderFolderNode = (parentId = null, level = 0) => {
-    const childFolders = folders.filter(f => (parentId === null ? !f.parent_id : f.parent_id === parentId));
-    const folderDocs = documents.filter(d => (parentId === null ? !d.category_id : d.category_id === parentId));
+  const handleDelete = async (type, id) => {
+    setContextMenu(null);
+    if (!confirm(`Are you sure you want to delete this ${type}?`)) return;
 
-    return (
-      <div style={{ display: "flex", flexDirection: "column", gap: "4px", paddingLeft: level > 0 ? "20px" : "0" }}>
-        {childFolders.map(folder => {
-          const isExpanded = !!expandedFolders[folder.id];
-          const isSelected = selectedFolderId === folder.id;
-
-          return (
-            <div key={folder.id}>
-              {/* Folder Row */}
-              <div 
-                onClick={() => setSelectedFolderId(folder.id)}
-                style={{ 
-                  display: "flex", 
-                  alignItems: "center", 
-                  justifyContent: "space-between", 
-                  padding: "8px 12px", 
-                  borderRadius: "8px", 
-                  background: isSelected ? "#eff6ff" : "transparent", 
-                  border: isSelected ? "1px solid #bfdbfe" : "1px solid transparent",
-                  cursor: "pointer",
-                  transition: "background 0.15s"
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <button 
-                    onClick={(e) => toggleExpand(folder.id, e)} 
-                    style={{ background: "none", border: "none", cursor: "pointer", fontSize: "0.75rem", color: "#64748b", width: "16px" }}
-                  >
-                    {isExpanded ? "▼" : "▶"}
-                  </button>
-                  <span>📁</span>
-                  <span style={{ fontWeight: isSelected ? "700" : "600", color: "#1e293b", fontSize: "0.9rem" }}>{folder.name}</span>
-                </div>
-
-                <button 
-                  onClick={(e) => { e.stopPropagation(); setParentFolderForNew(folder.id); setShowNewFolderModal(true); }}
-                  style={{ background: "none", border: "none", color: "#3b82f6", fontSize: "0.75rem", cursor: "pointer", fontWeight: "600" }}
-                  title="Add Subfolder"
-                >
-                  + Subfolder
-                </button>
-              </div>
-
-              {/* Expanded Contents (Subfolders & Files) */}
-              {isExpanded && (
-                <div style={{ marginTop: "4px" }}>
-                  {renderFolderNode(folder.id, level + 1)}
-                </div>
-              )}
-            </div>
-          );
-        })}
-
-        {/* Files directly inside this folder view */}
-        {folderDocs.map(doc => (
-          <div 
-            key={doc.id} 
-            style={{ 
-              display: "flex", 
-              alignItems: "center", 
-              justifyContent: "space-between", 
-              padding: "6px 12px 6px 36px", 
-              borderRadius: "6px", 
-              background: "#f8fafc", 
-              border: "1px solid #f1f5f9",
-              fontSize: "0.85rem" 
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", overflow: "hidden" }}>
-              <span>📄</span>
-              <span style={{ color: "#334155", fontWeight: "500", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={doc.title}>{doc.title}</span>
-            </div>
-            <div style={{ display: "flex", gap: "10px", alignItems: "center", flexShrink: 0 }}>
-              <a href={doc.file_url} target="_blank" rel="noreferrer" style={{ color: "#3b82f6", fontWeight: "600", textDecoration: "none" }}>View</a>
-              <button onClick={() => handleDeleteDoc(doc.id)} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontWeight: "600" }}>Delete</button>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
+    try {
+      const endpoint = type === "file" ? `${API_BASE}/api/documents/${id}` : `${API_BASE}/api/documents/categories/${id}`;
+      // Note: If you don't have a backend route for category deletion yet, ensure it cascades or use file delete.
+      const res = await fetch(`${API_BASE}/api/documents/${id}`, { method: "DELETE" });
+      if (res.ok) fetchData();
+    } catch (err) {
+      console.error("Delete error:", err);
+    }
   };
 
-  const selectedFolderName = selectedFolderId === null 
-    ? "Root Directory" 
-    : folders.find(f => f.id === selectedFolderId)?.name || "Selected Folder";
-
   return (
-    <div className={styles.formCard} style={{ marginTop: "10px", maxWidth: "100%" }}>
+    <div className={styles.formCard} style={{ marginTop: "10px", maxWidth: "100%", position: "min-height" }}>
+      {/* TOP MISSION CONTROL & ACTION BAR */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
         <button className={styles.cancelBtn} onClick={onBack}>← Back to Mission Control</button>
-        <button className={styles.postBtn} onClick={() => { setParentFolderForNew(null); setShowNewFolderModal(true); }}>📁 + New Root Folder</button>
+        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+          <select 
+            value={sortBy} 
+            onChange={(e) => setSortBy(e.target.value)}
+            style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", background: "white", fontSize: "0.85rem", fontWeight: "600" }}
+          >
+            <option value="name-asc">Sort: Name (A-Z)</option>
+            <option value="name-desc">Sort: Name (Z-A)</option>
+            <option value="date-desc">Sort: Newest First</option>
+          </select>
+          <button className={styles.postBtn} onClick={() => { setInputVal(""); setModalType("new-folder"); }}>📁 + New Folder</button>
+        </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "25px", alignItems: "start" }}>
-        {/* LEFT PANE: FILE TREE EXPLORER */}
-        <div style={{ background: "white", border: "1px solid #e2e8f0", borderRadius: "16px", padding: "20px", maxHeight: "600px", overflowY: "auto" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px", borderBottom: "1px solid #f1f5f9", paddingBottom: "10px" }}>
-            <h4 style={{ margin: 0, color: "#0f172a" }}>📂 Document Tree Explorer</h4>
-            <button 
-              onClick={() => setSelectedFolderId(null)} 
-              style={{ background: selectedFolderId === null ? "#eff6ff" : "none", border: "1px solid #e2e8f0", padding: "4px 10px", borderRadius: "6px", cursor: "pointer", fontSize: "0.8rem", fontWeight: "600" }}
-            >
-              Root
-            </button>
-          </div>
+      {/* EXPLORER NAVIGATION CONTROLS BAR */}
+      <div style={{ display: "flex", alignItems: "center", gap: "12px", background: "#f8fafc", padding: "10px 16px", borderRadius: "12px", border: "1px solid #e2e8f0", marginBottom: "20px" }}>
+        <div style={{ display: "flex", gap: "4px" }}>
+          <button 
+            onClick={handleBack} 
+            disabled={historyIndex === 0} 
+            style={{ background: "white", border: "1px solid #cbd5e1", borderRadius: "6px", width: "32px", height: "32px", cursor: historyIndex === 0 ? "not-allowed" : "pointer", opacity: historyIndex === 0 ? 0.5 : 1, fontWeight: "bold" }}
+          >
+            ←
+          </button>
+          <button 
+            onClick={handleForward} 
+            disabled={historyIndex >= history.length - 1} 
+            style={{ background: "white", border: "1px solid #cbd5e1", borderRadius: "6px", width: "32px", height: "32px", cursor: historyIndex >= history.length - 1 ? "not-allowed" : "pointer", opacity: historyIndex >= history.length - 1 ? 0.5 : 1, fontWeight: "bold" }}
+          >
+            →
+          </button>
+        </div>
 
-          {folders.length === 0 && documents.length === 0 ? (
-            <p style={{ color: "#94a3b8", fontStyle: "italic", textAlign: "center" }}>No folders or documents created yet.</p>
-          ) : (
-            renderFolderNode(null, 0)
+        {/* Live Breadcrumb Path */}
+        <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.9rem", fontWeight: "600", color: "#475569", overflowX: "auto" }}>
+          <span>📍</span>
+          {getBreadcrumbs().map((crumb, idx, arr) => (
+            <span key={crumb.id || "root"} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              {idx > 0 && <span style={{ color: "#94a3b8" }}>/</span>}
+              <button 
+                onClick={() => {
+                  const targetIndex = history.indexOf(crumb.id);
+                  if (targetIndex !== -1) {
+                    setHistoryIndex(targetIndex);
+                    setCurrentFolderId(crumb.id);
+                  } else {
+                    navigateToFolder(crumb.id);
+                  }
+                }}
+                style={{ background: idx === arr.length - 1 ? "#e2e8f0" : "transparent", border: "none", padding: "4px 8px", borderRadius: "6px", cursor: "pointer", fontWeight: "inherit", color: "#1e293b" }}
+              >
+                {crumb.name}
+              </button>
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* MAIN FILE EXPLORER DROP ZONE CANVAS */}
+      <div 
+        ref={explorerRef}
+        onContextMenu={(e) => handleContextMenu(e, "bg")}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={handleDropUpload}
+        style={{ 
+          background: "white", 
+          border: "2px dashed #cbd5e1", 
+          borderRadius: "16px", 
+          padding: "24px", 
+          minHeight: "450px", 
+          maxHeight: "650px", 
+          overflowY: "auto",
+          position: "relative" 
+        }}
+      >
+        {uploading && (
+          <div style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,0.8)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 50, fontWeight: "700", color: "#2ecc71" }}>
+            Uploading files to current folder...
+          </div>
+        )}
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "15px" }}>
+          {/* Folders Grid */}
+          {displayedFolders.map(folder => (
+            <div 
+              key={folder.id}
+              onDoubleClick={() => navigateToFolder(folder.id)}
+              onContextMenu={(e) => handleContextMenu(e, "folder", folder)}
+              style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "16px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: "8px", transition: "all 0.15s ease" }}
+              title="Double-click to open"
+            >
+              <span style={{ fontSize: "2.5rem" }}>📁</span>
+              <span style={{ fontWeight: "700", color: "#1e293b", fontSize: "0.9rem", width: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{folder.name}</span>
+            </div>
+          ))}
+
+          {/* Files Grid */}
+          {displayedDocs.map(doc => (
+            <div 
+              key={doc.id}
+              onContextMenu={(e) => handleContextMenu(e, "file", doc)}
+              style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "16px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: "8px", boxShadow: "0 2px 4px rgba(0,0,0,0.02)" }}
+            >
+              <span style={{ fontSize: "2.5rem" }}>📄</span>
+              <span style={{ fontWeight: "600", color: "#334155", fontSize: "0.85rem", width: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={doc.title}>{doc.title}</span>
+              <div style={{ display: "flex", gap: "10px", marginTop: "auto", fontSize: "0.8rem" }}>
+                <a href={doc.file_url} target="_blank" rel="noreferrer" style={{ color: "#3b82f6", fontWeight: "650", textDecoration: "none" }}>Open</a>
+                <button onClick={() => handleDelete("file", doc.id)} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontWeight: "650", padding: 0 }}>Delete</button>
+              </div>
+            </div>
+          ))}
+
+          {displayedFolders.length === 0 && displayedDocs.length === 0 && (
+            <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "80px 0", color: "#94a3b8", fontStyle: "italic" }}>
+              This folder is empty. Drag & drop files here or right-click to add a new folder.
+            </div>
           )}
         </div>
-
-        {/* RIGHT PANE: UPLOAD TARGET */}
-        <div style={{ background: "white", border: "1px solid #e2e8f0", borderRadius: "16px", padding: "20px" }}>
-          <h4 style={{ margin: "0 0 6px 0", color: "#0f172a" }}>📤 Upload Files</h4>
-          <p style={{ fontSize: "0.85rem", color: "#64748b", margin: "0 0 20px 0" }}>
-            Target Destination: <strong style={{ color: "#2563eb" }}>{selectedFolderName}</strong>
-          </p>
-
-          <form onSubmit={handleUploadToSelectedFolder} className={styles.announcementForm} style={{ marginTop: 0 }}>
-            <input 
-              type="text" 
-              placeholder="Optional Custom Title (leave blank for original filename)" 
-              value={customTitle} 
-              onChange={(e) => setCustomTitle(e.target.value)} 
-            />
-
-            <div 
-              onClick={() => document.getElementById("tree-file-input").click()}
-              style={{ border: "2px dashed #cbd5e1", borderRadius: "12px", padding: "25px", textAlign: "center", background: selectedFiles.length > 0 ? "#f0fdf4" : "#f8fafc", cursor: "pointer" }}
-            >
-              <p style={{ margin: 0, fontWeight: "600", color: "#475569" }}>
-                {selectedFiles.length > 0 ? `✅ ${selectedFiles.length} file(s) selected` : "📁 Click to browse or drop files here"}
-              </p>
-              <input id="tree-file-input" type="file" multiple hidden onChange={(e) => setSelectedFiles(Array.from(e.target.files || []))} />
-            </div>
-
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", margin: "10px 0" }}>
-              <input type="checkbox" id="boardKey" checked={requiresBoardKey} onChange={(e) => setRequiresBoardKey(e.target.checked)} style={{ width: "16px", height: "16px" }} />
-              <label htmlFor="boardKey" style={{ cursor: "pointer", fontSize: "0.9rem", color: "#334155", fontWeight: "600" }}>🔒 Board Access Only (Hidden from Residents)</label>
-            </div>
-
-            <button type="submit" className={styles.submitBtn} disabled={uploading || selectedFiles.length === 0}>
-              {uploading ? "Uploading..." : `Upload to ${selectedFolderName}`}
-            </button>
-          </form>
-        </div>
       </div>
 
-      {/* NEW FOLDER MODAL */}
-      {showNewFolderModal && (
-        <div className={styles.modalBackdrop} onClick={() => setShowNewFolderModal(false)}>
+      {/* CUSTOM RIGHT-CLICK CONTEXT MENU */}
+      {contextMenu && (
+        <div 
+          style={{ 
+            position: "absolute", 
+            top: contextMenu.y, 
+            left: contextMenu.x, 
+            background: "white", 
+            border: "1px solid #e2e8f0", 
+            borderRadius: "10px", 
+            boxShadow: "0 10px 25px -5px rgba(0,0,0,0.15)", 
+            zIndex: 1000, 
+            padding: "6px 0",
+            minWidth: "160px" 
+          }}
+        >
+          {contextMenu.type === "file" && (
+            <>
+              <a href={contextMenu.item.file_url} target="_blank" rel="noreferrer" style={{ display: "block", padding: "8px 16px", color: "#1e293b", textDecoration: "none", fontSize: "0.85rem", fontWeight: "600" }}>👁️ Open / View</a>
+              <button onClick={() => { navigator.clipboard.writeText(contextMenu.item.file_url); alert("Link copied to clipboard!"); setContextMenu(null); }} style={{ width: "100%", textAlign: "left", background: "none", border: "none", padding: "8px 16px", fontSize: "0.85rem", fontWeight: "600", color: "#1e293b", cursor: "pointer" }}>🔗 Copy Link</button>
+              <button onClick={() => handleDelete("file", contextMenu.item.id)} style={{ width: "100%", textAlign: "left", background: "none", border: "none", padding: "8px 16px", fontSize: "0.85rem", fontWeight: "600", color: "#ef4444", cursor: "pointer" }}>🗑️ Delete</button>
+            </>
+          )}
+
+          {contextMenu.type === "folder" && (
+            <>
+              <button onClick={() => { navigateToFolder(contextMenu.item.id); setContextMenu(null); }} style={{ width: "100%", textAlign: "left", background: "none", border: "none", padding: "8px 16px", fontSize: "0.85rem", fontWeight: "600", color: "#1e293b", cursor: "pointer" }}>📂 Open Folder</button>
+              <button onClick={() => { setModalData(contextMenu.item); setInputVal(contextMenu.item.name); setModalType("rename"); setContextMenu(null); }} style={{ width: "100%", textAlign: "left", background: "none", border: "none", padding: "8px 16px", fontSize: "0.85rem", fontWeight: "600", color: "#1e293b", cursor: "pointer" }}>✏️ Rename</button>
+              <button onClick={() => handleDelete("folder", contextMenu.item.id)} style={{ width: "100%", textAlign: "left", background: "none", border: "none", padding: "8px 16px", fontSize: "0.85rem", fontWeight: "600", color: "#ef4444", cursor: "pointer" }}>🗑️ Delete</button>
+            </>
+          )}
+
+          {contextMenu.type === "bg" && (
+            <>
+              <button onClick={() => { setInputVal(""); setModalType("new-folder"); setContextMenu(null); }} style={{ width: "100%", textAlign: "left", background: "none", border: "none", padding: "8px 16px", fontSize: "0.85rem", fontWeight: "600", color: "#1e293b", cursor: "pointer" }}>📁 + Add New Folder</button>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* MODAL WINDOWS */}
+      {modalType === "new-folder" && (
+        <div className={styles.modalBackdrop} onClick={() => setModalType(null)}>
           <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
             <h3>📁 Create New Folder</h3>
-            <p style={{ fontSize: "0.85rem", color: "#64748b" }}>
-              Creating inside: <strong>{parentFolderForNew ? folders.find(f => f.id === parentFolderForNew)?.name : "Root Directory"}</strong>
-            </p>
-            <form onSubmit={handleCreateFolder} style={{ display: "flex", flexDirection: "column", gap: "15px", marginTop: "15px" }}>
+            <form onSubmit={handleCreateFolderSubmit} style={{ display: "flex", flexDirection: "column", gap: "15px", marginTop: "15px" }}>
               <input 
                 type="text" 
-                placeholder="Folder Name (e.g., Meeting Minutes)" 
-                value={newFolderName} 
-                onChange={(e) => setNewFolderName(e.target.value)} 
+                placeholder="Folder Name..." 
+                value={inputVal} 
+                onChange={(e) => setInputVal(e.target.value)} 
                 style={{ padding: "12px", borderRadius: "8px", border: "1px solid #cbd5e1", width: "100%", boxSizing: "border-box" }}
                 required 
                 autoFocus
               />
               <div style={{ display: "flex", gap: "10px" }}>
-                <button type="submit" className={styles.submitBtn} style={{ flex: 1 }}>Create Folder</button>
-                <button type="button" className={styles.cancelBtn} onClick={() => setShowNewFolderModal(false)} style={{ flex: 1 }}>Cancel/Close</button>
+                <button type="submit" className={styles.submitBtn} style={{ flex: 1 }}>Create</button>
+                <button type="button" className={styles.cancelBtn} onClick={() => setModalType(null)} style={{ flex: 1 }}>Cancel</button>
               </div>
             </form>
           </div>
