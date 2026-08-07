@@ -452,25 +452,4 @@ router.post("/agree-guidelines", async (req, res) => {
   }
 });
 
-// TEMPORARY: Helper route to fix admin password hash
-router.post("/fix-password", async (req, res) => {
-  const { email, newPassword } = req.body;
-  try {
-    const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
-
-    const { rows } = await db.query(
-      "UPDATE users SET password_hash = $1 WHERE email = $2 RETURNING email",
-      [hashedPassword, email.trim().toLowerCase()]
-    );
-
-    if (rows.length === 0) {
-      return res.status(404).json({ error: "User not found." });
-    }
-
-    res.json({ success: true, message: `Password successfully hashed and updated for ${rows[0].email}` });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
 module.exports = router;
