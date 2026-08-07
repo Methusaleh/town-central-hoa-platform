@@ -1,0 +1,35 @@
+---
+description: Frontend component and styling conventions
+globs: frontend/**/*
+alwaysApply: false
+---
+
+# Frontend Conventions
+
+## Structure
+
+- One folder per component: `ComponentName/ComponentName.jsx` + `ComponentName.module.css`
+- Pages live in `frontend/src/pages/`
+- Board admin tools in `frontend/src/components/BoardPortal/subcomponents/`
+
+## API calls
+
+Import the shared base URL — never redefine it locally:
+
+```javascript
+import { API_URL } from "../../config"; // adjust relative path
+const res = await fetch(`${API_URL}/api/announcements`);
+```
+
+## Styling
+
+- CSS Modules for component styles
+- Inline `style={{}}` exists in some modals — match surrounding pattern when editing
+
+## Role gating (client-side only)
+
+```javascript
+const isAdmin = user?.role === "board_member" || user?.role === "super_admin";
+```
+
+Admin UI is hidden for non-admins but backend does not enforce this yet.

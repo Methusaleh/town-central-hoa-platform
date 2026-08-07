@@ -1,0 +1,43 @@
+---
+description: Town Central HOA platform — stack, architecture, and known constraints
+alwaysApply: true
+---
+
+# Town Central HOA Platform
+
+React/Vite frontend + Express/PostgreSQL backend for a neighborhood HOA portal.
+
+## Stack
+
+- **Frontend**: React 19, Vite 8, plain JSX, CSS Modules → deployed on **Vercel**
+- **Backend**: Node 20, Express 5, raw SQL via `pg` → deployed on **Cloud Run**
+- **Database**: PostgreSQL on **Neon** (`DATABASE_URL`)
+- **Storage**: Cloudflare R2 (S3-compatible)
+- **Payments**: Stripe ACH
+- **Email**: Nodemailer → Zoho SMTP
+- **Moderation**: Sightengine (images), OpenAI (text)
+- **Maps**: Google Maps Places API
+
+## Architecture
+
+- No React Router — `App.jsx` uses view-state (`landing`, `login`, `dashboard`, etc.)
+- No ORM — SQL is inline in `backend/routes/*.js`
+- No shared API client — components use `fetch()` with `API_URL` from `frontend/src/config.js`
+- Firebase auth was abandoned — do not add Firebase unless explicitly requested
+
+## Auth (current state — needs hardening)
+
+- Custom email/password via `/api/residents/login`
+- Passwords stored in `users.password_hash` — **bcrypt not yet implemented**
+- No backend auth middleware — admin routes are unprotected; role checks are client-side only
+- Roles: `resident`, `board_member`, `super_admin` (admin email gets `super_admin` at login)
+
+## Deployment
+
+Auto-deploy on GitHub push to Vercel (frontend) and Cloud Run (backend).
+
+## Do not
+
+- Reintroduce Firebase auth
+- Add TypeScript unless explicitly requested
+- Create snapshot/bundle text dumps of the codebase
