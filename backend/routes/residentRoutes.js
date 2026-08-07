@@ -1,8 +1,10 @@
+const bcrypt = require("bcrypt");
 const express = require("express");
 const router = express.Router();
 const db = require("../db");
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
+
 
 // Initialize secure Zoho backend mail carrier using environment variables
 const transporter = nodemailer.createTransport({
@@ -25,8 +27,8 @@ router.post("/login", async (req, res) => {
 
   try {
     const { rows } = await db.query(
-      "SELECT id, first_name, last_name, email, address, role FROM users WHERE email = $1 AND password_hash = $2",
-      [email.trim().toLowerCase(), password]
+      "SELECT id, first_name, last_name, email, address, role, password_hash FROM users WHERE email = $1",
+      [email.trim().toLowerCase()]
     );
 
     if (rows.length === 0) {
@@ -35,12 +37,21 @@ router.post("/login", async (req, res) => {
 
     const user = rows[0];
 
+    // Securely compare plain-text password with stored bcrypt hash
+    const match = await bcrypt.compare(password, user.password_hash);
+    if (!match) {
+      return res.status(401).json({ error: "Invalid email or password." });
+    }
+
     // Assign super_admin role dynamically if logging in as admin
     if (user.email === "admin@towncentralhoa.org") {
       user.role = "super_admin";
     } else if (!user.role) {
       user.role = "resident";
     }
+
+    // Omit password_hash before sending the user object back
+    delete user.password_hash;
 
     res.json({ success: true, user });
   } catch (err) {
@@ -87,26 +98,30 @@ router.post("/lookup", async (req, res) => {
   }
 });
 
-// POST /api/claim - Finalizes account creation and claims the roster profile
+// POST /api/residents/claim - Finalizes account creation and claims the roster profile with bcrypt password hashing
 router.post("/claim", async (req, res) => {
   const { first_name, last_name, email, password, street_address, residentId } = req.body;
 
   try {
     await db.query("BEGIN");
 
-    // 1. Create the user account (using password_hash)
+    // 1. Hash the user's password securely using bcrypt
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+    // 2. Create the user account using the secure password hash
     await db.query(
       `INSERT INTO users (first_name, last_name, email, password_hash, address) VALUES ($1, $2, $3, $4, $5)`,
-      [first_name, last_name, email, password, street_address]
+      [first_name, last_name, email, hashedPassword, street_address]
     );
 
-    // 2. Mark roster as claimed
+    // 3. Mark roster as claimed
     const { rows } = await db.query(
       "UPDATE neighborhood_roster SET is_claimed = true, first_name = $1, last_name = $2 WHERE id = $3 RETURNING id",
       [first_name, last_name, residentId]
     );
 
-    // 3. TRIGGER WELCOME PACKET HERE
+    // 4. TRIGGER WELCOME PACKET HERE
     const mailOptions = {
         from: `"Town Central Executive Board" <${process.env.EMAIL_USER}>`,
         to: email,
@@ -122,6 +137,7 @@ router.post("/claim", async (req, res) => {
     res.status(201).json({ success: true });
   } catch (err) {
     await db.query("ROLLBACK");
+    console.error("Claim error:", err.message);
     res.status(500).json({ error: "Server error during claim." });
   }
 });
@@ -245,7 +261,7 @@ router.get("/invite/:token", async (req, res) => {
   }
 });
 
-// POST /api/residents/invite/accept - Finalizes the secondary account creation
+// POST /api/residents/invite/accept - Finalizes the secondary account creation with bcrypt password hashing
 router.post("/invite/accept", async (req, res) => {
   const { token, first_name, last_name, password } = req.body;
 
@@ -264,19 +280,24 @@ router.post("/invite/accept", async (req, res) => {
     
     const { email, address } = inviteRes.rows[0];
 
-    // 2. Create the new user attached to the primary resident's address (using password_hash)
+    // 2. Hash the secondary user's password securely using bcrypt
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+    // 3. Create the new user attached to the primary resident's address using the hash
     await db.query(
       "INSERT INTO users (first_name, last_name, email, password_hash, address) VALUES ($1, $2, $3, $4, $5)",
-      [first_name, last_name, email, password, address]
+      [first_name, last_name, email, hashedPassword, address]
     );
 
-    // 3. Mark the invitation as used
+    // 4. Mark the invitation as used
     await db.query("UPDATE invitations SET is_used = true WHERE token = $1", [token]);
     
     await db.query("COMMIT");
     res.status(201).json({ success: true });
   } catch (err) {
     await db.query("ROLLBACK");
+    console.error("Invite accept error:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -335,7 +356,7 @@ router.delete("/account/:id", async (req, res) => {
   }
 });
 
-// --- ADDED FOR AUTOCOMPLETE: Fetch true directory indexing for administrative subcomponents ---
+// --- AUTO-COMPLETE: Fetch true directory indexing for administrative subcomponents ---
 router.get("/master-list-placeholder", async (req, res) => {
   try {
     const query = `
