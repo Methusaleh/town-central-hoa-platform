@@ -15,8 +15,10 @@ import VendorDirectory from "../../components/VendorDirectory/VendorDirectory";
 import DocumentCenter from "../../components/DocumentCenter/DocumentCenter";
 import DocumentManager from "../../components/BoardPortal/subcomponents/DocumentManager";
 import GuidelinesModal from "../../components/GuidelinesModal/GuidelinesModal";
+import HomeOverview from "./HomeOverview";
 import styles from "./Dashboard.module.css";
 import { apiFetch } from "../../api";
+import { markFeedSeen } from "../../utils/feedCursors";
 
 export default function Dashboard({ user, onLogout, onNavigateToProfile, onUserUpdate }) {
   const [activeTab, setActiveTab] = useState("feed");
@@ -32,6 +34,7 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile, onUserU
   const [recentAlerts, setRecentAlerts] = useState([]);
   const [recentPosts, setRecentPosts] = useState([]);
   const [recentAnnouncements, setRecentAnnouncements] = useState([]);
+  const [recentEvents, setRecentEvents] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // UI States
@@ -85,7 +88,19 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile, onUserU
         setRecentAnnouncements(Array.isArray(data.announcements) ? data.announcements : []);
       })
       .catch((err) => console.error("Announcements preview fetch error:", err));
+
+    apiFetch("/api/events")
+      .then((res) => res.json())
+      .then((data) => {
+        setRecentEvents(Array.isArray(data) ? data : []);
+      })
+      .catch((err) => console.error("Events preview fetch error:", err));
   }, [isBoard]);
+
+  const openNeighborhoodFeed = (tab) => {
+    setIsFeedOpen(true);
+    setActiveTab(tab);
+  };
 
   const fetchRosterData = async () => {
     try {
@@ -110,7 +125,8 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile, onUserU
   useEffect(() => {
     if (activeTab === "roster" || activeTab === "financials") fetchRosterData();
     if (activeTab === "vendors" || activeTab === "admin-vendors") fetchVendorsData();
-  }, [activeTab]);
+    markFeedSeen(user?.id, activeTab);
+  }, [activeTab, user?.id]);
 
   const handleResolve = async (requestId) => {
     try {
@@ -324,75 +340,14 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile, onUserU
 
       <main className={styles.main}>
         {activeTab === "feed" && (
-          <div className={styles.socialStreamContainer}>
-            <div className={styles.socialWelcomeCard}>
-              <h2>Welcome back, {user?.first_name}! 👋</h2>
-              <p>Catch up on the latest neighborhood updates, social alerts, and upcoming events.</p>
-            </div>
-
-            {/* Calendar Widget */}
-            <NeighborhoodCalendar user={user} />
-
-            {/* Larger Quick-Look Widgets Grid (Accommodating 4-5 items) */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
-              {/* Recent Alerts Quick Widget (Lists up to 5) */}
-              <div style={{ background: "white", padding: "20px", borderRadius: "16px", border: "1px solid #e2e8f0", minHeight: "220px", display: "flex", flexDirection: "column" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-                  <h4 style={{ margin: 0, fontSize: "1rem" }}>🚨 Recent Alerts</h4>
-                  <button onClick={() => setActiveTab("alerts")} style={{ background: "none", border: "none", color: "#3b82f6", cursor: "pointer", fontSize: "0.8rem", fontWeight: "600" }}>View All →</button>
-                </div>
-                {recentAlerts.length === 0 ? (
-                  <p style={{ color: "#94a3b8", fontSize: "0.85rem", fontStyle: "italic" }}>No active alerts.</p>
-                ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                    {recentAlerts.slice(0, 5).map(alert => (
-                      <div key={alert.id} style={{ padding: "6px 0", borderBottom: "1px solid #f1f5f9", fontSize: "0.85rem" }}>
-                        <strong>{alert.category}:</strong> {(alert.content || "").substring(0, 45)}...
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Water-Cooler Quick Widget (Lists up to 5) */}
-              <div style={{ background: "white", padding: "20px", borderRadius: "16px", border: "1px solid #e2e8f0", minHeight: "220px", display: "flex", flexDirection: "column" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-                  <h4 style={{ margin: 0, fontSize: "1rem" }}>🌴 Water-Cooler Chat</h4>
-                  <button onClick={() => setActiveTab("watercooler")} style={{ background: "none", border: "none", color: "#3b82f6", cursor: "pointer", fontSize: "0.8rem", fontWeight: "600" }}>View All →</button>
-                </div>
-                {recentPosts.length === 0 ? (
-                  <p style={{ color: "#94a3b8", fontSize: "0.85rem", fontStyle: "italic" }}>No posts yet.</p>
-                ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                    {recentPosts.slice(0, 5).map(post => (
-                      <div key={post.id} style={{ padding: "6px 0", borderBottom: "1px solid #f1f5f9", fontSize: "0.85rem" }}>
-                        <strong>{post.author_name}:</strong> {(post.content || "").substring(0, 45)}...
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Recent Announcements Quick Preview Widget (Lists up to 5) */}
-            <div style={{ background: "white", padding: "20px", borderRadius: "16px", border: "1px solid #e2e8f0", display: "flex", flexDirection: "column" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-                <h4 style={{ margin: 0, fontSize: "1rem" }}>📌 Recent Announcements</h4>
-                <button onClick={() => setActiveTab("announcements")} style={{ background: "none", border: "none", color: "#3b82f6", cursor: "pointer", fontSize: "0.8rem", fontWeight: "600" }}>View All →</button>
-              </div>
-              {recentAnnouncements.length === 0 ? (
-                <p style={{ color: "#94a3b8", fontSize: "0.85rem", fontStyle: "italic" }}>No announcements posted yet.</p>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                  {recentAnnouncements.slice(0, 5).map(ann => (
-                    <div key={ann.id} style={{ padding: "8px 0", borderBottom: "1px solid #f1f5f9", fontSize: "0.9rem" }}>
-                      <strong>{ann.title}</strong> — <span style={{ color: "#64748b" }}>{(ann.content || "").substring(0, 60)}...</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
+          <HomeOverview
+            user={user}
+            recentAlerts={recentAlerts}
+            recentPosts={recentPosts}
+            recentAnnouncements={recentAnnouncements}
+            recentEvents={recentEvents}
+            onOpen={openNeighborhoodFeed}
+          />
         )}
 
         {activeTab === "events" && <div className={styles.fadeContent}><NeighborhoodCalendar user={user} /></div>}
@@ -439,7 +394,11 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile, onUserU
         )}
         {activeTab === "financials" && <div className={styles.fadeContent}><FinancialLedger onBack={() => setActiveTab("mission-control")} masterRoster={masterRoster} user={user} /></div>}
         {activeTab === "admin-vendors" && <div className={styles.fadeContent}><VendorControls onBack={() => setActiveTab("mission-control")} /></div>}
-        {activeTab === "admin-documents" && <div className={styles.fadeContent}><DocumentManager user={user} onBack={() => setActiveTab("mission-control")} /></div>}
+        {activeTab === "admin-documents" && (
+          <div className={`${styles.fadeContent} ${styles.explorerWrap}`}>
+            <DocumentManager user={user} onBack={() => setActiveTab("mission-control")} />
+          </div>
+        )}
       </main>
 
       {showContactModal && (

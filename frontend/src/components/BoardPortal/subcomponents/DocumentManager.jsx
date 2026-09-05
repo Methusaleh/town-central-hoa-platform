@@ -1,449 +1,616 @@
-import { useState, useEffect, useRef } from "react";
-import styles from "../BoardPortal.module.css";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { apiFetch } from "../../../api";
+import styles from "./DocumentManager.module.css";
 
-export default function DocumentManager({ user, onBack }) {
+function IconFolder({ size = 44 }) {
+  return (
+    <svg width={size} height={size * 0.82} viewBox="0 0 48 40" aria-hidden="true">
+      <path fill="#f5c451" d="M4 8a4 4 0 0 1 4-4h10l4 4h18a4 4 0 0 1 4 4v20a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V8z" />
+      <path fill="#e0a82e" d="M4 16h40v16a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V16z" opacity="0.35" />
+    </svg>
+  );
+}
+
+function IconFile({ size = 40 }) {
+  return (
+    <svg width={size * 0.78} height={size} viewBox="0 0 32 40" aria-hidden="true">
+      <path fill="#f8fafc" stroke="#cbd5e1" d="M6 2.5h13l9 9V36a2.5 2.5 0 0 1-2.5 2.5H6A2.5 2.5 0 0 1 3.5 36V5A2.5 2.5 0 0 1 6 2.5z" />
+      <path fill="#e2e8f0" d="M19 2.5V12h9" />
+    </svg>
+  );
+}
+
+function itemKey(type, id) {
+  return `${type}:${id}`;
+}
+
+function fileKind(name = "") {
+  const ext = name.split(".").pop()?.toLowerCase();
+  if (!ext || ext === name.toLowerCase()) return "Document";
+  if (["png", "jpg", "jpeg", "gif", "webp", "svg"].includes(ext)) return "Image";
+  if (ext === "pdf") return "PDF";
+  if (["doc", "docx"].includes(ext)) return "Word document";
+  if (["xls", "xlsx", "csv"].includes(ext)) return "Spreadsheet";
+  return ext.toUpperCase() + " file";
+}
+
+function formatDate(value) {
+  if (!value) return "—";
+  return new Date(value).toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+export default function DocumentManager({ onBack }) {
   const [folders, setFolders] = useState([]);
   const [documents, setDocuments] = useState([]);
-  
-  // Navigation State (History for Back/Forward)
-  const [currentFolderId, setCurrentFolderId] = useState(null); // null = Root
+  const [currentFolderId, setCurrentFolderId] = useState(null);
   const [history, setHistory] = useState([null]);
   const [historyIndex, setHistoryIndex] = useState(0);
-
-  // Sorting & Filtering
-  const [sortBy, setSortBy] = useState("name-asc"); // name-asc, name-desc, date-desc
-
-  // Context Menu State
-  const [contextMenu, setContextMenu] = useState(null); // { type, item, x, y }
-
-  // Modals State
-  const [modalType, setModalType] = useState(null); // "new-folder", "rename", "share"
-  const [modalData, setModalData] = useState(null);
-  const [inputVal, setInputVal] = useState("");
+  const [viewMode, setViewMode] = useState("icons");
+  const [sortBy, setSortBy] = useState("name");
+  const [sortDir, setSortDir] = useState("asc");
+  const [query, setQuery] = useState("");
+  const [selected, setSelected] = useState(new Set());
+  const [expanded, setExpanded] = useState(() => new Set(["root"]));
+  const [contextMenu, setContextMenu] = useState(null);
+  const [renaming, setRenaming] = useState(null);
+  const [renameValue, setRenameValue] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [dropActive, setDropActive] = useState(false);
 
-  const explorerRef = useRef(null);
+  const paneRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const lastClicked = useRef(null);
 
   const fetchData = async () => {
-    try {
-      const [catsRes, docsRes] = await Promise.all([
-        apiFetch("/api/documents/categories"),
-        apiFetch("/api/documents")
-      ]);
-      const catsData = await catsRes.json();
-      const docsData = await docsRes.json();
-      setFolders(Array.isArray(catsData) ? catsData : []);
-      setDocuments(Array.isArray(docsData) ? docsData : []);
-    } catch (err) {
-      console.error("Error fetching explorer data:", err);
-    }
+    const [catsRes, docsRes] = await Promise.all([
+      apiFetch("/api/documents/categories"),
+      apiFetch("/api/documents"),
+    ]);
+    const catsData = await catsRes.json();
+    const docsData = await docsRes.json();
+    setFolders(Array.isArray(catsData) ? catsData : []);
+    setDocuments(Array.isArray(docsData) ? docsData : []);
   };
 
   useEffect(() => {
-    fetchData();
-    const handleClickOutside = () => setContextMenu(null);
-    window.addEventListener("click", handleClickOutside);
-    return () => window.removeEventListener("click", handleClickOutside);
+    fetchData().catch((err) => console.error(err));
   }, []);
 
-  // Navigation Handlers with History Support
+  useEffect(() => {
+    const close = () => setContextMenu(null);
+    window.addEventListener("click", close);
+    return () => window.removeEventListener("click", close);
+  }, []);
+
+  const childrenOf = (parentId) =>
+    folders.filter((f) => (parentId == null ? !f.parent_id : String(f.parent_id) === String(parentId)));
+
+  const breadcrumbs = useMemo(() => {
+    const path = [{ id: null, name: "Documents" }];
+    const trail = [];
+    let currId = currentFolderId;
+    while (currId != null) {
+      const folder = folders.find((f) => String(f.id) === String(currId));
+      if (!folder) break;
+      trail.unshift(folder);
+      currId = folder.parent_id;
+    }
+    return [...path, ...trail];
+  }, [folders, currentFolderId]);
+
+  const visibleItems = useMemo(() => {
+    const folderRows = folders
+      .filter((f) => (currentFolderId == null ? !f.parent_id : String(f.parent_id) === String(currentFolderId)))
+      .map((f) => ({ type: "folder", id: f.id, name: f.name, created_at: f.created_at, raw: f }));
+    const fileRows = documents
+      .filter((d) => (currentFolderId == null ? !d.category_id : String(d.category_id) === String(currentFolderId)))
+      .map((d) => ({ type: "file", id: d.id, name: d.title, created_at: d.created_at, file_url: d.file_url, raw: d }));
+
+    const q = query.trim().toLowerCase();
+    const filtered = [...folderRows, ...fileRows].filter((item) => !q || item.name.toLowerCase().includes(q));
+
+    const dir = sortDir === "asc" ? 1 : -1;
+    return filtered.sort((a, b) => {
+      if (a.type !== b.type) return a.type === "folder" ? -1 : 1;
+      if (sortBy === "date") return (new Date(a.created_at || 0) - new Date(b.created_at || 0)) * dir;
+      if (sortBy === "kind") return (fileKind(a.name).localeCompare(fileKind(b.name))) * dir;
+      return a.name.localeCompare(b.name, undefined, { sensitivity: "base" }) * dir;
+    });
+  }, [folders, documents, currentFolderId, query, sortBy, sortDir]);
+
   const navigateToFolder = (folderId) => {
-    const newHistory = history.slice(0, historyIndex + 1);
-    newHistory.push(folderId);
-    setHistory(newHistory);
-    setHistoryIndex(newHistory.length - 1);
+    const next = history.slice(0, historyIndex + 1);
+    next.push(folderId);
+    setHistory(next);
+    setHistoryIndex(next.length - 1);
     setCurrentFolderId(folderId);
+    setSelected(new Set());
     setContextMenu(null);
+    setRenaming(null);
+    if (folderId != null) {
+      setExpanded((prev) => new Set([...prev, String(folderId)]));
+    }
   };
 
   const handleBack = () => {
-    if (historyIndex > 0) {
-      const newIndex = historyIndex - 1;
-      setHistoryIndex(newIndex);
-      setCurrentFolderId(history[newIndex]);
-    }
+    if (historyIndex === 0) return;
+    const next = historyIndex - 1;
+    setHistoryIndex(next);
+    setCurrentFolderId(history[next]);
+    setSelected(new Set());
   };
 
   const handleForward = () => {
-    if (historyIndex < history.length - 1) {
-      const newIndex = historyIndex + 1;
-      setHistoryIndex(newIndex);
-      setCurrentFolderId(history[newIndex]);
-    }
+    if (historyIndex >= history.length - 1) return;
+    const next = historyIndex + 1;
+    setHistoryIndex(next);
+    setCurrentFolderId(history[next]);
+    setSelected(new Set());
   };
 
-  // Build Breadcrumb Chain from Root down to Current Folder
-  const getBreadcrumbs = () => {
-    const path = [{ id: null, name: "Root" }];
-    let currId = currentFolderId;
-    const tempPath = [];
-    while (currId !== null) {
-      const folder = folders.find(f => f.id === currId);
-      if (folder) {
-        tempPath.unshift(folder);
-        currId = folder.parent_id;
-      } else {
-        break;
+  const handleUp = () => {
+    if (currentFolderId == null) return;
+    const folder = folders.find((f) => String(f.id) === String(currentFolderId));
+    navigateToFolder(folder?.parent_id || null);
+  };
+
+  const selectItem = (item, e) => {
+    const key = itemKey(item.type, item.id);
+    setRenaming(null);
+    if (e.metaKey || e.ctrlKey) {
+      const next = new Set(selected);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      setSelected(next);
+      lastClicked.current = key;
+      return;
+    }
+    if (e.shiftKey && lastClicked.current) {
+      const keys = visibleItems.map((row) => itemKey(row.type, row.id));
+      const start = keys.indexOf(lastClicked.current);
+      const end = keys.indexOf(key);
+      if (start >= 0 && end >= 0) {
+        const [a, b] = start < end ? [start, end] : [end, start];
+        setSelected(new Set(keys.slice(a, b + 1)));
+        return;
       }
     }
-    return [...path, ...tempPath];
+    setSelected(new Set([key]));
+    lastClicked.current = key;
   };
 
-  // Filter & Sort Items in Current View
-  const currentFolders = folders.filter(f => (currentFolderId === null ? !f.parent_id : f.parent_id === currentFolderId));
-  const currentDocs = documents.filter(d => (currentFolderId === null ? !d.category_id : d.category_id === currentFolderId));
-
-  const sortItems = (items, type) => {
-    return [...items].sort((a, b) => {
-      const nameA = (type === "folder" ? a.name : a.title).toLowerCase();
-      const nameB = (type === "folder" ? b.name : b.title).toLowerCase();
-      if (sortBy === "name-asc") return nameA.localeCompare(nameB);
-      if (sortBy === "name-desc") return nameB.localeCompare(nameA);
-      if (sortBy === "date-desc") return new Date(b.created_at || 0) - new Date(a.created_at || 0);
-      return 0;
-    });
+  const openItem = (item) => {
+    if (item.type === "folder") navigateToFolder(item.id);
+    else if (item.file_url) window.open(item.file_url, "_blank", "noopener");
   };
 
-  const displayedFolders = sortItems(currentFolders, "folder");
-  const displayedDocs = sortItems(currentDocs, "file");
-
-  // Direct Drag-and-Drop File Upload Handler
-  const handleDropUpload = async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const files = Array.from(e.dataTransfer.files);
+  const uploadFiles = async (fileList, folderId = currentFolderId) => {
+    const files = Array.from(fileList || []);
     if (files.length === 0) return;
-
     setUploading(true);
     try {
       const formData = new FormData();
-      if (currentFolderId) formData.append("category_id", currentFolderId);
-      formData.append("requires_board_key", false);
-      files.forEach(file => formData.append("files", file));
-
+      if (folderId) formData.append("category_id", folderId);
+      files.forEach((file) => formData.append("files", file));
       const res = await apiFetch("/api/documents", { method: "POST", body: formData });
-      if (res.ok) fetchData();
+      if (res.ok) await fetchData();
       else alert("Upload failed.");
     } catch (err) {
-      console.error("Drop upload error:", err);
+      console.error(err);
+      alert("Upload failed.");
     } finally {
       setUploading(false);
     }
   };
 
-  // Right-Click Context Menu Trigger
-  const handleContextMenu = (e, type, item = null) => {
+  const createFolder = async () => {
+    const name = window.prompt("New folder name", "Untitled Folder");
+    if (!name?.trim()) return;
+    const res = await apiFetch("/api/documents/categories", {
+      method: "POST",
+      body: JSON.stringify({ name: name.trim(), parent_id: currentFolderId }),
+    });
+    if (res.ok) fetchData();
+    else alert("Could not create folder.");
+  };
+
+  const startRename = (item) => {
+    setRenaming({ type: item.type, id: item.id });
+    setRenameValue(item.name);
+    setContextMenu(null);
+  };
+
+  const commitRename = async () => {
+    if (!renaming || !renameValue.trim()) {
+      setRenaming(null);
+      return;
+    }
+    const path =
+      renaming.type === "folder"
+        ? `/api/documents/categories/${renaming.id}`
+        : `/api/documents/${renaming.id}`;
+    const body = renaming.type === "folder" ? { name: renameValue.trim() } : { title: renameValue.trim() };
+    const res = await apiFetch(path, { method: "PATCH", body: JSON.stringify(body) });
+    setRenaming(null);
+    if (res.ok) fetchData();
+    else alert("Rename failed.");
+  };
+
+  const deleteSelected = async (items) => {
+    const targets = items || visibleItems.filter((item) => selected.has(itemKey(item.type, item.id)));
+    if (targets.length === 0) return;
+    const label = targets.length === 1 ? targets[0].name : `${targets.length} items`;
+    if (!window.confirm(`Move ${label} to trash? This cannot be undone.`)) return;
+    for (const item of targets) {
+      const path = item.type === "folder" ? `/api/documents/categories/${item.id}` : `/api/documents/${item.id}`;
+      await apiFetch(path, { method: "DELETE" });
+    }
+    setSelected(new Set());
+    fetchData();
+  };
+
+  const moveItem = async (type, id, targetFolderId) => {
+    if (type === "folder" && String(id) === String(targetFolderId)) return;
+    const path = type === "folder" ? `/api/documents/categories/${id}` : `/api/documents/${id}`;
+    const body = type === "folder" ? { parent_id: targetFolderId } : { category_id: targetFolderId };
+    const res = await apiFetch(path, { method: "PATCH", body: JSON.stringify(body) });
+    if (res.ok) fetchData();
+  };
+
+  const onPaneDrop = async (e, folderId = currentFolderId) => {
     e.preventDefault();
     e.stopPropagation();
-    setContextMenu({
-      type, // "file", "folder", or "bg"
-      item,
-      x: e.clientX,
-      y: e.clientY
+    setDropActive(false);
+    const raw = e.dataTransfer.getData("application/x-explorer-item");
+    if (raw) {
+      try {
+        const payload = JSON.parse(raw);
+        await moveItem(payload.type, payload.id, folderId);
+      } catch {
+        /* ignore */
+      }
+      return;
+    }
+    if (e.dataTransfer.files?.length) {
+      await uploadFiles(e.dataTransfer.files, folderId);
+    }
+  };
+
+  const onItemDragStart = (e, item) => {
+    e.dataTransfer.setData("application/x-explorer-item", JSON.stringify({ type: item.type, id: item.id }));
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const showMenu = (e, type, item = null) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (item) {
+      const key = itemKey(item.type, item.id);
+      if (!selected.has(key)) setSelected(new Set([key]));
+    }
+    setContextMenu({ type, item, x: e.clientX, y: e.clientY });
+  };
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (!paneRef.current?.contains(document.activeElement) && document.activeElement !== paneRef.current) {
+        if (["INPUT", "TEXTAREA"].includes(document.activeElement?.tagName)) return;
+      }
+      if (renaming) {
+        if (e.key === "Escape") setRenaming(null);
+        return;
+      }
+      if (e.key === "Enter" && selected.size === 1) {
+        const item = visibleItems.find((row) => selected.has(itemKey(row.type, row.id)));
+        if (item) openItem(item);
+      }
+      if (e.key === "F2" && selected.size === 1) {
+        const item = visibleItems.find((row) => selected.has(itemKey(row.type, row.id)));
+        if (item) startRename(item);
+      }
+      if ((e.key === "Delete" || e.key === "Backspace") && selected.size > 0 && !e.metaKey) {
+        e.preventDefault();
+        deleteSelected();
+      }
+      if (e.key === "Escape") {
+        setSelected(new Set());
+        setContextMenu(null);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+
+  const toggleTree = (id, e) => {
+    e.stopPropagation();
+    const key = String(id ?? "root");
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
     });
   };
 
-  // CRUD Actions
-  const handleCreateFolderSubmit = async (e) => {
-    e.preventDefault();
-    if (!inputVal.trim()) return;
-
-    try {
-      const res = await apiFetch("/api/documents/categories", {
-        method: "POST",
-        body: JSON.stringify({ name: inputVal.trim(), parent_id: currentFolderId }),
-      });
-      if (res.ok) {
-        setInputVal("");
-        setModalType(null);
-        fetchData();
-      } else {
-        alert("Folder creation failed.");
-      }
-    } catch (err) {
-      console.error("Folder creation error:", err);
-    }
+  const renderTree = (parentId, depth) => {
+    const rows = childrenOf(parentId);
+    return rows.map((folder) => {
+      const hasKids = childrenOf(folder.id).length > 0;
+      const open = expanded.has(String(folder.id));
+      const active = String(currentFolderId) === String(folder.id);
+      return (
+        <div key={folder.id}>
+          <div className={`${styles.treeRow} ${active ? styles.treeRowActive : ""}`} style={{ paddingLeft: 8 + depth * 14 }}>
+            <button className={styles.treeTwist} onClick={(e) => toggleTree(folder.id, e)} aria-label="Toggle folder">
+              {hasKids ? (open ? "▾" : "▸") : ""}
+            </button>
+            <button
+              className={styles.treeRow}
+              style={{ flex: 1, padding: 0 }}
+              onClick={() => navigateToFolder(folder.id)}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => onPaneDrop(e, folder.id)}
+            >
+              <IconFolder size={16} />
+              <span className={styles.treeName}>{folder.name}</span>
+            </button>
+          </div>
+          {open && renderTree(folder.id, depth + 1)}
+        </div>
+      );
+    });
   };
 
-  const handleRenameSubmit = async (e) => {
-    e.preventDefault();
-    if (!inputVal.trim() || !modalData?.id) return;
-
-    try {
-      const res = await apiFetch(`/api/documents/categories/${modalData.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ name: inputVal.trim() }),
-      });
-      if (res.ok) {
-        setInputVal("");
-        setModalType(null);
-        setModalData(null);
-        fetchData();
-      } else {
-        alert("Rename failed.");
-      }
-    } catch (err) {
-      console.error("Folder rename error:", err);
-    }
-  };
-
-  const handleDelete = async (type, id) => {
-    setContextMenu(null);
-    if (!confirm(`Are you sure you want to delete this ${type}?`)) return;
-
-    try {
-      const endpoint = type === "file" ? `/api/documents/${id}` : `/api/documents/categories/${id}`;
-      const res = await apiFetch(endpoint, { method: "DELETE" });
-      if (res.ok) fetchData();
-      else alert(`Failed to delete ${type}.`);
-    } catch (err) {
-      console.error("Delete error:", err);
-    }
-  };
-
-  const handleSeedDemoData = async () => {
-    if (!confirm("This will load test folders and files into your current view. Proceed?")) return;
-    
-    try {
-      // 1. Create Sample Folders
-      const foldersToCreate = [
-        { name: "Financials", parent_id: currentFolderId },
-        { name: "Bylaws & Covenants", parent_id: currentFolderId },
-        { name: "Meeting Minutes", parent_id: currentFolderId }
-      ];
-
-      for (const f of foldersToCreate) {
-        await apiFetch("/api/documents/categories", {
-          method: "POST",
-          body: JSON.stringify(f),
-        });
-      }
-
-      alert("Demo folders seeded successfully.");
-      fetchData();
-    } catch (err) {
-      console.error("Seeding error:", err);
-      alert("Failed to seed demo data.");
+  const selectedCount = selected.size;
+  const toggleSort = (key) => {
+    if (sortBy === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else {
+      setSortBy(key);
+      setSortDir("asc");
     }
   };
 
   return (
-    <div className={styles.formCard} style={{ marginTop: "10px", maxWidth: "100%", position: "relative" }}>
-      {/* TOP MISSION CONTROL & ACTION BAR */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-        <button className={styles.cancelBtn} onClick={onBack}>← Back to Mission Control</button>
-        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-          <select 
-            value={sortBy} 
-            onChange={(e) => setSortBy(e.target.value)}
-            style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", background: "white", fontSize: "0.85rem", fontWeight: "600" }}
-          >
-            <option value="name-asc">Sort: Name (A-Z)</option>
-            <option value="name-desc">Sort: Name (Z-A)</option>
-            <option value="date-desc">Sort: Newest First</option>
-          </select>
-          <button className={styles.postBtn} onClick={() => { setInputVal(""); setModalType("new-folder"); }}>📁 + New Folder</button>
-        </div>
+    <div className={styles.page}>
+      <div className={styles.backRow}>
+        <button className={styles.backBtn} onClick={onBack}>← Mission Control</button>
       </div>
 
-      {/* EXPLORER NAVIGATION CONTROLS BAR */}
-      <div style={{ display: "flex", alignItems: "center", gap: "12px", background: "#f8fafc", padding: "10px 16px", borderRadius: "12px", border: "1px solid #e2e8f0", marginBottom: "20px" }}>
-        <div style={{ display: "flex", gap: "4px" }}>
-          <button 
-            onClick={handleBack} 
-            disabled={historyIndex === 0} 
-            style={{ background: "white", border: "1px solid #cbd5e1", borderRadius: "6px", width: "32px", height: "32px", cursor: historyIndex === 0 ? "not-allowed" : "pointer", opacity: historyIndex === 0 ? 0.5 : 1, fontWeight: "bold" }}
-          >
-            ←
-          </button>
-          <button 
-            onClick={handleForward} 
-            disabled={historyIndex >= history.length - 1} 
-            style={{ background: "white", border: "1px solid #cbd5e1", borderRadius: "6px", width: "32px", height: "32px", cursor: historyIndex >= history.length - 1 ? "not-allowed" : "pointer", opacity: historyIndex >= history.length - 1 ? 0.5 : 1, fontWeight: "bold" }}
-          >
-            →
-          </button>
-        </div>
-
-        {/* Live Breadcrumb Path */}
-        <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.9rem", fontWeight: "600", color: "#475569", overflowX: "auto" }}>
-          <span>📍</span>
-          {getBreadcrumbs().map((crumb, idx, arr) => (
-            <span key={crumb.id || "root"} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              {idx > 0 && <span style={{ color: "#94a3b8" }}>/</span>}
-              <button 
-                onClick={() => {
-                  const targetIndex = history.indexOf(crumb.id);
-                  if (targetIndex !== -1) {
-                    setHistoryIndex(targetIndex);
-                    setCurrentFolderId(crumb.id);
-                  } else {
-                    navigateToFolder(crumb.id);
-                  }
-                }}
-                style={{ background: idx === arr.length - 1 ? "#e2e8f0" : "transparent", border: "none", padding: "4px 8px", borderRadius: "6px", cursor: "pointer", fontWeight: "inherit", color: "#1e293b" }}
-              >
-                {crumb.name}
-              </button>
-            </span>
-          ))}
-        </div>
-      </div>
-
-      {/* MAIN FILE EXPLORER DROP ZONE CANVAS */}
-      <div 
-        ref={explorerRef}
-        onContextMenu={(e) => handleContextMenu(e, "bg")}
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={handleDropUpload}
-        style={{ 
-          background: "white", 
-          border: "2px dashed #cbd5e1", 
-          borderRadius: "16px", 
-          padding: "24px", 
-          minHeight: "450px", 
-          maxHeight: "650px", 
-          overflowY: "auto",
-          position: "relative" 
-        }}
-      >
-        {uploading && (
-          <div style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,0.8)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 50, fontWeight: "700", color: "#2ecc71" }}>
-            Uploading files to current folder...
+      <div className={styles.window}>
+        <div className={styles.titlebar}>
+          <div className={styles.title}>Community Documents</div>
+          <div className={styles.viewToggle}>
+            <button
+              className={`${styles.viewBtn} ${viewMode === "icons" ? styles.viewBtnActive : ""}`}
+              onClick={() => setViewMode("icons")}
+              title="Icon view"
+            >
+              ▦
+            </button>
+            <button
+              className={`${styles.viewBtn} ${viewMode === "list" ? styles.viewBtnActive : ""}`}
+              onClick={() => setViewMode("list")}
+              title="List view"
+            >
+              ☰
+            </button>
           </div>
-        )}
+        </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "15px" }}>
-          {/* Folders Grid */}
-          {displayedFolders.map(folder => (
-            <div 
-              key={folder.id}
-              onDoubleClick={() => navigateToFolder(folder.id)}
-              onContextMenu={(e) => handleContextMenu(e, "folder", folder)}
-              style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "16px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: "8px", transition: "all 0.15s ease" }}
-              title="Double-click to open"
-            >
-              <span style={{ fontSize: "2.5rem" }}>📁</span>
-              <span style={{ fontWeight: "700", color: "#1e293b", fontSize: "0.9rem", width: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{folder.name}</span>
-            </div>
-          ))}
+        <div className={styles.toolbar}>
+          <div className={styles.navBtns}>
+            <button className={styles.navBtn} onClick={handleBack} disabled={historyIndex === 0} title="Back">←</button>
+            <button className={styles.navBtn} onClick={handleForward} disabled={historyIndex >= history.length - 1} title="Forward">→</button>
+            <button className={styles.navBtn} onClick={handleUp} disabled={currentFolderId == null} title="Enclosing folder">↑</button>
+          </div>
+          <div className={styles.pathBar}>
+            {breadcrumbs.map((crumb, idx) => (
+              <span key={crumb.id ?? "root"} style={{ display: "flex", alignItems: "center" }}>
+                {idx > 0 && <span className={styles.sep}>/</span>}
+                <button
+                  className={`${styles.crumb} ${idx === breadcrumbs.length - 1 ? styles.crumbCurrent : ""}`}
+                  onClick={() => navigateToFolder(crumb.id)}
+                >
+                  {crumb.name}
+                </button>
+              </span>
+            ))}
+          </div>
+          <input
+            className={styles.search}
+            placeholder="Search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          <div className={styles.toolbarActions}>
+            <button className={styles.actionBtn} onClick={createFolder}>New Folder</button>
+            <button className={styles.actionBtn} onClick={() => fileInputRef.current?.click()}>Upload</button>
+          </div>
+        </div>
 
-          {/* Files Grid */}
-          {displayedDocs.map(doc => (
-            <div 
-              key={doc.id}
-              onContextMenu={(e) => handleContextMenu(e, "file", doc)}
-              style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "16px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: "8px", boxShadow: "0 2px 4px rgba(0,0,0,0.02)" }}
+        <div className={styles.body}>
+          <aside className={styles.sidebar}>
+            <div className={styles.treeLabel}>Locations</div>
+            <button
+              className={`${styles.treeRow} ${currentFolderId == null ? styles.treeRowActive : ""}`}
+              onClick={() => navigateToFolder(null)}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => onPaneDrop(e, null)}
             >
-              <span style={{ fontSize: "2.5rem" }}>📄</span>
-              <span style={{ fontWeight: "600", color: "#334155", fontSize: "0.85rem", width: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={doc.title}>{doc.title}</span>
-              <div style={{ display: "flex", gap: "10px", marginTop: "auto", fontSize: "0.8rem" }}>
-                <a href={doc.file_url} target="_blank" rel="noreferrer" style={{ color: "#3b82f6", fontWeight: "650", textDecoration: "none" }}>Open</a>
-                <button onClick={() => handleDelete("file", doc.id)} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontWeight: "650", padding: 0 }}>Delete</button>
+              <span className={styles.treeTwist} />
+              <IconFolder size={16} />
+              <span className={styles.treeName}>Documents</span>
+            </button>
+            {renderTree(null, 1)}
+          </aside>
+
+          <div
+            ref={paneRef}
+            tabIndex={0}
+            className={`${styles.pane} ${dropActive ? styles.dropTarget : ""}`}
+            onClick={() => { setSelected(new Set()); setRenaming(null); }}
+            onContextMenu={(e) => showMenu(e, "bg")}
+            onDragOver={(e) => { e.preventDefault(); setDropActive(true); }}
+            onDragLeave={() => setDropActive(false)}
+            onDrop={(e) => onPaneDrop(e, currentFolderId)}
+          >
+            {uploading && <div className={styles.uploadOverlay}>Copying files…</div>}
+
+            {visibleItems.length === 0 ? (
+              <div className={styles.empty}>
+                <div className={styles.emptyTitle}>This folder is empty</div>
+                <div className={styles.emptyHint}>Drag files here, or use Upload / New Folder.</div>
               </div>
-            </div>
-          ))}
+            ) : viewMode === "icons" ? (
+              <div className={styles.iconGrid}>
+                {visibleItems.map((item) => {
+                  const key = itemKey(item.type, item.id);
+                  const isOn = selected.has(key);
+                  const isRenaming = renaming && renaming.type === item.type && String(renaming.id) === String(item.id);
+                  return (
+                    <div
+                      key={key}
+                      className={`${styles.iconItem} ${isOn ? styles.iconItemSelected : ""}`}
+                      onClick={(e) => { e.stopPropagation(); selectItem(item, e); }}
+                      onDoubleClick={() => openItem(item)}
+                      onContextMenu={(e) => showMenu(e, item.type, item)}
+                      draggable
+                      onDragStart={(e) => onItemDragStart(e, item)}
+                      onDragOver={item.type === "folder" ? (e) => e.preventDefault() : undefined}
+                      onDrop={item.type === "folder" ? (e) => onPaneDrop(e, item.id) : undefined}
+                    >
+                      <div className={styles.iconGlyph}>
+                        {item.type === "folder" ? <IconFolder /> : <IconFile />}
+                      </div>
+                      {isRenaming ? (
+                        <input
+                          className={styles.renameInput}
+                          value={renameValue}
+                          autoFocus
+                          onChange={(e) => setRenameValue(e.target.value)}
+                          onBlur={commitRename}
+                          onClick={(e) => e.stopPropagation()}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") commitRename();
+                            if (e.key === "Escape") setRenaming(null);
+                          }}
+                        />
+                      ) : (
+                        <div className={styles.iconName}>{item.name}</div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <table className={styles.listTable}>
+                <thead>
+                  <tr>
+                    <th onClick={() => toggleSort("name")}>Name</th>
+                    <th onClick={() => toggleSort("date")}>Date modified</th>
+                    <th onClick={() => toggleSort("kind")}>Kind</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleItems.map((item) => {
+                    const key = itemKey(item.type, item.id);
+                    const isOn = selected.has(key);
+                    const isRenaming = renaming && renaming.type === item.type && String(renaming.id) === String(item.id);
+                    return (
+                      <tr
+                        key={key}
+                        className={`${styles.listRow} ${isOn ? styles.listRowSelected : ""}`}
+                        onClick={(e) => { e.stopPropagation(); selectItem(item, e); }}
+                        onDoubleClick={() => openItem(item)}
+                        onContextMenu={(e) => showMenu(e, item.type, item)}
+                        draggable
+                        onDragStart={(e) => onItemDragStart(e, item)}
+                        onDragOver={item.type === "folder" ? (e) => e.preventDefault() : undefined}
+                        onDrop={item.type === "folder" ? (e) => onPaneDrop(e, item.id) : undefined}
+                      >
+                        <td>
+                          <div className={styles.listName}>
+                            {item.type === "folder" ? <IconFolder size={18} /> : <IconFile size={18} />}
+                            {isRenaming ? (
+                              <input
+                                className={styles.listRename}
+                                value={renameValue}
+                                autoFocus
+                                onChange={(e) => setRenameValue(e.target.value)}
+                                onBlur={commitRename}
+                                onClick={(e) => e.stopPropagation()}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") commitRename();
+                                  if (e.key === "Escape") setRenaming(null);
+                                }}
+                              />
+                            ) : (
+                              item.name
+                            )}
+                          </div>
+                        </td>
+                        <td>{formatDate(item.created_at)}</td>
+                        <td>{item.type === "folder" ? "Folder" : fileKind(item.name)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
 
-          {displayedFolders.length === 0 && displayedDocs.length === 0 && (
-            <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "80px 0", color: "#94a3b8", fontStyle: "italic" }}>
-              This folder is empty. Drag & drop files here or right-click to add a new folder.
-            </div>
-          )}
+        <div className={styles.status}>
+          <span>
+            {visibleItems.length} item{visibleItems.length === 1 ? "" : "s"}
+            {selectedCount ? `  ·  ${selectedCount} selected` : ""}
+          </span>
+          <span>Drag files in to upload · F2 rename · Delete to remove</span>
         </div>
       </div>
 
-      {/* CUSTOM RIGHT-CLICK CONTEXT MENU */}
+      <input
+        ref={fileInputRef}
+        className={styles.hiddenInput}
+        type="file"
+        multiple
+        onChange={(e) => {
+          uploadFiles(e.target.files);
+          e.target.value = "";
+        }}
+      />
+
       {contextMenu && (
-        <div 
-          style={{ 
-            position: "fixed", 
-            top: contextMenu.y, 
-            left: contextMenu.x, 
-            background: "white", 
-            border: "1px solid #e2e8f0", 
-            borderRadius: "10px", 
-            boxShadow: "0 10px 25px -5px rgba(0,0,0,0.15)", 
-            zIndex: 1000, 
-            padding: "6px 0",
-            minWidth: "160px" 
-          }}
-        >
+        <div className={styles.menu} style={{ top: contextMenu.y, left: contextMenu.x }} onClick={(e) => e.stopPropagation()}>
           {contextMenu.type === "file" && (
             <>
-              <a href={contextMenu.item.file_url} target="_blank" rel="noreferrer" style={{ display: "block", padding: "8px 16px", color: "#1e293b", textDecoration: "none", fontSize: "0.85rem", fontWeight: "600" }}>👁️ Open / View</a>
-              <button onClick={() => { navigator.clipboard.writeText(contextMenu.item.file_url); alert("Link copied to clipboard!"); setContextMenu(null); }} style={{ width: "100%", textAlign: "left", background: "none", border: "none", padding: "8px 16px", fontSize: "0.85rem", fontWeight: "600", color: "#1e293b", cursor: "pointer" }}>🔗 Copy Link</button>
-              <button onClick={() => handleDelete("file", contextMenu.item.id)} style={{ width: "100%", textAlign: "left", background: "none", border: "none", padding: "8px 16px", fontSize: "0.85rem", fontWeight: "600", color: "#ef4444", cursor: "pointer" }}>🗑️ Delete</button>
+              <a className={styles.menuLink} href={contextMenu.item.file_url} target="_blank" rel="noreferrer">Open</a>
+              <button className={styles.menuItem} onClick={() => startRename(contextMenu.item)}>Rename</button>
+              <button className={styles.menuItem} onClick={() => { navigator.clipboard.writeText(contextMenu.item.file_url); setContextMenu(null); }}>Copy link</button>
+              <div className={styles.menuSep} />
+              <button className={`${styles.menuItem} ${styles.menuDanger}`} onClick={() => deleteSelected([contextMenu.item])}>Delete</button>
             </>
           )}
-
           {contextMenu.type === "folder" && (
             <>
-              <button onClick={() => { navigateToFolder(contextMenu.item.id); setContextMenu(null); }} style={{ width: "100%", textAlign: "left", background: "none", border: "none", padding: "8px 16px", fontSize: "0.85rem", fontWeight: "600", color: "#1e293b", cursor: "pointer" }}>📂 Open Folder</button>
-              <button onClick={() => { setModalData(contextMenu.item); setInputVal(contextMenu.item.name); setModalType("rename"); setContextMenu(null); }} style={{ width: "100%", textAlign: "left", background: "none", border: "none", padding: "8px 16px", fontSize: "0.85rem", fontWeight: "600", color: "#1e293b", cursor: "pointer" }}>✏️ Rename</button>
-              <button onClick={() => handleDelete("folder", contextMenu.item.id)} style={{ width: "100%", textAlign: "left", background: "none", border: "none", padding: "8px 16px", fontSize: "0.85rem", fontWeight: "600", color: "#ef4444", cursor: "pointer" }}>🗑️ Delete</button>
+              <button className={styles.menuItem} onClick={() => { navigateToFolder(contextMenu.item.id); setContextMenu(null); }}>Open</button>
+              <button className={styles.menuItem} onClick={() => startRename(contextMenu.item)}>Rename</button>
+              <div className={styles.menuSep} />
+              <button className={`${styles.menuItem} ${styles.menuDanger}`} onClick={() => deleteSelected([contextMenu.item])}>Delete</button>
             </>
           )}
-
           {contextMenu.type === "bg" && (
             <>
-              <button onClick={() => { setInputVal(""); setModalType("new-folder"); setContextMenu(null); }} style={{ width: "100%", textAlign: "left", background: "none", border: "none", padding: "8px 16px", fontSize: "0.85rem", fontWeight: "600", color: "#1e293b", cursor: "pointer" }}>📁 + Add New Folder</button>
-              <button 
-                onClick={handleSeedDemoData} 
-                className={styles.cancelBtn} 
-                style={{ background: "#fef3c7", borderColor: "#fde68a", color: "#b45309" }}
-              >
-                🌱 Load Demo Data
-              </button>
+              <button className={styles.menuItem} onClick={() => { setContextMenu(null); createFolder(); }}>New Folder</button>
+              <button className={styles.menuItem} onClick={() => { setContextMenu(null); fileInputRef.current?.click(); }}>Upload files…</button>
             </>
           )}
-        </div>
-      )}
-
-      {/* MODAL WINDOWS */}
-      {modalType === "new-folder" && (
-        <div className={styles.modalBackdrop} onClick={() => setModalType(null)}>
-          <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
-            <h3>📁 Create New Folder</h3>
-            <form onSubmit={handleCreateFolderSubmit} style={{ display: "flex", flexDirection: "column", gap: "15px", marginTop: "15px" }}>
-              <input 
-                type="text" 
-                placeholder="Folder Name..." 
-                value={inputVal} 
-                onChange={(e) => setInputVal(e.target.value)} 
-                style={{ padding: "12px", borderRadius: "8px", border: "1px solid #cbd5e1", width: "100%", boxSizing: "border-box" }}
-                required 
-                autoFocus
-              />
-              <div style={{ display: "flex", gap: "10px" }}>
-                <button type="submit" className={styles.submitBtn} style={{ flex: 1 }}>Create</button>
-                <button type="button" className={styles.cancelBtn} onClick={() => setModalType(null)} style={{ flex: 1 }}>Cancel</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {modalType === "rename" && (
-        <div className={styles.modalBackdrop} onClick={() => setModalType(null)}>
-          <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
-            <h3>Rename Folder</h3>
-            <form onSubmit={handleRenameSubmit} style={{ display: "flex", flexDirection: "column", gap: "15px", marginTop: "15px" }}>
-              <input
-                type="text"
-                placeholder="Folder Name..."
-                value={inputVal}
-                onChange={(e) => setInputVal(e.target.value)}
-                style={{ padding: "12px", borderRadius: "8px", border: "1px solid #cbd5e1", width: "100%", boxSizing: "border-box" }}
-                required
-                autoFocus
-              />
-              <div style={{ display: "flex", gap: "10px" }}>
-                <button type="submit" className={styles.submitBtn} style={{ flex: 1 }}>Save</button>
-                <button type="button" className={styles.cancelBtn} onClick={() => setModalType(null)} style={{ flex: 1 }}>Cancel</button>
-              </div>
-            </form>
-          </div>
         </div>
       )}
     </div>

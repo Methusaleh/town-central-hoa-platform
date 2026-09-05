@@ -82,15 +82,49 @@ router.post("/categories", boardRequired, async (req, res) => {
 });
 
 router.patch("/categories/:id", boardRequired, async (req, res) => {
-  const { name } = req.body;
-  if (!name || !name.trim()) {
+  const { name, parent_id } = req.body;
+  const id = req.params.id;
+
+  if (name !== undefined && (!name || !name.trim())) {
     return res.status(400).json({ error: "Folder name is required." });
   }
 
   try {
+    if (parent_id !== undefined && parent_id !== null && String(parent_id) === String(id)) {
+      return res.status(400).json({ error: "A folder cannot be moved into itself." });
+    }
+
+    if (parent_id) {
+      let cursor = parent_id;
+      const seen = new Set();
+      while (cursor) {
+        if (String(cursor) === String(id) || seen.has(String(cursor))) {
+          return res.status(400).json({ error: "Cannot move a folder into one of its descendants." });
+        }
+        seen.add(String(cursor));
+        const { rows } = await db.query("SELECT parent_id FROM document_categories WHERE id = $1", [cursor]);
+        cursor = rows[0]?.parent_id || null;
+      }
+    }
+
+    const sets = [];
+    const vals = [];
+    let i = 1;
+    if (name !== undefined) {
+      sets.push(`name = $${i++}`);
+      vals.push(name.trim());
+    }
+    if (parent_id !== undefined) {
+      sets.push(`parent_id = $${i++}`);
+      vals.push(parent_id || null);
+    }
+    if (sets.length === 0) {
+      return res.status(400).json({ error: "No folder updates provided." });
+    }
+    vals.push(id);
     const { rows } = await db.query(
-      "UPDATE document_categories SET name = $1 WHERE id = $2 RETURNING *",
-      [name.trim(), req.params.id],
+      `UPDATE document_categories SET ${sets.join(", ")} WHERE id = $${i} RETURNING *`,
+      vals,
     );
     if (rows.length === 0) return res.status(404).json({ error: "Folder not found." });
     res.json(rows[0]);
@@ -161,6 +195,40 @@ router.post("/", boardRequired, upload.any(), async (req, res) => {
     res.status(201).json(uploaded.length === 1 ? uploaded[0] : { documents: uploaded });
   } catch (err) {
     console.error("Upload error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.patch("/:id", boardRequired, async (req, res) => {
+  const { title, category_id } = req.body;
+  const sets = [];
+  const vals = [];
+  let i = 1;
+
+  if (title !== undefined) {
+    if (!title || !title.trim()) {
+      return res.status(400).json({ error: "File name is required." });
+    }
+    sets.push(`title = $${i++}`);
+    vals.push(title.trim());
+  }
+  if (category_id !== undefined) {
+    sets.push(`category_id = $${i++}`);
+    vals.push(category_id || null);
+  }
+  if (sets.length === 0) {
+    return res.status(400).json({ error: "No file updates provided." });
+  }
+
+  try {
+    vals.push(req.params.id);
+    const { rows } = await db.query(
+      `UPDATE documents SET ${sets.join(", ")} WHERE id = $${i} RETURNING *`,
+      vals,
+    );
+    if (rows.length === 0) return res.status(404).json({ error: "Document not found" });
+    res.json(rows[0]);
+  } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });

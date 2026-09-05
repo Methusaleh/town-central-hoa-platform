@@ -304,6 +304,11 @@
   max-width: 1000px;
 }
 
+.explorerWrap {
+  max-width: none;
+  height: calc(100vh - 80px);
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
