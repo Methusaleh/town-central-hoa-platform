@@ -147,7 +147,9 @@ function AppRoutes() {
             <Route path="events" element={<EventsPage />} />
             <Route path="events/:eventId" element={<EventsPage />} />
             <Route path="announcements" element={<AnnouncementsPage />} />
+            <Route path="announcements/:announcementId" element={<AnnouncementsPage />} />
             <Route path="alerts" element={<AlertsPage />} />
+            <Route path="alerts/:alertId" element={<AlertsPage />} />
             <Route path="maintenance" element={<MaintenancePage />} />
             <Route path="dues" element={<DuesPage />} />
             <Route path="vendors" element={<VendorsPage />} />

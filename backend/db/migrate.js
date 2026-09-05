@@ -64,6 +64,7 @@ END $$;`,
   `UPDATE neighborhood_events
      SET event_type = 'gathering'
    WHERE event_type IS NULL OR event_type = ''`,
+  `ALTER TABLE alert_comments ADD COLUMN IF NOT EXISTS image_url TEXT`,
   `CREATE TABLE IF NOT EXISTS event_rsvps (
     id SERIAL PRIMARY KEY,
     event_id INTEGER NOT NULL REFERENCES neighborhood_events(id) ON DELETE CASCADE,

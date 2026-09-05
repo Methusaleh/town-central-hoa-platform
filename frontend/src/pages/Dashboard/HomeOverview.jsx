@@ -195,7 +195,7 @@ export default function HomeOverview() {
               <h3>From the board</h3>
             </div>
             <button type="button" className={styles.openLink} onClick={() => open("announcements")}>
-              Open feed
+              See all
             </button>
           </header>
 
@@ -203,7 +203,7 @@ export default function HomeOverview() {
             <button
               type="button"
               className={`${styles.featured} ${styles[announcementTone(featured)]}`}
-              onClick={() => open("announcements")}
+              onClick={() => navigate(`${PATHS.announcements}/${featured.id}`)}
             >
               {featured.image_url && (
                 <img src={featured.image_url} alt="" className={styles.featuredImg} />
@@ -225,7 +225,7 @@ export default function HomeOverview() {
             <ul className={styles.stack}>
               {moreAnnouncements.map((item) => (
                 <li key={item.id}>
-                  <button type="button" className={styles.stackItem} onClick={() => open("announcements")}>
+                  <button type="button" className={styles.stackItem} onClick={() => navigate(`${PATHS.announcements}/${item.id}`)}>
                     <span className={styles.stackTitle}>{item.title}</span>
                     <span className={styles.time}>{relativeTime(item.created_at)}</span>
                   </button>
@@ -281,7 +281,7 @@ export default function HomeOverview() {
               <h3>Need-to-know</h3>
             </div>
             <button type="button" className={styles.openLink} onClick={() => open("alerts")}>
-              View all
+              See all
             </button>
           </header>
 
@@ -293,7 +293,7 @@ export default function HomeOverview() {
                 const meta = alertMeta(alert.category);
                 return (
                   <li key={alert.id}>
-                    <button type="button" className={styles.alertRow} onClick={() => open("alerts")}>
+                    <button type="button" className={styles.alertRow} onClick={() => navigate(`${PATHS.alerts}/${alert.id}`)}>
                       <span className={`${styles.tag} ${styles[meta.tone]}`}>
                         {alert.category}
                       </span>

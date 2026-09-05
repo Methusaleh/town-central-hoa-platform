@@ -16,15 +16,15 @@ const upload = multer({
 // GET: Fetch all active alerts and their comments
 router.get("/", authRequired, async (req, res) => {
   try {
-    const alertsQuery = "SELECT * FROM community_alerts ORDER BY created_at DESC";
-    const alertsRes = await db.query(alertsQuery);
-
-    const commentsQuery = "SELECT * FROM alert_comments ORDER BY created_at ASC";
-    const commentsRes = await db.query(commentsQuery);
-
+    const alertsRes = await db.query(
+      "SELECT * FROM community_alerts ORDER BY created_at DESC",
+    );
+    const commentsRes = await db.query(
+      "SELECT * FROM alert_comments ORDER BY created_at ASC",
+    );
     res.json({
       alerts: alertsRes.rows,
-      comments: commentsRes.rows
+      comments: commentsRes.rows,
     });
   } catch (err) {
     console.error("Error fetching community alerts:", err.message);
@@ -81,28 +81,54 @@ router.post("/", authRequired, upload.single("image"), async (req, res) => {
   }
 });
 
-// POST: Add a comment/reply to a community alert with safety filters
-router.post("/:alertId/comments", authRequired, async (req, res) => {
+// POST: Sighting note (and optional photo) on a lost-pet alert
+router.post("/:alertId/comments", authRequired, upload.single("image"), async (req, res) => {
   const { alertId } = req.params;
   const { author_name, content } = req.body;
+  const text = (content || "").trim();
 
-  if (!content || !content.trim()) {
-    return res.status(400).json({ error: "Comment content is required." });
+  if (!text && !req.file) {
+    return res.status(400).json({ error: "A note or a photo is required." });
   }
 
   try {
-    // 1. Text Toxicity Check for comments
-    const textCheck = await checkTextToxicity(content.trim());
+    const alertRes = await db.query(
+      "SELECT id, category, is_removed FROM community_alerts WHERE id = $1",
+      [alertId],
+    );
+    if (alertRes.rows.length === 0) {
+      return res.status(404).json({ error: "Alert not found." });
+    }
+    if (alertRes.rows[0].is_removed) {
+      return res.status(400).json({ error: "That alert isn't posted anymore." });
+    }
+    if (alertRes.rows[0].category !== "Lost Pet") {
+      return res.status(400).json({ error: "Sightings are only for lost pets." });
+    }
+
+    const note = text || "Shared a photo";
+    const textCheck = await checkTextToxicity(note);
     if (!textCheck.safe) {
       return res.status(400).json({ error: textCheck.reason });
     }
 
-    const query = `
-      INSERT INTO alert_comments (alert_id, author_name, content)
-      VALUES ($1, $2, $3)
+    let imageUrl = null;
+    if (req.file) {
+      imageUrl = await uploadToR2(req.file.buffer, req.file.originalname, req.file.mimetype);
+      const imageCheck = await checkImageSafety(imageUrl);
+      if (!imageCheck.safe) {
+        return res.status(400).json({ error: imageCheck.reason });
+      }
+    }
+
+    const { rows } = await db.query(
+      `
+      INSERT INTO alert_comments (alert_id, author_name, content, image_url)
+      VALUES ($1, $2, $3, $4)
       RETURNING *;
-    `;
-    const { rows } = await db.query(query, [alertId, author_name || "Resident", content.trim()]);
+    `,
+      [alertId, author_name || "Resident", note, imageUrl],
+    );
     res.status(201).json(rows[0]);
   } catch (err) {
     console.error("Error adding alert comment:", err.message);

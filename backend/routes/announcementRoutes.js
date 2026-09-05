@@ -12,19 +12,11 @@ const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
 // GET: Get all announcements (Stickies sorted first, then newest)
 router.get("/", authRequired, async (req, res) => {
   try {
-    const query = `
-      SELECT * FROM announcements 
+    const { rows } = await db.query(`
+      SELECT * FROM announcements
       ORDER BY is_sticky DESC, created_at DESC;
-    `;
-    const { rows } = await db.query(query);
-
-    // Also fetch comments for announcements if you want threaded replies
-    const commentsRes = await db.query("SELECT * FROM announcement_comments ORDER BY created_at ASC");
-
-    res.json({
-      announcements: rows,
-      comments: commentsRes.rows
-    });
+    `);
+    res.json({ announcements: rows });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
