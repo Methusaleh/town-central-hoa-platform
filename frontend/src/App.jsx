@@ -10,6 +10,7 @@ import DashboardLayout, {
   AdminVendorsPage,
   AlertsPage,
   AnnouncementsPage,
+  ContactBoardPage,
   DocumentsPage,
   DuesPage,
   EventsPage,
@@ -150,6 +151,7 @@ function AppRoutes() {
             <Route path="announcements/:announcementId" element={<AnnouncementsPage />} />
             <Route path="alerts" element={<AlertsPage />} />
             <Route path="alerts/:alertId" element={<AlertsPage />} />
+            <Route path="contact" element={<ContactBoardPage />} />
             <Route path="maintenance" element={<MaintenancePage />} />
             <Route path="dues" element={<DuesPage />} />
             <Route path="vendors" element={<VendorsPage />} />

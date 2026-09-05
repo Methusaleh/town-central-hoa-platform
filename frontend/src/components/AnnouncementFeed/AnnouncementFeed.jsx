@@ -5,7 +5,6 @@ import Button from "../ui/Button";
 import Modal from "../ui/Modal";
 import { apiFetch } from "../../api";
 import { PATHS } from "../../layout/navConfig";
-import { usePortal } from "../../layout/PortalContext";
 import styles from "./AnnouncementFeed.module.css";
 
 function formatDate(dateInput) {
@@ -30,7 +29,6 @@ function priorityMeta(priority) {
 export default function AnnouncementFeed({ user }) {
   const { announcementId } = useParams();
   const navigate = useNavigate();
-  const { setContactOpen } = usePortal();
   const [items, setItems] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
@@ -98,7 +96,11 @@ export default function AnnouncementFeed({ user }) {
             item={active}
             isAdmin={isAdmin}
             onUnpublish={() => setUnpublishId(active.id)}
-            onContact={() => setContactOpen(true)}
+            onContact={() =>
+              navigate(
+                `${PATHS.contact}?subject=${encodeURIComponent(`About: ${active.title}`)}`,
+              )
+            }
           />
         )}
 

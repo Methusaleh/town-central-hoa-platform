@@ -2,10 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { ChevronDown, LogOut, Settings } from "lucide-react";
 import Avatar from "../components/ui/Avatar";
-import Button from "../components/ui/Button";
-import Modal from "../components/ui/Modal";
 import GuidelinesModal from "../components/GuidelinesModal/GuidelinesModal";
-import { apiFetch } from "../api";
 import { markFeedSeen } from "../utils/feedCursors";
 import { usePortal } from "./PortalContext";
 import {
@@ -23,14 +20,12 @@ function linkClass({ isActive }) {
 }
 
 export default function AppShell() {
-  const { user, isBoard, onLogout, onUserUpdate, contactOpen, setContactOpen } = usePortal();
+  const { user, isBoard, onLogout, onUserUpdate } = usePortal();
   const location = useLocation();
   const navigate = useNavigate();
   const [moreOpen, setMoreOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [mobileMore, setMobileMore] = useState(false);
-  const [contactForm, setContactForm] = useState({ subject: "", message: "" });
-  const [sending, setSending] = useState(false);
   const [showGuidelines, setShowGuidelines] = useState(!user?.agreed_to_guidelines);
   const moreRef = useRef(null);
   const accountRef = useRef(null);
@@ -58,44 +53,6 @@ export default function AppShell() {
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
   }, []);
-
-  const handleContactSubmit = async (e) => {
-    e.preventDefault();
-    setSending(true);
-    try {
-      const response = await apiFetch("/api/requests", {
-        method: "POST",
-        body: JSON.stringify({
-          resident_id: user?.id || null,
-          first_name: user?.first_name || "Resident",
-          last_name: user?.last_name || "",
-          type: "Board Message",
-          subject: contactForm.subject,
-          description: contactForm.message,
-        }),
-      });
-      if (response.ok) {
-        setContactForm({ subject: "", message: "" });
-        setContactOpen(false);
-      } else {
-        window.alert("Failed to send message.");
-      }
-    } catch {
-      window.alert("Network error.");
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const onMoreItem = (item) => {
-    if (item.action === "contact") {
-      setContactOpen(true);
-      setMoreOpen(false);
-      setMobileMore(false);
-      return;
-    }
-    navigate(item.to);
-  };
 
   const overflow = isBoard ? [...moreItems, adminItem] : moreItems;
   const moreActive = overflow.some((item) => item.to && location.pathname.startsWith(item.to));
@@ -138,19 +95,12 @@ export default function AppShell() {
             </button>
             {moreOpen && (
               <div className={styles.dropdown}>
-                {overflow.map((item) =>
-                  item.to ? (
-                    <NavLink key={item.to} to={item.to} className={styles.dropItem} onClick={() => setMoreOpen(false)}>
-                      <item.icon size={16} />
-                      {item.label}
-                    </NavLink>
-                  ) : (
-                    <button key={item.label} type="button" className={styles.dropItem} onClick={() => onMoreItem(item)}>
-                      <item.icon size={16} />
-                      {item.label}
-                    </button>
-                  ),
-                )}
+                {overflow.map((item) => (
+                  <NavLink key={item.to} to={item.to} className={styles.dropItem} onClick={() => setMoreOpen(false)}>
+                    <item.icon size={16} />
+                    {item.label}
+                  </NavLink>
+                ))}
               </div>
             )}
           </div>
@@ -219,57 +169,14 @@ export default function AppShell() {
           <div className={styles.sheet} onClick={(e) => e.stopPropagation()}>
             <div className={styles.sheetHandle} />
             <p className={styles.sheetTitle}>More</p>
-            {overflow.map((item) =>
-              item.to ? (
-                <NavLink key={item.to} to={item.to} className={styles.sheetItem} onClick={() => setMobileMore(false)}>
-                  <item.icon size={18} />
-                  {item.label}
-                </NavLink>
-              ) : (
-                <button key={item.label} type="button" className={styles.sheetItem} onClick={() => onMoreItem(item)}>
-                  <item.icon size={18} />
-                  {item.label}
-                </button>
-              ),
-            )}
+            {overflow.map((item) => (
+              <NavLink key={item.to} to={item.to} className={styles.sheetItem} onClick={() => setMobileMore(false)}>
+                <item.icon size={18} />
+                {item.label}
+              </NavLink>
+            ))}
           </div>
         </div>
-      )}
-
-      {contactOpen && (
-        <Modal
-          title="Contact the Board"
-          description="Send a message directly to the HOA executive board."
-          onClose={() => setContactOpen(false)}
-        >
-          <form onSubmit={handleContactSubmit} className={styles.contactForm}>
-            <label>
-              Subject
-              <input
-                type="text"
-                required
-                value={contactForm.subject}
-                onChange={(e) => setContactForm({ ...contactForm, subject: e.target.value })}
-              />
-            </label>
-            <label>
-              Message
-              <textarea
-                required
-                value={contactForm.message}
-                onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
-              />
-            </label>
-            <div className={styles.contactActions}>
-              <Button variant="secondary" onClick={() => setContactOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={sending}>
-                {sending ? "Sending..." : "Send message"}
-              </Button>
-            </div>
-          </form>
-        </Modal>
       )}
     </div>
   );

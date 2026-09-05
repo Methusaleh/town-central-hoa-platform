@@ -179,49 +179,6 @@
   display: none;
 }
 
-.contactForm {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.contactForm label {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: 0.75rem;
-  font-weight: 650;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--tc-muted);
-}
-
-.contactForm input,
-.contactForm textarea {
-  padding: 12px 14px;
-  border-radius: 8px;
-  border: 1px solid var(--tc-line);
-  font: inherit;
-  font-size: 0.95rem;
-  text-transform: none;
-  letter-spacing: 0;
-  font-weight: 500;
-  color: var(--tc-ink);
-  background: var(--tc-bg);
-}
-
-.contactForm textarea {
-  min-height: 120px;
-  resize: vertical;
-}
-
-.contactActions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 6px;
-}
-
 @media (min-width: 861px) {
   .desktopNav {
     display: flex;

@@ -3,6 +3,35 @@ const router = express.Router();
 const db = require("../db");
 const { authRequired, boardRequired, isBoard } = require("../middleware/auth");
 
+router.get("/admin/overview", boardRequired, async (_req, res) => {
+  try {
+    const { rows } = await db.query(`
+      SELECT
+        MIN(r.id) AS id,
+        string_agg(
+          TRIM(COALESCE(r.first_name, '') || ' ' || COALESCE(r.last_name, '')),
+          ', '
+          ORDER BY r.last_name, r.first_name
+        ) AS household,
+        MIN(r.street_address) AS street_address,
+        MIN(r.lot_number) AS lot_number,
+        BOOL_OR(COALESCE(r.is_claimed, false)) AS is_claimed,
+        COALESCE(MAX(d.balance), 0)::numeric AS balance,
+        COALESCE(MAX(d.status), 'No Record') AS status,
+        MAX(d.last_payment_date) AS last_payment_date
+      FROM neighborhood_roster r
+      LEFT JOIN resident_dues d
+        ON lower(trim(d.street_address)) = lower(trim(r.street_address))
+      GROUP BY lower(trim(r.street_address))
+      ORDER BY COALESCE(MAX(d.balance), 0) DESC, MIN(r.last_name) ASC, MIN(r.first_name) ASC
+    `);
+    res.json({ accounts: rows });
+  } catch (err) {
+    console.error("Dues overview error:", err.message);
+    res.status(500).json({ error: "Server error loading the assessment ledger." });
+  }
+});
+
 router.get("/history/:address", authRequired, async (req, res) => {
   try {
     const { address } = req.params;

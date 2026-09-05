@@ -1,33 +1,58 @@
-import { useState } from "react";
-import styles from "./AdminPaymentForm.module.css";
+import { useEffect, useState } from "react";
+import Button from "../../ui/Button";
 import { apiFetch } from "../../../api";
+import styles from "./AdminPaymentForm.module.css";
 
-export default function AdminPaymentForm({ user, street_address, onPaymentSuccess }) {
-  const [formData, setFormData] = useState({
-    transaction_type: "payment",
-    amount: "",
-    payment_method: "check",
-    reference_note: ""
-  });
+const EMPTY = {
+  transaction_type: "payment",
+  amount: "",
+  payment_method: "check",
+  reference_note: "",
+};
+
+function formatAmount(value) {
+  const amount = Number(value);
+  if (!amount || Number.isNaN(amount) || amount <= 0) return "";
+  return amount.toFixed(2);
+}
+
+export default function AdminPaymentForm({ user, street_address, currentBalance = 0, onPaymentSuccess }) {
+  const [formData, setFormData] = useState(EMPTY);
   const [displayAmount, setDisplayAmount] = useState("");
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState({ type: "", text: "" });
+  const [sending, setSending] = useState(false);
+  const remaining = formatAmount(currentBalance);
+
+  useEffect(() => {
+    const seed = formatAmount(currentBalance);
+    setFormData({ ...EMPTY, amount: seed });
+    setDisplayAmount(seed);
+    setStatus({ type: "", text: "" });
+  }, [street_address]);
 
   const handleAmountChange = (e) => {
-    const rawValue = e.target.value.replace(/\D/g, ""); // Strip non-digits
+    const rawValue = e.target.value.replace(/\D/g, "");
     if (!rawValue) {
       setDisplayAmount("");
-      setFormData({ ...formData, amount: "" });
+      setFormData((current) => ({ ...current, amount: "" }));
       return;
     }
-
     const numericValue = (parseInt(rawValue, 10) / 100).toFixed(2);
     setDisplayAmount(numericValue);
-    setFormData({ ...formData, amount: numericValue });
+    setFormData((current) => ({ ...current, amount: numericValue }));
+  };
+
+  const applyRemaining = () => {
+    if (!remaining) return;
+    setDisplayAmount(remaining);
+    setFormData((current) => ({ ...current, transaction_type: "payment", amount: remaining }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setStatus("Processing...");
+    if (!formData.amount || sending) return;
+    setSending(true);
+    setStatus({ type: "", text: "" });
 
     try {
       const res = await apiFetch("/api/dues/manual-payment", {
@@ -35,80 +60,105 @@ export default function AdminPaymentForm({ user, street_address, onPaymentSucces
         body: JSON.stringify({
           street_address,
           ...formData,
-          admin_name: user?.first_name || "Board Treasurer"
-        })
+          admin_name: user?.first_name || "Board Treasurer",
+        }),
       });
-
-      const data = await res.json();
-
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        setStatus(`✅ Success! Record applied.`);
-        setFormData({ transaction_type: "payment", amount: "", payment_method: "check", reference_note: "" });
+        setStatus({ type: "ok", text: `Posted. New balance ${formatMoney(data.new_balance)}.` });
+        setFormData(EMPTY);
         setDisplayAmount("");
         if (onPaymentSuccess) onPaymentSuccess();
       } else {
-        setStatus(`❌ Error: ${data.error}`);
+        setStatus({ type: "err", text: data.error || "Could not post that entry." });
       }
-    } catch (err) {
-      setStatus("❌ Network error. Please check server connection.");
+    } catch {
+      setStatus({ type: "err", text: "Network error posting to the ledger." });
+    } finally {
+      setSending(false);
     }
   };
 
   return (
-    <div className={styles.formContainer}>
-      <h4>Manage Ledger for {street_address}</h4>
-      <form onSubmit={handleSubmit} className={styles.form}>
-        <div className={styles.inputGroup}>
-          <label>Transaction Type</label>
-          <select 
-            value={formData.transaction_type}
-            onChange={(e) => setFormData({...formData, transaction_type: e.target.value})}
-          >
-            <option value="payment">Record Incoming Payment</option>
-            <option value="charge">Issue Opening / Special Charge</option>
-          </select>
-        </div>
-
-        <div className={styles.inputGroup}>
-          <label>Amount ($)</label>
-          <input 
-            type="text" 
-            placeholder="0.00" 
-            value={displayAmount}
-            onChange={handleAmountChange}
-            required
-          />
-        </div>
-
-        {formData.transaction_type === "payment" && (
-          <div className={styles.inputGroup}>
-            <label>Payment Method</label>
-            <select 
-              value={formData.payment_method}
-              onChange={(e) => setFormData({...formData, payment_method: e.target.value})}
-            >
-              <option value="check">Paper Check</option>
-              <option value="zelle">Zelle (Business)</option>
-              <option value="ach">ACH Transfer</option>
-            </select>
-          </div>
-        )}
-
-        <div className={styles.inputGroup}>
-          <label>Reference / Note</label>
-          <input 
-            type="text" 
-            placeholder={formData.transaction_type === "charge" ? "e.g. 2026 Opening Balance or Special Assessment" : "e.g. Check #1042"} 
-            value={formData.reference_note}
-            onChange={(e) => setFormData({...formData, reference_note: e.target.value})}
-          />
-        </div>
-
-        <button type="submit" className={styles.submitBtn}>
-          {formData.transaction_type === "charge" ? "Post Charge to Account" : "Apply Payment"}
+    <form onSubmit={handleSubmit} className={styles.form}>
+      <div className={styles.types}>
+        <button
+          type="button"
+          className={formData.transaction_type === "payment" ? styles.typeOn : styles.typeBtn}
+          onClick={() => setFormData((current) => ({ ...current, transaction_type: "payment" }))}
+        >
+          Record payment
         </button>
-      </form>
-      {status && <p className={styles.statusMessage}>{status}</p>}
-    </div>
+        <button
+          type="button"
+          className={formData.transaction_type === "charge" ? styles.typeOn : styles.typeBtn}
+          onClick={() => setFormData((current) => ({ ...current, transaction_type: "charge" }))}
+        >
+          Post a charge
+        </button>
+      </div>
+
+      <label>
+        Amount
+        <input
+          type="text"
+          inputMode="decimal"
+          placeholder="0.00"
+          value={displayAmount}
+          onChange={handleAmountChange}
+          required
+        />
+      </label>
+      {formData.transaction_type === "payment" && remaining && (
+        <button type="button" className={styles.remaining} onClick={applyRemaining}>
+          Apply remaining {formatMoney(currentBalance)}
+        </button>
+      )}
+
+      {formData.transaction_type === "payment" && (
+        <label>
+          How it arrived
+          <select
+            value={formData.payment_method}
+            onChange={(e) => setFormData((current) => ({ ...current, payment_method: e.target.value }))}
+          >
+            <option value="check">Paper check</option>
+            <option value="zelle">Zelle</option>
+            <option value="ach">ACH / bill pay</option>
+          </select>
+        </label>
+      )}
+
+      <label>
+        Memo
+        <input
+          type="text"
+          placeholder={
+            formData.transaction_type === "charge"
+              ? "2026 assessment, special assessment…"
+              : "Check 1042, bill-pay 9/5…"
+          }
+          value={formData.reference_note}
+          onChange={(e) => setFormData((current) => ({ ...current, reference_note: e.target.value }))}
+        />
+      </label>
+
+      <Button type="submit" disabled={sending || !formData.amount}>
+        {sending
+          ? "Posting…"
+          : formData.transaction_type === "charge"
+            ? "Post charge"
+            : "Apply payment"}
+      </Button>
+      {status.text && (
+        <p className={status.type === "err" ? styles.err : styles.ok}>{status.text}</p>
+      )}
+    </form>
   );
+}
+
+function formatMoney(value) {
+  const amount = Number(value);
+  if (Number.isNaN(amount)) return "$0.00";
+  return amount.toLocaleString("en-US", { style: "currency", currency: "USD" });
 }

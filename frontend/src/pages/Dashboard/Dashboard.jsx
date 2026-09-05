@@ -15,6 +15,7 @@ import RequestForm from "../../components/RequestForm/RequestForm";
 import VendorDirectory from "../../components/VendorDirectory/VendorDirectory";
 import DocumentCenter from "../../components/DocumentCenter/DocumentCenter";
 import DocumentManager from "../../components/BoardPortal/subcomponents/DocumentManager";
+import BoardMail from "../../components/BoardMail/BoardMail";
 import HomeOverview from "./HomeOverview";
 import { usePortal } from "../../layout/PortalContext";
 import { PATHS } from "../../layout/navConfig";
@@ -175,6 +176,14 @@ export function AlertsPage() {
   return (
     <Panel>
       <CommunityAlerts user={user} />
+    </Panel>
+  );
+}
+
+export function ContactBoardPage() {
+  return (
+    <Panel>
+      <BoardMail />
     </Panel>
   );
 }

@@ -23,6 +23,7 @@ export const PATHS = {
   maintenance: "/dashboard/maintenance",
   dues: "/dashboard/dues",
   vendors: "/dashboard/vendors",
+  contact: "/dashboard/contact",
   admin: "/dashboard/admin",
   profile: "/profile",
 };
@@ -53,7 +54,7 @@ export const moreItems = [
   { to: PATHS.maintenance, label: "Maintenance & ARC", icon: ClipboardList },
   { to: PATHS.dues, label: "My Dues", icon: Wallet },
   { to: PATHS.vendors, label: "Trusted Companies", icon: Building2 },
-  { action: "contact", label: "Contact the Board", icon: Mail },
+  { to: PATHS.contact, label: "Contact the Board", icon: Mail },
 ];
 
 export const mobileTabs = [
