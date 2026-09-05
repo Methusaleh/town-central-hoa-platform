@@ -48,7 +48,7 @@ export default function EventCreationModal({ onClose, onEventCreated }) {
   return (
     <div className={styles.modalBackdrop} onClick={onClose}>
       <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
-        <h3>🗓️ Create Neighborhood Event</h3>
+        <h3>Create event</h3>
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "15px" }}>
           <div>
             <label style={{ fontSize: "0.75rem", fontWeight: "700", color: "#64748b", textTransform: "uppercase" }}>Event Title *</label>

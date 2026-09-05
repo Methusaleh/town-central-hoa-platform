@@ -163,7 +163,7 @@ export default function CommunityAlerts({ user }) {
     <div className={styles.container}>
       <header className={styles.header}>
         <div>
-          <h2>🚨 Community Alerts</h2>
+          <h2>Community Alerts</h2>
           <p>Time-sensitive neighborhood notices (lost pets, block parties, traffic).</p>
         </div>
         <button onClick={() => setShowModal(true)} className={styles.postBtn}>
@@ -196,9 +196,6 @@ export default function CommunityAlerts({ user }) {
                         : styles.tagSafety
                     }`}
                   >
-                    {alert.category === "Lost Pet" && "🐾 "}
-                    {alert.category === "Traffic / Party" && "🎉 "}
-                    {alert.category === "Safety Alert" && "⚠️ "}
                     {alert.category}
                   </span>
 
@@ -336,9 +333,9 @@ export default function CommunityAlerts({ user }) {
                   onChange={(e) => setCategory(e.target.value)}
                   className={styles.select}
                 >
-                  <option value="Lost Pet">🐾 Lost / Found Pet</option>
-                  <option value="Traffic / Party">🎉 Block Party / Traffic Warning</option>
-                  <option value="Safety Alert">⚠️ Urgent Safety / Weather</option>
+                  <option value="Lost Pet">Lost / found pet</option>
+                  <option value="Traffic / Party">Block party / traffic</option>
+                  <option value="Safety Alert">Safety / weather</option>
                 </select>
               </div>
 

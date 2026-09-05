@@ -1,17 +1,15 @@
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { countUnseen, readFeedCursors } from "../../utils/feedCursors";
+import { usePortal } from "../../layout/PortalContext";
+import { HOME_OPEN_PATHS, PATHS } from "../../layout/navConfig";
+import { apiFetch } from "../../api";
 import styles from "./HomeOverview.module.css";
 
 function greetingForHour(hour) {
   if (hour < 12) return "Good morning";
   if (hour < 17) return "Good afternoon";
   return "Good evening";
-}
-
-function skyForHour(hour) {
-  if (hour < 6 || hour >= 20) return "🌙";
-  if (hour < 12) return "☀️";
-  if (hour < 18) return "🌤️";
-  return "🌅";
 }
 
 function clip(text, max = 110) {
@@ -74,10 +72,10 @@ function relativeTime(dateInput) {
 }
 
 function alertMeta(category) {
-  if (category === "Lost Pet") return { icon: "🐾", tone: "pet" };
-  if (category === "Traffic / Party") return { icon: "🎉", tone: "party" };
-  if (category === "Safety Alert") return { icon: "⚠️", tone: "safety" };
-  return { icon: "📣", tone: "default" };
+  if (category === "Lost Pet") return { tone: "pet" };
+  if (category === "Traffic / Party") return { tone: "party" };
+  if (category === "Safety Alert") return { tone: "safety" };
+  return { tone: "default" };
 }
 
 function announcementTone(item) {
@@ -94,18 +92,42 @@ function upcomingFrom(events) {
     .sort((a, b) => formatUtcYmd(a.event_date).localeCompare(formatUtcYmd(b.event_date)));
 }
 
-export default function HomeOverview({
-  user,
-  recentAlerts = [],
-  recentPosts = [],
-  recentAnnouncements = [],
-  recentEvents = [],
-  onOpen,
-}) {
+export default function HomeOverview() {
+  const { user } = usePortal();
+  const navigate = useNavigate();
+  const [recentAlerts, setRecentAlerts] = useState([]);
+  const [recentPosts, setRecentPosts] = useState([]);
+  const [recentAnnouncements, setRecentAnnouncements] = useState([]);
+  const [recentEvents, setRecentEvents] = useState([]);
+
+  useEffect(() => {
+    apiFetch("/api/alerts")
+      .then((res) => res.json())
+      .then((data) => setRecentAlerts(Array.isArray(data.alerts) ? data.alerts : []))
+      .catch((err) => console.error("Alerts preview fetch error:", err));
+
+    apiFetch("/api/porch")
+      .then((res) => res.json())
+      .then((data) => setRecentPosts(Array.isArray(data.posts) ? data.posts : []))
+      .catch((err) => console.error("Porch preview fetch error:", err));
+
+    apiFetch("/api/announcements")
+      .then((res) => res.json())
+      .then((data) =>
+        setRecentAnnouncements(Array.isArray(data.announcements) ? data.announcements : []),
+      )
+      .catch((err) => console.error("Announcements preview fetch error:", err));
+
+    apiFetch("/api/events")
+      .then((res) => res.json())
+      .then((data) => setRecentEvents(Array.isArray(data) ? data : []))
+      .catch((err) => console.error("Events preview fetch error:", err));
+  }, []);
+
+  const open = (key) => navigate(HOME_OPEN_PATHS[key]);
   const now = new Date();
   const hour = now.getHours();
   const greeting = greetingForHour(hour);
-  const sky = skyForHour(hour);
   const upcoming = upcomingFrom(recentEvents);
   const upcomingPreview = upcoming.slice(0, 4);
   const featured = recentAnnouncements[0] || null;
@@ -113,7 +135,7 @@ export default function HomeOverview({
   const cursors = readFeedCursors(user?.id);
   const newAnnouncements = countUnseen(recentAnnouncements, cursors.announcements);
   const newAlerts = countUnseen(recentAlerts, cursors.alerts);
-  const newPosts = countUnseen(recentPosts, cursors.watercooler);
+  const newPosts = countUnseen(recentPosts, cursors.porch);
 
   const dateLabel = now.toLocaleDateString("en-US", {
     weekday: "long",
@@ -125,27 +147,23 @@ export default function HomeOverview({
     <div className={styles.home}>
       <section className={styles.hero}>
         <div className={styles.heroCopy}>
-          <p className={styles.eyebrow}>
-            <span aria-hidden="true">{sky}</span>
-            {dateLabel}
-          </p>
+          <p className={styles.eyebrow}>{dateLabel}</p>
           <h2>
             {greeting}, {user?.first_name || "neighbor"}
           </h2>
           <p className={styles.lede}>
-            A quick look at what’s happening around Town Central — events, board notes,
-            alerts, and porch chat.
+            Neighborhood news, calendar, alerts, and conversation — in one place.
           </p>
         </div>
         <div className={styles.pulseRow}>
-          <button type="button" className={`${styles.pulse} ${styles.pulseEvents}`} onClick={() => onOpen("events")}>
+          <button type="button" className={`${styles.pulse} ${styles.pulseEvents}`} onClick={() => open("events")}>
             <strong>{upcoming.length}</strong>
             <span>Upcoming events</span>
           </button>
           <button
             type="button"
             className={`${styles.pulse} ${styles.pulseNews} ${newAnnouncements ? styles.pulseHot : ""}`}
-            onClick={() => onOpen("announcements")}
+            onClick={() => open("announcements")}
           >
             <strong>{newAnnouncements}</strong>
             <span>New announcements</span>
@@ -153,7 +171,7 @@ export default function HomeOverview({
           <button
             type="button"
             className={`${styles.pulse} ${styles.pulseAlerts} ${newAlerts ? styles.pulseHot : ""}`}
-            onClick={() => onOpen("alerts")}
+            onClick={() => open("alerts")}
           >
             <strong>{newAlerts}</strong>
             <span>New alerts</span>
@@ -161,10 +179,10 @@ export default function HomeOverview({
           <button
             type="button"
             className={`${styles.pulse} ${styles.pulseChat} ${newPosts ? styles.pulseHot : ""}`}
-            onClick={() => onOpen("watercooler")}
+            onClick={() => open("porch")}
           >
             <strong>{newPosts}</strong>
-            <span>New Water-Cooler</span>
+            <span>New Porch posts</span>
           </button>
         </div>
       </section>
@@ -173,10 +191,10 @@ export default function HomeOverview({
         <article className={`${styles.tile} ${styles.newsTile}`}>
           <header className={styles.tileHeader}>
             <div>
-              <p className={styles.kicker}>📌 Announcements</p>
+              <p className={styles.kicker}>Announcements</p>
               <h3>From the board</h3>
             </div>
-            <button type="button" className={styles.openLink} onClick={() => onOpen("announcements")}>
+            <button type="button" className={styles.openLink} onClick={() => open("announcements")}>
               Open feed
             </button>
           </header>
@@ -185,7 +203,7 @@ export default function HomeOverview({
             <button
               type="button"
               className={`${styles.featured} ${styles[announcementTone(featured)]}`}
-              onClick={() => onOpen("announcements")}
+              onClick={() => open("announcements")}
             >
               {featured.image_url && (
                 <img src={featured.image_url} alt="" className={styles.featuredImg} />
@@ -207,7 +225,7 @@ export default function HomeOverview({
             <ul className={styles.stack}>
               {moreAnnouncements.map((item) => (
                 <li key={item.id}>
-                  <button type="button" className={styles.stackItem} onClick={() => onOpen("announcements")}>
+                  <button type="button" className={styles.stackItem} onClick={() => open("announcements")}>
                     <span className={styles.stackTitle}>{item.title}</span>
                     <span className={styles.time}>{relativeTime(item.created_at)}</span>
                   </button>
@@ -220,10 +238,10 @@ export default function HomeOverview({
         <article className={`${styles.tile} ${styles.eventsTile}`}>
           <header className={styles.tileHeader}>
             <div>
-              <p className={styles.kicker}>🗓️ Events & Calendar</p>
+              <p className={styles.kicker}>Calendar</p>
               <h3>Coming up</h3>
             </div>
-            <button type="button" className={styles.openLink} onClick={() => onOpen("events")}>
+            <button type="button" className={styles.openLink} onClick={() => open("events")}>
               Full calendar
             </button>
           </header>
@@ -236,7 +254,7 @@ export default function HomeOverview({
                 const parts = eventParts(event.event_date);
                 return (
                   <li key={event.id}>
-                    <button type="button" className={styles.eventRow} onClick={() => onOpen("events")}>
+                    <button type="button" className={styles.eventRow} onClick={() => open("events")}>
                       <div className={styles.dateBlock} aria-hidden="true">
                         <span>{parts.month}</span>
                         <strong>{parts.day}</strong>
@@ -259,10 +277,10 @@ export default function HomeOverview({
         <article className={`${styles.tile} ${styles.alertsTile}`}>
           <header className={styles.tileHeader}>
             <div>
-              <p className={styles.kicker}>🚨 Community Alerts</p>
+              <p className={styles.kicker}>Alerts</p>
               <h3>Need-to-know</h3>
             </div>
-            <button type="button" className={styles.openLink} onClick={() => onOpen("alerts")}>
+            <button type="button" className={styles.openLink} onClick={() => open("alerts")}>
               View all
             </button>
           </header>
@@ -275,9 +293,9 @@ export default function HomeOverview({
                 const meta = alertMeta(alert.category);
                 return (
                   <li key={alert.id}>
-                    <button type="button" className={styles.alertRow} onClick={() => onOpen("alerts")}>
+                    <button type="button" className={styles.alertRow} onClick={() => open("alerts")}>
                       <span className={`${styles.tag} ${styles[meta.tone]}`}>
-                        {meta.icon} {alert.category}
+                        {alert.category}
                       </span>
                       <p>{clip(alert.content, 92)}</p>
                       <span className={styles.time}>{relativeTime(alert.created_at)}</span>
@@ -292,10 +310,10 @@ export default function HomeOverview({
         <article className={`${styles.tile} ${styles.chatTile}`}>
           <header className={styles.tileHeader}>
             <div>
-              <p className={styles.kicker}>🌴 Water-Cooler</p>
-              <h3>Porch chatter</h3>
+              <p className={styles.kicker}>The Porch</p>
+              <h3>What's happening</h3>
             </div>
-            <button type="button" className={styles.openLink} onClick={() => onOpen("watercooler")}>
+            <button type="button" className={styles.openLink} onClick={() => open("porch")}>
               Join in
             </button>
           </header>
@@ -306,7 +324,7 @@ export default function HomeOverview({
             <ul className={styles.chatList}>
               {recentPosts.slice(0, 4).map((post) => (
                 <li key={post.id}>
-                  <button type="button" className={styles.chatRow} onClick={() => onOpen("watercooler")}>
+                  <button type="button" className={styles.chatRow} onClick={() => navigate(`${PATHS.porch}/${post.id}`)}>
                     <div className={styles.avatar} aria-hidden="true">
                       {(post.author_name || "R").charAt(0).toUpperCase()}
                     </div>

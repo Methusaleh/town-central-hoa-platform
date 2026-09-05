@@ -1,8 +1,8 @@
 .ledgerContainer {
-  background: white;
+  background: var(--tc-bg-elevated);
   padding: 24px;
   border-radius: 16px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--tc-line);
   height: 400px; /* Fixed height for scrolling */
   display: flex;
   flex-direction: column;
@@ -22,23 +22,23 @@
 .table th {
   text-align: left;
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--tc-muted);
   text-transform: uppercase;
   padding-bottom: 10px;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--tc-line);
 }
 
 .table td {
   padding: 12px 0;
-  border-bottom: 1px solid #f8fafc;
+  border-bottom: 1px solid var(--tc-bg);
   font-size: 0.9rem;
 }
 
 .comingSoon {
   font-size: 0.7rem;
-  background: #f1f5f9;
+  background: var(--tc-line);
   padding: 2px 6px;
   border-radius: 4px;
-  color: #64748b;
+  color: var(--tc-muted);
   margin-left: 8px;
 }

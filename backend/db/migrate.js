@@ -5,6 +5,56 @@ const statements = [
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_photo TEXT`,
   `ALTER TABLE document_categories ADD COLUMN IF NOT EXISTS parent_id INTEGER REFERENCES document_categories(id) ON DELETE CASCADE`,
   `ALTER TABLE document_categories ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP`,
+  `DO $$
+BEGIN
+  IF to_regclass('public.watercooler_posts') IS NOT NULL AND to_regclass('public.porch_posts') IS NULL THEN
+    ALTER TABLE watercooler_posts RENAME TO porch_posts;
+  END IF;
+  IF to_regclass('public.watercooler_comments') IS NOT NULL AND to_regclass('public.porch_comments') IS NULL THEN
+    ALTER TABLE watercooler_comments RENAME TO porch_comments;
+  END IF;
+  IF to_regclass('public.watercooler_posts_id_seq') IS NOT NULL AND to_regclass('public.porch_posts_id_seq') IS NULL THEN
+    ALTER SEQUENCE watercooler_posts_id_seq RENAME TO porch_posts_id_seq;
+  END IF;
+  IF to_regclass('public.watercooler_comments_id_seq') IS NOT NULL AND to_regclass('public.porch_comments_id_seq') IS NULL THEN
+    ALTER SEQUENCE watercooler_comments_id_seq RENAME TO porch_comments_id_seq;
+  END IF;
+  IF to_regclass('public.watercooler_posts_pkey') IS NOT NULL AND to_regclass('public.porch_posts_pkey') IS NULL THEN
+    ALTER INDEX watercooler_posts_pkey RENAME TO porch_posts_pkey;
+  END IF;
+  IF to_regclass('public.watercooler_comments_pkey') IS NOT NULL AND to_regclass('public.porch_comments_pkey') IS NULL THEN
+    ALTER INDEX watercooler_comments_pkey RENAME TO porch_comments_pkey;
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'watercooler_comments_post_id_fkey'
+  ) THEN
+    ALTER TABLE porch_comments RENAME CONSTRAINT watercooler_comments_post_id_fkey TO porch_comments_post_id_fkey;
+  END IF;
+END $$;`,
+  `CREATE TABLE IF NOT EXISTS porch_posts (
+    id SERIAL PRIMARY KEY,
+    author_name VARCHAR NOT NULL,
+    author_email VARCHAR,
+    content TEXT NOT NULL,
+    image_url TEXT,
+    reactions JSONB DEFAULT '{}'::jsonb,
+    is_removed BOOLEAN DEFAULT false,
+    removal_reason TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE TABLE IF NOT EXISTS porch_comments (
+    id SERIAL PRIMARY KEY,
+    post_id INTEGER REFERENCES porch_posts(id) ON DELETE CASCADE,
+    author_name VARCHAR NOT NULL,
+    content TEXT NOT NULL,
+    image_url TEXT,
+    is_removed BOOLEAN DEFAULT false,
+    removal_reason TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `DROP TABLE IF EXISTS watercooler_comments`,
+  `DROP TABLE IF EXISTS watercooler_posts`,
 ];
 
 async function migrate(query) {

@@ -1,12 +1,30 @@
 import { useEffect, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import Landing from "./pages/Landing/Landing";
-import Dashboard from "./pages/Dashboard/Dashboard";
+import DashboardLayout, {
+  AdminDocumentsPage,
+  AdminFinancialsPage,
+  AdminHomePage,
+  AdminRequestsPage,
+  AdminRosterPage,
+  AdminVendorsPage,
+  AlertsPage,
+  AnnouncementsPage,
+  DocumentsPage,
+  DuesPage,
+  EventsPage,
+  FeedPage,
+  HomePage,
+  MaintenancePage,
+  VendorsPage,
+} from "./pages/Dashboard/Dashboard";
 import ContactPage from "./pages/Contact/ContactPage";
 import AcceptInvite from "./pages/AcceptInvite/AcceptInvite";
 import Profile from "./pages/Profile/Profile";
 import Claim from "./pages/Claim/Claim";
 import Login from "./pages/Login/Login";
+import AppShell from "./layout/AppShell";
+import { PortalProvider } from "./layout/PortalContext";
 import { apiFetch, clearSession, getStoredUser, persistSession } from "./api";
 
 function InviteRedirect() {
@@ -55,17 +73,22 @@ function AcceptInvitePage({ onJoinSuccess }) {
   );
 }
 
+function ProtectedShell({ user, onLogout, onUserUpdate }) {
+  if (!user) return <Navigate to="/login" replace />;
+  return (
+    <PortalProvider user={user} onLogout={onLogout} onUserUpdate={onUserUpdate}>
+      <AppShell />
+    </PortalProvider>
+  );
+}
+
 function AppRoutes() {
   const navigate = useNavigate();
   const [user, setUser] = useState(() => getStoredUser());
-  const [sessionChecked, setSessionChecked] = useState(!getStoredUser());
 
   useEffect(() => {
     const stored = getStoredUser();
-    if (!stored) {
-      setSessionChecked(true);
-      return;
-    }
+    if (!stored) return;
 
     apiFetch("/api/residents/me")
       .then((res) => (res.ok ? res.json() : Promise.reject()))
@@ -76,8 +99,7 @@ function AppRoutes() {
       .catch(() => {
         clearSession();
         setUser(null);
-      })
-      .finally(() => setSessionChecked(true));
+      });
   }, []);
 
   const handleAuthSuccess = (payload) => {
@@ -99,10 +121,6 @@ function AppRoutes() {
     persistSession({ user: updatedUser });
   };
 
-  if (!sessionChecked) {
-    return null;
-  }
-
   return (
     <div className="app-container">
       <Routes>
@@ -119,33 +137,43 @@ function AppRoutes() {
         />
         <Route
           path="/dashboard"
-          element={
-            user ? (
-              <Dashboard
-                user={user}
-                onNavigateToProfile={() => navigate("/profile")}
-                onLogout={handleLogout}
-                onUserUpdate={handleUserUpdate}
-              />
-            ) : (
-              <Navigate to="/login" replace />
-            )
-          }
-        />
+          element={<ProtectedShell user={user} onLogout={handleLogout} onUserUpdate={handleUserUpdate} />}
+        >
+          <Route element={<DashboardLayout />}>
+            <Route index element={<HomePage />} />
+            <Route path="porch" element={<FeedPage />} />
+            <Route path="porch/:postId" element={<FeedPage />} />
+            <Route path="feed" element={<Navigate to="/dashboard/porch" replace />} />
+            <Route path="events" element={<EventsPage />} />
+            <Route path="announcements" element={<AnnouncementsPage />} />
+            <Route path="alerts" element={<AlertsPage />} />
+            <Route path="maintenance" element={<MaintenancePage />} />
+            <Route path="dues" element={<DuesPage />} />
+            <Route path="vendors" element={<VendorsPage />} />
+            <Route path="documents" element={<DocumentsPage />} />
+            <Route path="admin" element={<AdminHomePage />} />
+            <Route path="admin/requests" element={<AdminRequestsPage />} />
+            <Route path="admin/roster" element={<AdminRosterPage />} />
+            <Route path="admin/financials" element={<AdminFinancialsPage />} />
+            <Route path="admin/vendors" element={<AdminVendorsPage />} />
+            <Route path="admin/documents" element={<AdminDocumentsPage />} />
+          </Route>
+        </Route>
         <Route
           path="/profile"
-          element={
-            user ? (
+          element={<ProtectedShell user={user} onLogout={handleLogout} onUserUpdate={handleUserUpdate} />}
+        >
+          <Route
+            index
+            element={
               <Profile
                 user={user}
                 onBack={() => navigate("/dashboard")}
                 onUserUpdate={handleUserUpdate}
               />
-            ) : (
-              <Navigate to="/login" replace />
-            )
-          }
-        />
+            }
+          />
+        </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </div>

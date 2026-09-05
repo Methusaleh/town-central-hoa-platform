@@ -1,43 +1,44 @@
-// ./frontend/src/components/BoardPortal/subcomponents/MissionControl.jsx
+import { useNavigate } from "react-router-dom";
 import styles from "../BoardPortal.module.css";
+import { PATHS, adminToolPaths } from "../../../layout/navConfig";
 
-export default function MissionControl({ onNavigate }) {
+export default function MissionControl() {
+  const navigate = useNavigate();
   const adminTools = [
-    { id: "requests", label: "Operations & Tickets", icon: "📋" },
-    { id: "roster", label: "Master Roster", icon: "👥" },
-    { id: "financials", label: "Assessment Ledger", icon: "💰" },
-    { id: "admin-vendors", label: "Vendor Controls", icon: "🏢" }, // Note the "admin-" prefix
-    { id: "admin-documents", label: "Document Manager", icon: "📄" }, // Note the "admin-" prefix
+    { id: "requests", label: "Operations & Tickets" },
+    { id: "roster", label: "Master Roster" },
+    { id: "financials", label: "Assessment Ledger" },
+    { id: "admin-vendors", label: "Vendor Controls" },
+    { id: "admin-documents", label: "Document Manager" },
   ];
 
   return (
     <div className={styles.container}>
       <header className={styles.header}>
         <h2>Mission Control</h2>
-        <button className={styles.cancelBtn} onClick={() => onNavigate("feed")}>
+        <button className={styles.cancelBtn} onClick={() => navigate(PATHS.home)}>
           ← Back to Resident Portal
         </button>
       </header>
       
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "20px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "16px" }}>
         {adminTools.map((tool) => (
           <button 
             key={tool.id}
-            onClick={() => onNavigate(tool.id)}
+            onClick={() => navigate(adminToolPaths[tool.id])}
             style={{ 
-              padding: "30px", 
-              borderRadius: "20px", 
-              border: "1px solid #e2e8f0", 
-              background: "white", 
+              padding: "24px", 
+              borderRadius: "10px", 
+              border: "1px solid var(--tc-line)", 
+              background: "var(--tc-bg-elevated)", 
+              color: "var(--tc-ink)",
               cursor: "pointer", 
               textAlign: "left",
-              display: "flex", 
-              flexDirection: "column", 
-              gap: "10px" 
+              fontWeight: "650",
+              fontSize: "1.05rem",
             }}
           >
-            <span style={{ fontSize: "2rem" }}>{tool.icon}</span>
-            <span style={{ fontWeight: "700", fontSize: "1.1rem" }}>{tool.label}</span>
+            {tool.label}
           </button>
         ))}
       </div>

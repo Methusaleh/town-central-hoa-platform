@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
+import { Outlet, useLocation, useNavigate, useOutletContext } from "react-router-dom";
 import MissionControl from "../../components/BoardPortal/subcomponents/MissionControl";
 import RosterDirectory from "../../components/BoardPortal/subcomponents/RosterDirectory";
 import FinancialLedger from "../../components/BoardPortal/subcomponents/FinancialLedger";
@@ -6,7 +7,7 @@ import VendorControls from "../../components/BoardPortal/subcomponents/VendorCon
 import OperationsDashboard from "../../components/BoardPortal/subcomponents/OperationsDashboard";
 import AnnouncementFeed from "../../components/AnnouncementFeed/AnnouncementFeed";
 import CommunityAlerts from "../../components/CommunityAlerts/CommunityAlerts";
-import WaterCooler from "../../components/WaterCooler/WaterCooler";
+import Porch from "../../components/Porch/Porch";
 import ResidentLedger from "../../components/ResidentLedger/ResidentLedger";
 import DuesCard from "../../components/DuesCard/DuesCard";
 import NeighborhoodCalendar from "../../components/NeighborhoodCalendar/NeighborhoodCalendar";
@@ -14,93 +15,27 @@ import RequestForm from "../../components/RequestForm/RequestForm";
 import VendorDirectory from "../../components/VendorDirectory/VendorDirectory";
 import DocumentCenter from "../../components/DocumentCenter/DocumentCenter";
 import DocumentManager from "../../components/BoardPortal/subcomponents/DocumentManager";
-import GuidelinesModal from "../../components/GuidelinesModal/GuidelinesModal";
 import HomeOverview from "./HomeOverview";
+import { usePortal } from "../../layout/PortalContext";
+import { PATHS } from "../../layout/navConfig";
 import styles from "./Dashboard.module.css";
 import { apiFetch } from "../../api";
-import { markFeedSeen } from "../../utils/feedCursors";
 
-export default function Dashboard({ user, onLogout, onNavigateToProfile, onUserUpdate }) {
-  const [activeTab, setActiveTab] = useState("feed");
-  const [isFeedOpen, setIsFeedOpen] = useState(false); // Collapsed by default
-
-  // --- GUIDELINES WALL STATE ---
-  const [showGuidelinesModal, setShowGuidelinesModal] = useState(!user?.agreed_to_guidelines);
-
-  // Data States for Quick-Look Widgets
+export default function DashboardLayout() {
+  const { user, isBoard } = usePortal();
+  const location = useLocation();
   const [requests, setRequests] = useState([]);
   const [masterRoster, setMasterRoster] = useState([]);
-  const [vendorsList, setVendorsList] = useState([]);
-  const [recentAlerts, setRecentAlerts] = useState([]);
-  const [recentPosts, setRecentPosts] = useState([]);
-  const [recentAnnouncements, setRecentAnnouncements] = useState([]);
-  const [recentEvents, setRecentEvents] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  // UI States
   const [viewMode, setViewMode] = useState("active");
   const [showForm, setShowForm] = useState(false);
-  const [showContactModal, setShowContactModal] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const [sending, setSending] = useState(false);
-  
-  const [rosterForm, setRosterForm] = useState({ first_name: "", last_name: "", email: "", street_address: "" });
-  const [financeForm, setFinanceForm] = useState({ street_address: "", balance: "", status: "Pending" });
+  const [rosterForm, setRosterForm] = useState({
+    first_name: "",
+    last_name: "",
+    email: "",
+    street_address: "",
+  });
   const [financeStatus, setFinanceStatus] = useState({ text: "", type: "" });
-  const [contactForm, setContactForm] = useState({ subject: "", message: "" });
-
-  const settingsRef = useRef(null);
-  const isBoard = user?.role === "board_member" || user?.role === "super_admin";
-
-  useEffect(() => {
-    if (isBoard) {
-      apiFetch("/api/requests/admin/all")
-        .then((res) => res.json())
-        .then((data) => {
-          setRequests(Array.isArray(data) ? data : []);
-          setLoading(false);
-        })
-        .catch((err) => {
-          console.error("Admin requests fetch error:", err);
-          setLoading(false);
-        });
-    } else {
-      setLoading(false);
-    }
-
-    apiFetch("/api/alerts")
-      .then((res) => res.json())
-      .then((data) => {
-        setRecentAlerts(Array.isArray(data.alerts) ? data.alerts : []);
-      })
-      .catch((err) => console.error("Alerts preview fetch error:", err));
-
-    apiFetch("/api/watercooler")
-      .then((res) => res.json())
-      .then((data) => {
-        setRecentPosts(Array.isArray(data.posts) ? data.posts : []);
-      })
-      .catch((err) => console.error("Watercooler preview fetch error:", err));
-
-    apiFetch("/api/announcements")
-      .then((res) => res.json())
-      .then((data) => {
-        setRecentAnnouncements(Array.isArray(data.announcements) ? data.announcements : []);
-      })
-      .catch((err) => console.error("Announcements preview fetch error:", err));
-
-    apiFetch("/api/events")
-      .then((res) => res.json())
-      .then((data) => {
-        setRecentEvents(Array.isArray(data) ? data : []);
-      })
-      .catch((err) => console.error("Events preview fetch error:", err));
-  }, [isBoard]);
-
-  const openNeighborhoodFeed = (tab) => {
-    setIsFeedOpen(true);
-    setActiveTab(tab);
-  };
 
   const fetchRosterData = async () => {
     try {
@@ -112,21 +47,28 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile, onUserU
     }
   };
 
-  const fetchVendorsData = async () => {
-    try {
-      const response = await apiFetch("/api/vendors");
-      const data = await response.json();
-      setVendorsList(data || []);
-    } catch (err) {
-      console.error("Vendor fetch error:", err);
+  useEffect(() => {
+    if (!isBoard) {
+      setLoading(false);
+      return;
     }
-  };
+    apiFetch("/api/requests/admin/all")
+      .then((res) => res.json())
+      .then((data) => {
+        setRequests(Array.isArray(data) ? data : []);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("Admin requests fetch error:", err);
+        setLoading(false);
+      });
+  }, [isBoard]);
 
   useEffect(() => {
-    if (activeTab === "roster" || activeTab === "financials") fetchRosterData();
-    if (activeTab === "vendors" || activeTab === "admin-vendors") fetchVendorsData();
-    markFeedSeen(user?.id, activeTab);
-  }, [activeTab, user?.id]);
+    if (location.pathname.includes("/admin/roster") || location.pathname.includes("/admin/financials")) {
+      fetchRosterData();
+    }
+  }, [location.pathname]);
 
   const handleResolve = async (requestId) => {
     try {
@@ -135,10 +77,8 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile, onUserU
         body: JSON.stringify({ adminName: user?.first_name || "Admin" }),
       });
       if (response.ok) {
-        setRequests(
-          requests.map((req) =>
-            req.id === requestId ? { ...req, status: "Resolved" } : req,
-          ),
+        setRequests((current) =>
+          current.map((req) => (req.id === requestId ? { ...req, status: "Resolved" } : req)),
         );
       }
     } catch (err) {
@@ -146,294 +86,205 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile, onUserU
     }
   };
 
-  const handleContactSubmit = async (e) => {
-    e.preventDefault();
-    setSending(true);
-    try {
-      const response = await apiFetch("/api/requests", {
-        method: "POST",
-        body: JSON.stringify({
-          resident_id: user?.id || null,
-          first_name: user?.first_name || "Resident",
-          last_name: user?.last_name || "",
-          type: "Board Message",
-          subject: contactForm.subject,
-          description: contactForm.message,
-        }),
-      });
-      if (response.ok) {
-        alert("Message delivered to the Board!");
-        setContactForm({ subject: "", message: "" });
-        setShowContactModal(false);
-      } else {
-        alert("Failed to send message.");
-      }
-    } catch (err) {
-      console.error("Contact submission fault:", err);
-      alert("Network error.");
-    } finally {
-      setSending(false);
-    }
-  };
-
   const handleOnboardResident = async (e, sendWelcomePacket) => {
     e.preventDefault();
     const generatedToken = Math.random().toString(36).substring(2, 8).toUpperCase();
-    
     try {
       const response = await apiFetch("/api/residents", {
         method: "POST",
         body: JSON.stringify({
           ...rosterForm,
           onboarding_token: generatedToken,
-          send_welcome: sendWelcomePacket
-        })
+          send_welcome: sendWelcomePacket,
+        }),
       });
-
       if (response.ok) {
-        alert(`Property added! Claim Code: ${generatedToken}`);
+        window.alert(`Property added! Claim Code: ${generatedToken}`);
         fetchRosterData();
         setShowForm(false);
         setRosterForm({ first_name: "", last_name: "", email: "", street_address: "" });
       }
     } catch (err) {
       console.error("Onboarding error:", err);
-      alert("Failed to save property.");
+      window.alert("Failed to save property.");
     }
   };
 
   return (
-    <div className={styles.layout}>
-      {/* GUIDELINES ACCEPTANCE WALL OVERLAY */}
-      {showGuidelinesModal && (
-        <GuidelinesModal 
-          user={user} 
-          onAgree={() => {
-            setShowGuidelinesModal(false);
-            const updatedUser = { ...user, agreed_to_guidelines: true };
-            if (onUserUpdate) onUserUpdate(updatedUser);
-          }} 
-        />
-      )}
-      
-      <div className={styles.orb1}></div>
-      <div className={styles.orb2}></div>
+    <Outlet
+      context={{
+        user,
+        requests,
+        loading,
+        handleResolve,
+        viewMode,
+        setViewMode,
+        masterRoster,
+        showForm,
+        setShowForm,
+        rosterForm,
+        setRosterForm,
+        financeStatus,
+        handleOnboardResident,
+      }}
+    />
+  );
+}
 
-      <aside className={styles.sidebar}>
-        <nav className={styles.nav}>
-          <div className={styles.profileHeader} ref={settingsRef}>
-            {user?.photo ? (
-              <img src={user.photo} alt="Avatar" className={styles.userAvatarMini} />
-            ) : (
-              <div className={styles.avatarPlaceholderMini}>
-                {user?.first_name?.charAt(0).toUpperCase()}
-              </div>
-            )}
-            <div className={styles.userInfoMini}>
-              <h4>{user?.first_name}</h4>
-            </div>
-            <div className={styles.settingsTrigger} onClick={() => setShowSettings(!showSettings)}>
-              ⚙️
-            </div>
-            {showSettings && (
-              <div className={styles.settingsDropdown}>
-                <button className={styles.dropdownBtn} onClick={onNavigateToProfile}>
-                  Settings
-                </button>
-                <button className={`${styles.dropdownBtn} ${styles.logoutText}`} onClick={onLogout}>
-                  Logout
-                </button>
-              </div>
-            )}
-          </div>
-
-          <button
-            className={`${styles.navItem} ${activeTab === "feed" ? styles.activeNav : ""}`}
-            onClick={() => setActiveTab("feed")}
-          >
-            🏠 Home Dashboard
-          </button>
-
-          {/* EXPANDABLE NEIGHBORHOOD FEED SECTION (Collapsed by default) */}
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            <button
-              className={styles.navItem}
-              onClick={() => setIsFeedOpen(!isFeedOpen)}
-              style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
-            >
-              <span>🌐 Neighborhood Feed</span>
-              <span style={{ fontSize: "0.75rem" }}>{isFeedOpen ? "▲" : "▼"}</span>
-            </button>
-
-            {isFeedOpen && (
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px", paddingLeft: "15px", marginTop: "6px" }}>
-                <button
-                  className={`${styles.navItem} ${activeTab === "events" ? styles.activeNav : ""}`}
-                  onClick={() => setActiveTab("events")}
-                  style={{ padding: "10px 14px", fontSize: "0.85rem" }}
-                >
-                  🗓️ Events & Calendar
-                </button>
-                <button
-                  className={`${styles.navItem} ${activeTab === "announcements" ? styles.activeNav : ""}`}
-                  onClick={() => setActiveTab("announcements")}
-                  style={{ padding: "10px 14px", fontSize: "0.85rem" }}
-                >
-                  📌 Announcements
-                </button>
-                <button
-                  className={`${styles.navItem} ${activeTab === "alerts" ? styles.activeNav : ""}`}
-                  onClick={() => setActiveTab("alerts")}
-                  style={{ padding: "10px 14px", fontSize: "0.85rem" }}
-                >
-                  🚨 Community Alerts
-                </button>
-                <button
-                  className={`${styles.navItem} ${activeTab === "watercooler" ? styles.activeNav : ""}`}
-                  onClick={() => setActiveTab("watercooler")}
-                  style={{ padding: "10px 14px", fontSize: "0.85rem" }}
-                >
-                  🌴 Water-Cooler
-                </button>
-              </div>
-            )}
-          </div>
-
-          <button
-            className={`${styles.navItem} ${activeTab === "maintenance" ? styles.activeNav : ""}`}
-            onClick={() => setActiveTab("maintenance")}
-          >
-            📋 Maintenance & ARC
-          </button>
-          <button
-            className={`${styles.navItem} ${activeTab === "dues" ? styles.activeNav : ""}`}
-            onClick={() => setActiveTab("dues")}
-          >
-            💰 My Dues
-          </button>
-          <button
-            className={`${styles.navItem} ${activeTab === "vendors" ? styles.activeNav : ""}`}
-            onClick={() => setActiveTab("vendors")}
-          >
-            🏢 Trusted Companies
-          </button>
-          <button
-            className={`${styles.navItem} ${activeTab === "documents" ? styles.activeNav : ""}`}
-            onClick={() => setActiveTab("documents")}
-          >
-            📄 Community Documents
-          </button>
-          <button onClick={() => setShowContactModal(true)} className={styles.navItem}>
-            ✉️ Contact the Board
-          </button>
-
-          {(user?.role === "board_member" || user?.role === "super_admin") && (
-            <button
-              className={`${styles.navItem} ${activeTab === "mission-control" ? styles.activeNav : ""}`}
-              onClick={() => setActiveTab("mission-control")}
-            >
-              🛡️ Admin Tools
-            </button>
-          )}
-        </nav>
-      </aside>
-
-      <main className={styles.main}>
-        {activeTab === "feed" && (
-          <HomeOverview
-            user={user}
-            recentAlerts={recentAlerts}
-            recentPosts={recentPosts}
-            recentAnnouncements={recentAnnouncements}
-            recentEvents={recentEvents}
-            onOpen={openNeighborhoodFeed}
-          />
-        )}
-
-        {activeTab === "events" && <div className={styles.fadeContent}><NeighborhoodCalendar user={user} /></div>}
-        {activeTab === "announcements" && <div className={styles.fadeContent}><AnnouncementFeed user={user} /></div>}
-        {activeTab === "alerts" && <div className={styles.fadeContent}><CommunityAlerts user={user} /></div>}
-        {activeTab === "watercooler" && <div className={styles.fadeContent}><WaterCooler user={user} /></div>}
-        {activeTab === "maintenance" && <div className={styles.fadeContent}><RequestForm user={user} /></div>}
-        {activeTab === "dues" && (
-          <div className={styles.fadeContent} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
-            <DuesCard user={user} />
-            <ResidentLedger user={user} />
-          </div>
-        )}
-        {activeTab === "vendors" && <div className={styles.fadeContent}><VendorDirectory /></div>}
-        {activeTab === "documents" && <div className={styles.fadeContent}><DocumentCenter user={user} /></div>}
-
-        {/* --- ADMIN VIEWS --- */}
-        {activeTab === "mission-control" && <div className={styles.fadeContent}><MissionControl onNavigate={setActiveTab} /></div>}
-        {activeTab === "requests" && (
-          <div className={styles.fadeContent}>
-            <OperationsDashboard 
-              onBack={() => setActiveTab("mission-control")} 
-              requests={requests} 
-              loading={loading} 
-              handleResolve={handleResolve} 
-              viewMode={viewMode} 
-              onToggleView={() => setViewMode(viewMode === "active" ? "archived" : "active")}
-            />
-          </div>
-        )}
-        {activeTab === "roster" && (
-          <div className={styles.fadeContent}>
-            <RosterDirectory 
-              onBack={() => setActiveTab("mission-control")} 
-              masterRoster={masterRoster} 
-              showRosterModal={showForm} 
-              setShowRosterModal={setShowForm}
-              rosterForm={rosterForm || {}} 
-              setRosterForm={setRosterForm}
-              rosterStatus={financeStatus}
-              handleOnboardResident={handleOnboardResident}
-            />
-          </div>
-        )}
-        {activeTab === "financials" && <div className={styles.fadeContent}><FinancialLedger onBack={() => setActiveTab("mission-control")} masterRoster={masterRoster} user={user} /></div>}
-        {activeTab === "admin-vendors" && <div className={styles.fadeContent}><VendorControls onBack={() => setActiveTab("mission-control")} /></div>}
-        {activeTab === "admin-documents" && (
-          <div className={`${styles.fadeContent} ${styles.explorerWrap}`}>
-            <DocumentManager user={user} onBack={() => setActiveTab("mission-control")} />
-          </div>
-        )}
-      </main>
-
-      {showContactModal && (
-        <div className={styles.modalBackdrop} onClick={() => setShowContactModal(false)}>
-          <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
-            <h3>Contact the Board</h3>
-            <p>Send a message directly to the HOA Executive Board.</p>
-            <form onSubmit={handleContactSubmit} className={styles.modalForm}>
-              <div className={styles.modalInputGroup}>
-                <label>Subject</label>
-                <input 
-                  type="text" 
-                  required 
-                  value={contactForm.subject}
-                  onChange={(e) => setContactForm({...contactForm, subject: e.target.value})} 
-                />
-              </div>
-              <div className={styles.modalInputGroup}>
-                <label>Message</label>
-                <textarea 
-                  required 
-                  value={contactForm.message}
-                  onChange={(e) => setContactForm({...contactForm, message: e.target.value})} 
-                />
-              </div>
-              <div className={styles.modalButtonGroup}>
-                <button type="button" className={styles.modalCancelBtn} onClick={() => setShowContactModal(false)}>Cancel</button>
-                <button type="submit" className={styles.modalSubmitBtn} disabled={sending}>
-                  {sending ? "Sending..." : "Send Message"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+function Panel({ children, wide, bleed }) {
+  return (
+    <div className={`${styles.fadeContent} ${wide ? styles.widePanel : ""} ${bleed ? styles.explorerWrap : ""}`}>
+      {children}
     </div>
+  );
+}
+
+export function HomePage() {
+  return <HomeOverview />;
+}
+
+export function FeedPage() {
+  const { user } = usePortal();
+  return (
+    <Panel>
+      <Porch user={user} />
+    </Panel>
+  );
+}
+
+export function EventsPage() {
+  const { user } = usePortal();
+  return (
+    <Panel wide>
+      <NeighborhoodCalendar user={user} />
+    </Panel>
+  );
+}
+
+export function AnnouncementsPage() {
+  const { user } = usePortal();
+  return (
+    <Panel>
+      <AnnouncementFeed user={user} />
+    </Panel>
+  );
+}
+
+export function AlertsPage() {
+  const { user } = usePortal();
+  return (
+    <Panel>
+      <CommunityAlerts user={user} />
+    </Panel>
+  );
+}
+
+export function MaintenancePage() {
+  const { user } = usePortal();
+  return (
+    <Panel>
+      <RequestForm user={user} />
+    </Panel>
+  );
+}
+
+export function DuesPage() {
+  const { user } = usePortal();
+  return (
+    <div className={`${styles.fadeContent} ${styles.duesGrid}`}>
+      <DuesCard user={user} />
+      <ResidentLedger user={user} />
+    </div>
+  );
+}
+
+export function VendorsPage() {
+  return (
+    <Panel>
+      <VendorDirectory />
+    </Panel>
+  );
+}
+
+export function DocumentsPage() {
+  const { user } = usePortal();
+  return (
+    <Panel>
+      <DocumentCenter user={user} />
+    </Panel>
+  );
+}
+
+export function AdminHomePage() {
+  return (
+    <Panel wide>
+      <MissionControl />
+    </Panel>
+  );
+}
+
+export function AdminRequestsPage() {
+  const ctx = useOutletContext();
+  const navigate = useNavigate();
+  return (
+    <Panel wide>
+      <OperationsDashboard
+        onBack={() => navigate(PATHS.admin)}
+        requests={ctx.requests}
+        loading={ctx.loading}
+        handleResolve={ctx.handleResolve}
+        viewMode={ctx.viewMode}
+        onToggleView={() => ctx.setViewMode(ctx.viewMode === "active" ? "archived" : "active")}
+      />
+    </Panel>
+  );
+}
+
+export function AdminRosterPage() {
+  const ctx = useOutletContext();
+  const navigate = useNavigate();
+  return (
+    <Panel wide>
+      <RosterDirectory
+        onBack={() => navigate(PATHS.admin)}
+        masterRoster={ctx.masterRoster}
+        showRosterModal={ctx.showForm}
+        setShowRosterModal={ctx.setShowForm}
+        rosterForm={ctx.rosterForm || {}}
+        setRosterForm={ctx.setRosterForm}
+        rosterStatus={ctx.financeStatus}
+        handleOnboardResident={ctx.handleOnboardResident}
+      />
+    </Panel>
+  );
+}
+
+export function AdminFinancialsPage() {
+  const ctx = useOutletContext();
+  const navigate = useNavigate();
+  const { user } = usePortal();
+  return (
+    <Panel wide>
+      <FinancialLedger onBack={() => navigate(PATHS.admin)} masterRoster={ctx.masterRoster} user={user} />
+    </Panel>
+  );
+}
+
+export function AdminVendorsPage() {
+  const navigate = useNavigate();
+  return (
+    <Panel wide>
+      <VendorControls onBack={() => navigate(PATHS.admin)} />
+    </Panel>
+  );
+}
+
+export function AdminDocumentsPage() {
+  const { user } = usePortal();
+  const navigate = useNavigate();
+  return (
+    <Panel bleed>
+      <DocumentManager user={user} onBack={() => navigate(PATHS.admin)} />
+    </Panel>
   );
 }

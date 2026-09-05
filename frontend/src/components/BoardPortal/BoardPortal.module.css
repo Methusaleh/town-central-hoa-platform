@@ -12,8 +12,8 @@
 }
 
 .postBtn {
-  background: #2ecc71;
-  color: white;
+  background: var(--tc-brand);
+  color: var(--tc-bg-elevated);
   border: none;
   padding: 12px 24px;
   border-radius: 8px;
@@ -28,7 +28,7 @@
 
 /* --- TABLE CARD --- */
 .tableCard {
-  background: white;
+  background: var(--tc-bg-elevated);
   padding: 30px;
   border-radius: 20px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
@@ -44,7 +44,7 @@
   text-align: left;
   padding: 12px;
   border-bottom: 2px solid #f1f5f9;
-  color: #64748b;
+  color: var(--tc-muted);
   font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -59,7 +59,7 @@
 
 /* --- COLUMN SPECIFIC STYLES --- */
 .dateCol {
-  color: #64748b;
+  color: var(--tc-muted);
   font-size: 0.85rem;
   font-weight: 500;
 }
@@ -98,8 +98,8 @@
 
 /* --- ACTIONS --- */
 .viewBtn {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--tc-bg);
+  border: 1px solid var(--tc-line);
   padding: 6px 14px;
   border-radius: 8px;
   cursor: pointer;
@@ -115,7 +115,7 @@
 
 /* --- ANNOUNCEMENT FORM --- */
 .formCard {
-  background: white;
+  background: var(--tc-bg-elevated);
   padding: 30px;
   border-radius: 20px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
@@ -133,11 +133,11 @@
 .announcementForm textarea,
 .prioritySelect {
   padding: 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--tc-line);
   border-radius: 8px;
   font-family: inherit;
   font-size: 1rem;
-  background-color: white;
+  background-color: var(--tc-bg-elevated);
   color: #1e293b;
   width: 100%;
   box-sizing: border-box;
@@ -147,7 +147,7 @@
 .announcementForm textarea:focus,
 .prioritySelect:focus {
   outline: none;
-  border-color: #2ecc71;
+  border-color: var(--tc-brand);
   box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.1);
 }
 
@@ -157,8 +157,8 @@
 }
 
 .submitBtn {
-  background: #2ecc71;
-  color: white;
+  background: var(--tc-brand);
+  color: var(--tc-bg-elevated);
   border: none;
   padding: 14px;
   border-radius: 8px;
@@ -174,8 +174,8 @@
 
 .cancelBtn {
   background: #f1f5f9;
-  color: #64748b;
-  border: 1px solid #e2e8f0;
+  color: var(--tc-muted);
+  border: 1px solid var(--tc-line);
   padding: 12px 24px;
   border-radius: 8px;
   font-weight: 700;
@@ -184,7 +184,7 @@
 }
 
 .cancelBtn:hover {
-  background: #e2e8f0;
+  background: var(--tc-line);
 }
 
 @keyframes fadeIn {
@@ -200,7 +200,7 @@
 }
 
 .completedCheck {
-  color: #2ecc71;
+  color: var(--tc-brand);
   font-weight: 700;
   font-size: 0.85rem;
 }
@@ -222,9 +222,9 @@
 }
 
 .toggleBtn {
-  background: #f8fafc;
-  color: #64748b;
-  border: 1px solid #e2e8f0;
+  background: var(--tc-bg);
+  color: var(--tc-muted);
+  border: 1px solid var(--tc-line);
   padding: 8px 16px;
   border-radius: 20px;
   font-size: 0.8rem;
@@ -239,7 +239,7 @@
 }
 
 .toggleBtn:hover {
-  background: #ffffff;
+  background: var(--tc-bg-elevated);
   color: #3b82f6;
   border-color: #3b82f6;
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
@@ -265,7 +265,7 @@
 
 .eventBtn {
   background: #3498db;
-  color: white;
+  color: var(--tc-bg-elevated);
   border: none;
   padding: 12px 24px;
   border-radius: 8px;
@@ -291,7 +291,7 @@
 .announcementForm label {
   font-size: 0.8rem;
   font-weight: 700;
-  color: #64748b;
+  color: var(--tc-muted);
   margin-bottom: 5px;
   display: block;
   text-transform: uppercase;

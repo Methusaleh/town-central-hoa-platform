@@ -124,7 +124,7 @@ export default function NeighborhoodCalendar({ user }) {
               onClick={() => setShowEventModal(true)}
               style={{ background: "#2ecc71", color: "white", border: "none", padding: "6px 12px", borderRadius: "8px", fontWeight: "700", fontSize: "0.8rem", cursor: "pointer" }}
             >
-              ➕ Create Event
+              Create event
             </button>
           )}
         </div>

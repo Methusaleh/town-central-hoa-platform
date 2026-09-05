@@ -7,17 +7,17 @@
 .feedTitle {
   font-size: 1.2rem;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--tc-ink);
   margin-bottom: 20px;
   text-transform: uppercase;
   letter-spacing: 1px;
 }
 
 .announcementCard {
-  background: white;
+  background: var(--tc-bg-elevated);
   padding: 24px;
   border-radius: 16px;
-  border: 1px solid #f1f5f9;
+  border: 1px solid var(--tc-line);
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
   transition: transform 0.2s;
 }
@@ -39,12 +39,12 @@
 }
 
 .normal {
-  border-left: 6px solid #10b981;
+  border-left: 6px solid var(--tc-brand);
   /* General Posts map a standard Emerald Green spine */
 }
 
 .newsletterStyle {
-  border-left: 6px solid #64748b;
+  border-left: 6px solid var(--tc-muted);
   /* Newsletters map a sleek Slate Gray accent spine */
 }
 
@@ -57,17 +57,17 @@
 .cardHeader h4 {
   font-size: 1.1rem;
   margin: 0;
-  color: #0f172a;
+  color: var(--tc-ink);
 }
 
 .date {
   font-size: 0.8rem;
-  color: #94a3b8;
+  color: var(--tc-muted);
   font-weight: 500;
 }
 
 .announcementCard p {
-  color: #475569;
+  color: var(--tc-muted);
   line-height: 1.6;
   margin-top: 12px;
 }
@@ -75,8 +75,8 @@
 .expandBtn {
   margin-top: 10px;
   background: transparent;
-  border: 1px solid #2ecc71;
-  color: #2ecc71;
+  border: 1px solid var(--tc-brand);
+  color: var(--tc-brand);
   padding: 10px 20px;
   border-radius: 8px;
   cursor: pointer;
@@ -86,8 +86,8 @@
 }
 
 .expandBtn:hover {
-  background: #2ecc71;
-  color: white;
+  background: var(--tc-brand);
+  color: var(--tc-bg-elevated);
 }
 
 /* --- SOCIAL STREAM STYLING POLISH --- */
@@ -96,14 +96,14 @@
   gap: 12px;
   margin-top: 15px;
   padding-top: 12px;
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid var(--tc-line);
   align-items: center;
 }
 
 .socialActionBtn {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  color: #475569;
+  background: var(--tc-bg);
+  border: 1px solid var(--tc-line);
+  color: var(--tc-muted);
   padding: 6px 14px;
   border-radius: 20px;
   font-size: 0.85rem;
@@ -117,9 +117,9 @@
 }
 
 .socialActionBtn:hover {
-  background: #f1f5f9;
-  color: #2ecc71;
-  border-color: #cbd5e1;
+  background: var(--tc-line);
+  color: var(--tc-brand);
+  border-color: var(--tc-line-strong);
 }
 
 .socialActionBtn.liked {
@@ -132,7 +132,7 @@
 .likesCountBtn {
   background: none;
   border: none;
-  color: #64748b;
+  color: var(--tc-muted);
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
@@ -157,18 +157,18 @@
   flex: 1;
   padding: 10px 14px;
   border-radius: 10px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--tc-line-strong);
   font-size: 0.9rem;
-  background: #f8fafc;
-  color: #1e293b;
+  background: var(--tc-bg);
+  color: var(--tc-ink);
   font-family: inherit;
   transition: all 0.2s ease;
 }
 
 .commentInput:focus {
   outline: none;
-  border-color: #2ecc71;
-  background: white;
+  border-color: var(--tc-brand);
+  background: var(--tc-bg-elevated);
   box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.15);
 }
 
@@ -189,19 +189,19 @@
 }
 
 .modalCard {
-  background: white;
+  background: var(--tc-bg-elevated);
   padding: 30px;
   border-radius: 20px;
   max-width: 400px;
   width: 100%;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-  border: 1px solid #f1f5f9;
+  border: 1px solid var(--tc-line);
 }
 
 .modalCard h3 {
   margin-top: 0;
   margin-bottom: 15px;
-  color: #0f172a;
+  color: var(--tc-ink);
   font-size: 1.2rem;
 }
 
@@ -215,17 +215,17 @@
 
 .likesListItem {
   padding: 8px 0;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--tc-line);
   font-size: 0.9rem;
-  color: #334155;
+  color: var(--tc-ink-soft);
   font-weight: 500;
 }
 
 .modalCloseBtn {
   width: 100%;
-  background: #f1f5f9;
-  color: #475569;
-  border: 1px solid #e2e8f0;
+  background: var(--tc-line);
+  color: var(--tc-muted);
+  border: 1px solid var(--tc-line);
   padding: 10px;
   border-radius: 10px;
   font-weight: 600;
@@ -233,7 +233,7 @@
 }
 
 .modalCloseBtn:hover {
-  background: #e2e8f0;
+  background: var(--tc-line);
 }
 
 /* --- EMOJI REACTIONS STYLING --- */
@@ -243,14 +243,14 @@
   gap: 6px;
   margin-top: 15px;
   padding-top: 12px;
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid var(--tc-line);
   align-items: center;
 }
 
 .reactionBadge {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  color: #334155;
+  background: var(--tc-bg);
+  border: 1px solid var(--tc-line);
+  color: var(--tc-ink-soft);
   padding: 4px 10px;
   border-radius: 20px;
   font-size: 0.8rem;
@@ -263,8 +263,8 @@
 }
 
 .reactionBadge:hover {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
+  background: var(--tc-line);
+  border-color: var(--tc-line-strong);
   transform: translateY(-1px);
 }
 
@@ -276,8 +276,8 @@
 
 .addReactionBtn {
   background: transparent;
-  border: 1px dashed #cbd5e1;
-  color: #64748b;
+  border: 1px dashed var(--tc-line-strong);
+  color: var(--tc-muted);
   width: 32px;
   height: 32px;
   border-radius: 50%;
@@ -291,9 +291,9 @@
 }
 
 .addReactionBtn:hover {
-  background: #f8fafc;
-  border-color: #94a3b8;
-  color: #0f172a;
+  background: var(--tc-bg);
+  border-color: var(--tc-muted);
+  color: var(--tc-ink);
 }
 
 /* Emoji Picker Popup Menu */
@@ -301,8 +301,8 @@
   position: absolute;
   bottom: 110%;
   left: 0;
-  background: white;
-  border: 1px solid #e2e8f0;
+  background: var(--tc-bg-elevated);
+  border: 1px solid var(--tc-line);
   border-radius: 20px;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
   display: flex;
@@ -324,5 +324,5 @@
 
 .emojiOption:hover {
   transform: scale(1.25);
-  background: #f1f5f9;
+  background: var(--tc-line);
 }

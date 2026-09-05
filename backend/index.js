@@ -12,7 +12,7 @@ const vendorRoutes = require("./routes/vendorRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const documentRoutes = require("./routes/documentRoutes");
 const alertRoutes = require("./routes/alertRoutes");
-const watercoolerRoutes = require("./routes/watercoolerRoutes");
+const porchRoutes = require("./routes/porchRoutes");
 
 const app = express();
 const port = process.env.PORT || 8080;
@@ -51,7 +51,7 @@ app.use("/api/vendors", vendorRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/documents", documentRoutes);
 app.use("/api/alerts", alertRoutes);
-app.use("/api/watercooler", watercoolerRoutes);
+app.use("/api/porch", porchRoutes);
 
 async function start() {
   try {

@@ -4,7 +4,7 @@ import styles from "./Landing.module.css";
 
 export default function Landing({ onLogin, onRegisterClick, onContactClick }) {
   return (
-    <div className={styles.pageContainer}>
+    <div className={styles.container}>
       <div className={styles.heroWrapper}>
         <nav className={styles.topNav}>
           <div className={styles.logo}>Town Central HOA</div>
@@ -19,9 +19,9 @@ export default function Landing({ onLogin, onRegisterClick, onContactClick }) {
         </nav>
 
         <main className={styles.mainContent}>
-          <h1 className={styles.title}>Your Community, Connected.</h1>
+          <h1 className={styles.title}>The neighborhood, in one place.</h1>
           <p className={styles.subtitle}>
-            The official resident portal for Town Central.
+            Official Town Central HOA portal for announcements, events, documents, and resident services.
           </p>
         </main>
       </div>

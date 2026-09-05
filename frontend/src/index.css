@@ -1,13 +1,28 @@
+@import "./styles/tokens.css";
+
 html,
 body {
   margin: 0;
   padding: 0;
   width: 100%;
   height: 100%;
-  overflow: hidden; /* Stops the outer window from scrolling */
+  overflow: hidden;
+  font-family: var(--tc-font);
+  background: var(--tc-bg);
+  color: var(--tc-ink);
+  -webkit-font-smoothing: antialiased;
 }
 
-#root {
+#root,
+.app-container {
   height: 100%;
   width: 100%;
+  min-height: 100dvh;
+}
+
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
 }

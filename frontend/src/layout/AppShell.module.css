@@ -1,0 +1,344 @@
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 100dvh;
+  background: var(--tc-bg);
+  color: var(--tc-ink);
+}
+
+.topbar {
+  height: var(--tc-header-h);
+  min-height: var(--tc-header-h);
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 0 28px;
+  padding-left: max(28px, env(safe-area-inset-left));
+  padding-right: max(28px, env(safe-area-inset-right));
+  background: var(--tc-chrome);
+  border-bottom: 1px solid #4a5851;
+  z-index: 30;
+  flex-shrink: 0;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--tc-chrome-ink);
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  font-size: 0.92rem;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.mark {
+  width: 8px;
+  height: 8px;
+  border-radius: 1px;
+  background: var(--tc-brand);
+}
+
+.desktopNav {
+  display: none;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 11px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--tc-chrome-muted);
+  text-decoration: none;
+  font-size: 0.84rem;
+  font-weight: 550;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.link:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--tc-chrome-ink);
+}
+
+.linkActive {
+  background: rgba(255, 255, 255, 0.08);
+  color: #dce8de;
+}
+
+.menuWrap,
+.account {
+  position: relative;
+}
+
+.menuBtn {
+  margin-left: 4px;
+}
+
+.dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  min-width: 248px;
+  padding: 6px;
+  background: var(--tc-bg-elevated);
+  border: 1px solid var(--tc-line);
+  border-radius: var(--tc-radius);
+  box-shadow: var(--tc-shadow);
+  display: flex;
+  flex-direction: column;
+  z-index: 40;
+}
+
+.accountMenu {
+  left: auto;
+  right: 0;
+}
+
+.dropItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--tc-ink);
+  text-decoration: none;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 550;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dropItem:hover,
+.dropItem.active {
+  background: var(--tc-bg-hover);
+}
+
+.dangerItem {
+  color: var(--tc-danger);
+}
+
+.account {
+  margin-left: auto;
+}
+
+.accountBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+  padding: 3px 10px 3px 3px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.accountName {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--tc-chrome-ink);
+}
+
+.chevron {
+  color: var(--tc-chrome-muted);
+}
+
+.main {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 20px 32px 28px;
+  padding-bottom: calc(28px + var(--tc-bottom-h));
+}
+
+.mainBleed {
+  padding: 0;
+  padding-bottom: var(--tc-bottom-h);
+}
+
+.tabbar {
+  display: none;
+}
+
+.sheetBackdrop {
+  display: none;
+}
+
+.contactForm {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.contactForm label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tc-muted);
+}
+
+.contactForm input,
+.contactForm textarea {
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--tc-line);
+  font: inherit;
+  font-size: 0.95rem;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 500;
+  color: var(--tc-ink);
+  background: var(--tc-bg);
+}
+
+.contactForm textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.contactActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+@media (min-width: 861px) {
+  .desktopNav {
+    display: flex;
+  }
+
+  .accountName,
+  .chevron {
+    display: inline;
+  }
+}
+
+@media (max-width: 860px) {
+  .topbar {
+    padding: 0 14px;
+    padding-left: max(14px, env(safe-area-inset-left));
+    padding-right: max(14px, env(safe-area-inset-right));
+  }
+
+  .accountName,
+  .chevron {
+    display: none;
+  }
+
+  .accountBtn {
+    padding: 3px;
+    border-radius: 50%;
+  }
+
+  .main {
+    padding: 14px 14px calc(16px + var(--tc-bottom-h));
+  }
+
+  .tabbar {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: var(--tc-bottom-h);
+    padding-bottom: env(safe-area-inset-bottom);
+    background: var(--tc-chrome);
+    border-top: 1px solid #4a5851;
+    z-index: 30;
+  }
+
+  .tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    border: none;
+    background: none;
+    color: var(--tc-chrome-muted);
+    text-decoration: none;
+    font-size: 0.65rem;
+    font-weight: 650;
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  .tabActive {
+    color: var(--tc-brand);
+  }
+
+  .sheetBackdrop {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background: rgba(0, 0, 0, 0.55);
+    align-items: flex-end;
+  }
+
+  .sheet {
+    width: 100%;
+    background: var(--tc-bg-elevated);
+    border-radius: 16px 16px 0 0;
+    padding: 10px 16px calc(18px + env(safe-area-inset-bottom));
+    max-height: 80dvh;
+    overflow: auto;
+    border: 1px solid var(--tc-line);
+  }
+
+  .sheetHandle {
+    width: 42px;
+    height: 4px;
+    border-radius: 99px;
+    background: var(--tc-line-strong);
+    margin: 6px auto 12px;
+  }
+
+  .sheetTitle {
+    margin: 0 8px 10px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--tc-muted);
+  }
+
+  .sheetItem {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 14px 8px;
+    border: none;
+    border-bottom: 1px solid var(--tc-line);
+    background: none;
+    color: var(--tc-ink);
+    text-decoration: none;
+    font: inherit;
+    font-size: 1rem;
+    font-weight: 550;
+    text-align: left;
+    cursor: pointer;
+  }
+}

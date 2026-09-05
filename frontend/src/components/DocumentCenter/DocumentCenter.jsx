@@ -66,7 +66,7 @@ export default function DocumentCenter({ user }) {
                 onClick={() => toggleCategory(category.id)}
               >
                 <div className={styles.headerContent}>
-                  <span className={styles.categoryIcon}>📁</span>
+                  <span className={styles.categoryIcon} aria-hidden="true" />
                   <h3>{category.name}</h3>
                   <span className={styles.docCount}>({categoryDocs.length})</span>
                 </div>

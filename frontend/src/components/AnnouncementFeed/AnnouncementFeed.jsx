@@ -175,14 +175,14 @@ export default function AnnouncementFeed({ user }) {
   return (
     <div className={styles.feedContainer}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-        <h3 className={styles.feedTitle} style={{ margin: 0 }}>📌 Official Announcements & Neighborhood Feed</h3>
+        <h3 className={styles.feedTitle} style={{ margin: 0 }}>Announcements</h3>
         {isAdmin && (
           <button 
             onClick={() => setShowCreateModal(true)}
             className={styles.socialActionBtn}
-            style={{ background: "#2ecc71", color: "white", border: "none", fontWeight: "700" }}
+            style={{ background: "var(--tc-brand)", color: "#fff", border: "none", fontWeight: "700" }}
           >
-            ➕ Post Announcement
+            Post announcement
           </button>
         )}
       </div>
@@ -207,8 +207,8 @@ export default function AnnouncementFeed({ user }) {
               <div className={styles.cardHeader}>
                 <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
                   {item.is_sticky && (
-                    <span style={{ fontSize: "0.75rem", fontWeight: "700", background: "#fef08a", color: "#854d0e", padding: "4px 10px", borderRadius: "20px" }}>
-                      📌 Pinned Announcement
+                    <span style={{ fontSize: "0.72rem", fontWeight: "700", background: "var(--tc-accent-soft)", color: "var(--tc-accent)", padding: "4px 10px", borderRadius: "4px" }}>
+                      Pinned
                     </span>
                   )}
                   <h4>{item.title}</h4>

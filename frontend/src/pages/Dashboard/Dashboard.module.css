@@ -300,13 +300,26 @@
 }
 
 .fadeContent {
-  animation: fadeIn 0.5s ease-out;
-  max-width: 1000px;
+  animation: fadeIn 0.35s ease-out;
+  max-width: none;
+  width: 100%;
+}
+
+.widePanel {
+  max-width: none;
+}
+
+.duesGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  max-width: none;
+  animation: fadeIn 0.35s ease-out;
 }
 
 .explorerWrap {
   max-width: none;
-  height: calc(100vh - 80px);
+  height: calc(100dvh - var(--tc-header-h) - var(--tc-bottom-h) - 24px);
 }
 
 @keyframes fadeIn {
@@ -670,5 +683,8 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 15px;
+  }
+  .duesGrid {
+    grid-template-columns: 1fr;
   }
 }

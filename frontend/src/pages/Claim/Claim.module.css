@@ -5,13 +5,13 @@
   justify-content: center;
   min-height: 100vh;
   padding: 20px;
-  background-color: #f8fafc;
+  background-color: var(--tc-bg);
 }
 
 .backBtn {
   background: none;
   border: none;
-  color: #64748b;
+  color: var(--tc-muted);
   cursor: pointer;
   font-size: 0.9rem;
   margin-bottom: 20px;
@@ -23,7 +23,7 @@
 }
 
 .formCard {
-  background: white;
+  background: var(--tc-bg-elevated);
   padding: 40px;
   border-radius: 12px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
@@ -33,7 +33,7 @@
 
 .formCard h2 {
   margin: 0 0 25px 0;
-  color: #0f172a;
+  color: var(--tc-ink);
   text-align: center;
 }
 
@@ -45,7 +45,7 @@
 
 .formCard input {
   padding: 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--tc-line);
   border-radius: 6px;
   font-size: 1rem;
   width: 100%;
@@ -58,8 +58,8 @@
 }
 
 .submitBtn {
-  background-color: #0f172a;
-  color: white;
+  background-color: var(--tc-ink);
+  color: var(--tc-bg-elevated);
   padding: 12px;
   border: none;
   border-radius: 6px;

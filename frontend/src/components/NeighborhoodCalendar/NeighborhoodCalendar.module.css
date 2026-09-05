@@ -2,31 +2,35 @@
 .calendarWrapper {
   display: flex;
   gap: 20px;
-  background: rgba(255, 255, 255, 0.4);
+  background: var(--tc-bg-elevated);
   padding: 20px;
-  border-radius: 20px;
-  backdrop-filter: blur(10px);
+  border-radius: var(--tc-radius);
+  border: 1px solid var(--tc-line);
+  width: 100%;
+  box-sizing: border-box;
 }
 
-/* --- CALENDAR COMPONENT OVERRIDES --- */
-.customCalendar {
-  border: none !important;
-  font-family: "Inter", sans-serif !important;
-  border-radius: 12px;
-  padding: 10px;
-  background: white !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+.customCalendar :global(.react-calendar__tile),
+.customCalendar :global(.react-calendar__navigation button),
+.customCalendar :global(.react-calendar__month-view__weekdays) {
+  color: var(--tc-ink);
+  background: transparent;
+}
+
+.customCalendar :global(.react-calendar__navigation button:hover),
+.customCalendar :global(.react-calendar__tile:hover) {
+  background: var(--tc-bg-hover) !important;
 }
 
 /* 1. Neutralize Weekend Colors */
 .customCalendar :global(.react-calendar__month-view__days__day--weekend) {
-  color: #1e293b !important; /* Standard slate black */
+  color: var(--tc-ink) !important; /* Standard slate black */
 }
 
 /* 2. Today's Date Highlight (Step 3) */
 .customCalendar :global(.react-calendar__tile--now) {
   background: rgba(46, 204, 113, 0.1) !important;
-  color: #2ecc71 !important;
+  color: var(--tc-brand) !important;
   font-weight: 800;
   border-radius: 8px;
   border: 1px solid rgba(46, 204, 113, 0.3) !important;
@@ -57,7 +61,7 @@
 .eventDetail {
   flex: 1;
   padding: 20px;
-  background: white;
+  background: var(--tc-bg-elevated);
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
   display: flex;
@@ -65,13 +69,13 @@
 }
 
 .eventInfo h4 {
-  color: #2ecc71;
+  color: var(--tc-brand);
   margin-bottom: 10px;
   font-size: 1.2rem;
 }
 
 .mapLink {
-  color: #64748b;
+  color: var(--tc-muted);
   text-decoration: none;
   font-size: 0.9rem;
   display: flex;
@@ -82,11 +86,11 @@
 }
 
 .mapLink:hover {
-  color: #2ecc71;
+  color: var(--tc-brand);
 }
 
 .noEvent {
-  color: #94a3b8;
+  color: var(--tc-muted);
   font-style: italic;
   margin-top: 10px;
 }
@@ -112,11 +116,11 @@
   font-weight: 600;
   text-decoration: none;
   transition: all 0.2s ease;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--tc-line);
 }
 
 .googleBtn {
-  background: #ffffff;
+  background: var(--tc-bg-elevated);
   color: #4285f4;
 }
 
@@ -127,7 +131,7 @@
 }
 
 .appleBtn {
-  background: #ffffff;
+  background: var(--tc-bg-elevated);
   color: #000000;
 }
 
@@ -145,13 +149,13 @@
 
 .divider {
   border: 0;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--tc-line);
   margin-top: 10px;
 }
 
 .description {
   font-size: 0.9rem;
-  color: #475569;
+  color: var(--tc-muted);
   margin-top: 8px;
   line-height: 1.4;
 }

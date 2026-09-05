@@ -1,7 +1,7 @@
 const STORAGE_PREFIX = "tc_feed_cursors_";
 const NEW_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
-const FEED_TABS = ["announcements", "alerts", "watercooler"];
+const FEED_TABS = ["announcements", "alerts", "porch"];
 
 function storageKey(userId) {
   return `${STORAGE_PREFIX}${userId || "anon"}`;

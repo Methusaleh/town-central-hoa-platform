@@ -12,7 +12,7 @@
 .formCard h3 {
   margin-top: 0;
   margin-bottom: 30px;
-  color: #1e293b;
+  color: var(--tc-ink);
   font-size: 1.4rem;
 }
 
@@ -31,7 +31,7 @@
 .inputGroup label {
   font-size: 0.9rem;
   font-weight: 600;
-  color: #64748b;
+  color: var(--tc-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -41,11 +41,11 @@
 .inputGroup textarea {
   padding: 14px;
   border-radius: 12px;
-  border: 1px solid #e2e8f0;
-  background: white;
+  border: 1px solid var(--tc-line);
+  background: var(--tc-bg-elevated);
   font-family: inherit;
   font-size: 1rem;
-  color: #1e293b;
+  color: var(--tc-ink);
   transition: all 0.2s ease;
 }
 
@@ -53,13 +53,13 @@
 .inputGroup select:focus,
 .inputGroup textarea:focus {
   outline: none;
-  border-color: #2ecc71;
+  border-color: var(--tc-brand);
   box-shadow: 0 0 0 4px rgba(46, 204, 113, 0.1);
 }
 
 .submitBtn {
-  background: #2ecc71;
-  color: white;
+  background: var(--tc-brand);
+  color: var(--tc-bg-elevated);
   border: none;
   padding: 16px;
   border-radius: 12px;
@@ -71,7 +71,7 @@
 }
 
 .submitBtn:hover {
-  background: #27ae60;
+  background: var(--tc-brand-hover);
   transform: translateY(-2px);
   box-shadow: 0 8px 20px rgba(46, 204, 113, 0.2);
 }

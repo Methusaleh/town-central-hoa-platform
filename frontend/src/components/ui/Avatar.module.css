@@ -1,0 +1,37 @@
+.avatar {
+  display: block;
+  object-fit: cover;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--tc-brand-soft);
+}
+
+.sm {
+  width: 28px;
+  height: 28px;
+}
+
+.md {
+  width: 36px;
+  height: 36px;
+}
+
+.lg {
+  width: 44px;
+  height: 44px;
+}
+
+.fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--tc-brand-ink);
+  background: var(--tc-brand-soft);
+  color: var(--tc-brand-ink);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.sm.fallback {
+  font-size: 0.72rem;
+}
