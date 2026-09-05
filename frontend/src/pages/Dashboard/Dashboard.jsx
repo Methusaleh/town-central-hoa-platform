@@ -10,7 +10,7 @@ import CommunityAlerts from "../../components/CommunityAlerts/CommunityAlerts";
 import Porch from "../../components/Porch/Porch";
 import ResidentLedger from "../../components/ResidentLedger/ResidentLedger";
 import DuesCard from "../../components/DuesCard/DuesCard";
-import NeighborhoodCalendar from "../../components/NeighborhoodCalendar/NeighborhoodCalendar";
+import Events from "../../components/Events/Events";
 import RequestForm from "../../components/RequestForm/RequestForm";
 import VendorDirectory from "../../components/VendorDirectory/VendorDirectory";
 import DocumentCenter from "../../components/DocumentCenter/DocumentCenter";
@@ -156,7 +156,7 @@ export function EventsPage() {
   const { user } = usePortal();
   return (
     <Panel wide>
-      <NeighborhoodCalendar user={user} />
+      <Events user={user} />
     </Panel>
   );
 }

@@ -55,6 +55,23 @@ END $$;`,
   )`,
   `DROP TABLE IF EXISTS watercooler_comments`,
   `DROP TABLE IF EXISTS watercooler_posts`,
+  `ALTER TABLE neighborhood_events ADD COLUMN IF NOT EXISTS event_type VARCHAR DEFAULT 'gathering'`,
+  `ALTER TABLE neighborhood_events ADD COLUMN IF NOT EXISTS cover_url TEXT`,
+  `ALTER TABLE neighborhood_events ADD COLUMN IF NOT EXISTS details JSONB DEFAULT '{}'::jsonb`,
+  `UPDATE neighborhood_events
+     SET event_type = 'meeting'
+   WHERE lower(coalesce(category, '')) LIKE '%meet%'`,
+  `UPDATE neighborhood_events
+     SET event_type = 'gathering'
+   WHERE event_type IS NULL OR event_type = ''`,
+  `CREATE TABLE IF NOT EXISTS event_rsvps (
+    id SERIAL PRIMARY KEY,
+    event_id INTEGER NOT NULL REFERENCES neighborhood_events(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    display_name VARCHAR,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (event_id, user_id)
+  )`,
 ];
 
 async function migrate(query) {

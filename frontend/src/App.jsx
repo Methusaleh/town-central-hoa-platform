@@ -145,6 +145,7 @@ function AppRoutes() {
             <Route path="porch/:postId" element={<FeedPage />} />
             <Route path="feed" element={<Navigate to="/dashboard/porch" replace />} />
             <Route path="events" element={<EventsPage />} />
+            <Route path="events/:eventId" element={<EventsPage />} />
             <Route path="announcements" element={<AnnouncementsPage />} />
             <Route path="alerts" element={<AlertsPage />} />
             <Route path="maintenance" element={<MaintenancePage />} />

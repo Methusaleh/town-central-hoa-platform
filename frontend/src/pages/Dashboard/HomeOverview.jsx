@@ -238,11 +238,11 @@ export default function HomeOverview() {
         <article className={`${styles.tile} ${styles.eventsTile}`}>
           <header className={styles.tileHeader}>
             <div>
-              <p className={styles.kicker}>Calendar</p>
+              <p className={styles.kicker}>Events</p>
               <h3>Coming up</h3>
             </div>
             <button type="button" className={styles.openLink} onClick={() => open("events")}>
-              Full calendar
+              See all
             </button>
           </header>
 
@@ -254,7 +254,7 @@ export default function HomeOverview() {
                 const parts = eventParts(event.event_date);
                 return (
                   <li key={event.id}>
-                    <button type="button" className={styles.eventRow} onClick={() => open("events")}>
+                    <button type="button" className={styles.eventRow} onClick={() => navigate(`${PATHS.events}/${event.id}`)}>
                       <div className={styles.dateBlock} aria-hidden="true">
                         <span>{parts.month}</span>
                         <strong>{parts.day}</strong>
