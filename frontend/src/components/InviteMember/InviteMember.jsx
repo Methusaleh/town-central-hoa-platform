@@ -1,22 +1,21 @@
 import { useState } from "react";
 import styles from "./InviteMember.module.css";
+import { apiFetch } from "../../api";
 
 export default function InviteMember({ user }) {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState("");
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
   const handleInvite = async (e) => {
     e.preventDefault();
     setStatus("Sending...");
     
     try {
-      const res = await fetch(`${API_URL}/api/residents/invite`, {
+      const res = await apiFetch("/api/residents/invite", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           email, 
-          primary_resident_id: user.id, // Linking back to the current user
+          primary_resident_id: user.id,
           address: user.address 
         })
       });

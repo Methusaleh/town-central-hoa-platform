@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import styles from "./CommunityAlerts.module.css";
+import { apiFetch } from "../../api";
 
 export default function CommunityAlerts({ user }) {
   const [alerts, setAlerts] = useState([]);
@@ -27,12 +28,11 @@ export default function CommunityAlerts({ user }) {
   ];
 
   const AVAILABLE_EMOJIS = ["👍", "❤️", "🎉", "💡", "⚠️"];
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
   const isAdmin = user?.role === "board_member" || user?.role === "super_admin";
 
   const fetchAlerts = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/alerts`);
+      const res = await apiFetch("/api/alerts");
       const data = await res.json();
       if (res.ok) {
         setAlerts(data.alerts || []);
@@ -51,7 +51,7 @@ export default function CommunityAlerts({ user }) {
 
   useEffect(() => {
     fetchAlerts();
-  }, [API_URL]);
+  }, []);
 
   const handleSubmitAlert = async (e) => {
     e.preventDefault();
@@ -65,7 +65,7 @@ export default function CommunityAlerts({ user }) {
       formData.append("content", content.trim());
       if (selectedFile) formData.append("image", selectedFile);
 
-      const res = await fetch(`${API_URL}/api/alerts`, {
+      const res = await apiFetch("/api/alerts", {
         method: "POST",
         body: formData,
       });
@@ -123,9 +123,8 @@ export default function CommunityAlerts({ user }) {
     if (!text?.trim()) return;
 
     try {
-      const res = await fetch(`${API_URL}/api/alerts/${alertId}/comments`, {
+      const res = await apiFetch(`/api/alerts/${alertId}/comments`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           author_name: user?.first_name || "Resident",
           content: text.trim()
@@ -144,9 +143,8 @@ export default function CommunityAlerts({ user }) {
   const handleModerate = async () => {
     if (!modModalId) return;
     try {
-      const res = await fetch(`${API_URL}/api/alerts/${modModalId}/moderate`, {
+      const res = await apiFetch(`/api/alerts/${modModalId}/moderate`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ removal_reason: removalReason }),
       });
 

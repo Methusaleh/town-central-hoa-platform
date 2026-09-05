@@ -1,0 +1,1 @@
+-- See backend/schema.sql for the current Town Central HOA schema.

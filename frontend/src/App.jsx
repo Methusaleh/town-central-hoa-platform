@@ -1,84 +1,161 @@
-// frontend/src/App.jsx
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { BrowserRouter, Navigate, Route, Routes, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import Landing from "./pages/Landing/Landing";
 import Dashboard from "./pages/Dashboard/Dashboard";
 import ContactPage from "./pages/Contact/ContactPage";
 import AcceptInvite from "./pages/AcceptInvite/AcceptInvite";
 import Profile from "./pages/Profile/Profile";
 import Claim from "./pages/Claim/Claim";
-import Login from "./pages/Login/Login"; // <-- 1. Import Login page
+import Login from "./pages/Login/Login";
+import { apiFetch, clearSession, getStoredUser, persistSession } from "./api";
 
-export default function App() {
-  const params = new URLSearchParams(window.location.search);
-  const initialView = params.get("invite") ? "accept-invite" : "landing";
+function InviteRedirect() {
+  const [params] = useSearchParams();
+  const invite = params.get("invite");
+  if (invite) return <Navigate to={`/invite/${invite}`} replace />;
+  return <LandingPage />;
+}
 
-  const [view, setView] = useState(initialView);
-  const [user, setUser] = useState(null); // Starts null so users must authenticate!
+function LandingPage() {
+  const navigate = useNavigate();
+  return (
+    <Landing
+      onLogin={() => navigate("/login")}
+      onRegisterClick={() => navigate("/claim")}
+      onContactClick={() => navigate("/contact")}
+    />
+  );
+}
 
-  const goToLanding = () => setView("landing");
-  const goToProfile = () => setView("profile");
-  const goToLogin = () => setView("login"); // <-- 2. Handler to switch view to login
-  
-  const handleLoginSuccess = (loggedInUser) => {
-    setUser(loggedInUser);
-    setView("dashboard");
+function LoginPage({ onLoginSuccess }) {
+  const navigate = useNavigate();
+  return (
+    <Login
+      onBack={() => navigate("/")}
+      onLoginSuccess={onLoginSuccess}
+      onNavigateToClaim={() => navigate("/claim")}
+    />
+  );
+}
+
+function ClaimPage({ onClaimSuccess }) {
+  const navigate = useNavigate();
+  return <Claim onBack={() => navigate("/")} onClaimSuccess={onClaimSuccess} />;
+}
+
+function AcceptInvitePage({ onJoinSuccess }) {
+  const navigate = useNavigate();
+  const { token } = useParams();
+  return (
+    <AcceptInvite
+      inviteToken={token}
+      onBack={() => navigate("/")}
+      onJoinSuccess={onJoinSuccess}
+    />
+  );
+}
+
+function AppRoutes() {
+  const navigate = useNavigate();
+  const [user, setUser] = useState(() => getStoredUser());
+  const [sessionChecked, setSessionChecked] = useState(!getStoredUser());
+
+  useEffect(() => {
+    const stored = getStoredUser();
+    if (!stored) {
+      setSessionChecked(true);
+      return;
+    }
+
+    apiFetch("/api/residents/me")
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
+      .then((data) => {
+        setUser(data.user);
+        persistSession({ user: data.user });
+      })
+      .catch(() => {
+        clearSession();
+        setUser(null);
+      })
+      .finally(() => setSessionChecked(true));
+  }, []);
+
+  const handleAuthSuccess = (payload) => {
+    const nextUser = payload?.user || payload;
+    const token = payload?.token;
+    persistSession({ token, user: nextUser });
+    setUser(nextUser);
+    navigate("/dashboard");
   };
 
   const handleLogout = () => {
-    setUser(null);          // 3. Wipes active user session data completely
-    setView("landing");     // Returns user safely back to the landing page
+    clearSession();
+    setUser(null);
+    navigate("/");
   };
 
-  const goToContact = () => setView("contact");
-  const goToClaim = () => setView("claim");
+  const handleUserUpdate = (updatedUser) => {
+    setUser(updatedUser);
+    persistSession({ user: updatedUser });
+  };
+
+  if (!sessionChecked) {
+    return null;
+  }
 
   return (
     <div className="app-container">
-      {view === "landing" && (
-        <Landing 
-          onLogin={goToLogin} // <-- Clicking login takes them to the login view instead of hard-coding
-          onRegisterClick={goToClaim} 
-          onContactClick={goToContact} 
+      <Routes>
+        <Route path="/" element={<InviteRedirect />} />
+        <Route path="/login" element={<LoginPage onLoginSuccess={handleAuthSuccess} />} />
+        <Route path="/claim" element={<ClaimPage onClaimSuccess={handleAuthSuccess} />} />
+        <Route
+          path="/invite/:token"
+          element={<AcceptInvitePage onJoinSuccess={handleAuthSuccess} />}
         />
-      )}
-
-      {view === "login" && (
-        <Login 
-          onBack={goToLanding} 
-          onLoginSuccess={handleLoginSuccess} 
-          onNavigateToClaim={goToClaim} // Links to the claim page view
+        <Route
+          path="/contact"
+          element={<ContactPage onBack={() => navigate("/")} />}
         />
-      )}
-
-      {view === "claim" && (
-        <Claim onBack={goToLanding} onClaimSuccess={handleLoginSuccess} />
-      )}
-
-      {view === "accept-invite" && (
-        <AcceptInvite 
-          onBack={goToLanding} 
-          onJoinSuccess={goToLanding} 
+        <Route
+          path="/dashboard"
+          element={
+            user ? (
+              <Dashboard
+                user={user}
+                onNavigateToProfile={() => navigate("/profile")}
+                onLogout={handleLogout}
+                onUserUpdate={handleUserUpdate}
+              />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
         />
-      )}
-
-      {view === "dashboard" && user && (
-        <Dashboard 
-          user={user} 
-          onNavigateToProfile={() => setView("profile")} 
-          onLogout={handleLogout}
-          onUserUpdate={(updatedUser) => setUser(updatedUser)} // <-- Add this prop
+        <Route
+          path="/profile"
+          element={
+            user ? (
+              <Profile
+                user={user}
+                onBack={() => navigate("/dashboard")}
+                onUserUpdate={handleUserUpdate}
+              />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
         />
-      )}
-
-      {view === "contact" && <ContactPage onBack={goToLanding} />}
-
-      {view === "profile" && user && (
-        <Profile 
-          user={user} 
-          onBack={() => setView("dashboard")} 
-          onUserUpdate={(updatedUser) => setUser(updatedUser)} 
-        />
-      )}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AppRoutes />
+    </BrowserRouter>
   );
 }

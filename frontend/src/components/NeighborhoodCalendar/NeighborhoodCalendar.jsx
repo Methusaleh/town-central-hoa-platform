@@ -3,6 +3,7 @@ import Calendar from "react-calendar";
 import EventCreationModal from "./EventCreationModal";
 import "react-calendar/dist/Calendar.css";
 import styles from "./NeighborhoodCalendar.module.css";
+import { apiFetch } from "../../api";
 
 export default function NeighborhoodCalendar({ user }) {
   const [date, setDate] = useState(new Date());
@@ -11,27 +12,25 @@ export default function NeighborhoodCalendar({ user }) {
   const [showEventModal, setShowEventModal] = useState(false);
   const isAdmin = user?.role === "board_member" || user?.role === "super_admin";
 
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
-
-  // 1. Fetch live events AND trigger today's selection
-  useEffect(() => {
-    fetch(`${API_URL}/api/events`)
+  const loadEvents = () => {
+    apiFetch("/api/events")
       .then((res) => res.json())
       .then((data) => {
-        setEvents(data);
-        
-        // --- AUTO-SELECT TODAY'S EVENTS ON LOAD ---
+        const list = Array.isArray(data) ? data : [];
+        setEvents(list);
         const today = new Date();
         const year = today.getFullYear();
         const month = String(today.getMonth() + 1).padStart(2, "0");
         const day = String(today.getDate()).padStart(2, "0");
         const todayStr = `${year}-${month}-${day}`;
-        
-        const todaysEvents = data.filter((e) => formatDate(e.event_date) === todayStr);
-        setSelectedEvents(todaysEvents);
+        setSelectedEvents(list.filter((e) => formatDate(e.event_date) === todayStr));
       })
       .catch((err) => console.error("Calendar fetch error:", err));
-  }, [API_URL]);
+  };
+
+  useEffect(() => {
+    loadEvents();
+  }, []);
 
   // Helper to normalize dates for comparison
   const formatDate = (dateInput) => {
@@ -201,11 +200,7 @@ export default function NeighborhoodCalendar({ user }) {
       {showEventModal && (
         <EventCreationModal 
           onClose={() => setShowEventModal(false)} 
-          onEventCreated={() => {
-            fetch(`${API_URL}/api/events`)
-              .then((res) => res.json())
-              .then((data) => setEvents(data));
-          }} 
+          onEventCreated={loadEvents} 
         />
       )}
     </div>

@@ -1,10 +1,10 @@
 import { useState } from "react";
 import styles from "./GuidelinesModal.module.css";
+import { apiFetch } from "../../api";
 
 export default function GuidelinesModal({ user, onAgree }) {
   const [isChecked, setIsChecked] = useState(false);
   const [loading, setLoading] = useState(false);
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
   const handleAccept = async (e) => {
     e.preventDefault();
@@ -12,10 +12,9 @@ export default function GuidelinesModal({ user, onAgree }) {
 
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/residents/agree-guidelines`, {
+      const res = await apiFetch("/api/residents/agree-guidelines", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: user?.email })
+        body: JSON.stringify({})
       });
 
       if (res.ok) {

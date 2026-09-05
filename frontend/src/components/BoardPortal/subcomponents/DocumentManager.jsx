@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import styles from "../BoardPortal.module.css";
+import { apiFetch } from "../../../api";
 
 export default function DocumentManager({ user, onBack }) {
   const [folders, setFolders] = useState([]);
@@ -23,18 +24,17 @@ export default function DocumentManager({ user, onBack }) {
   const [uploading, setUploading] = useState(false);
 
   const explorerRef = useRef(null);
-  const API_BASE = import.meta.env.VITE_API_URL || "https://town-central-hoa-platform-469564564131.us-central1.run.app";
 
   const fetchData = async () => {
     try {
       const [catsRes, docsRes] = await Promise.all([
-        fetch(`${API_BASE}/api/documents/categories`),
-        fetch(`${API_BASE}/api/documents`)
+        apiFetch("/api/documents/categories"),
+        apiFetch("/api/documents")
       ]);
       const catsData = await catsRes.json();
       const docsData = await docsRes.json();
-      setFolders(catsData || []);
-      setDocuments(docsData || []);
+      setFolders(Array.isArray(catsData) ? catsData : []);
+      setDocuments(Array.isArray(docsData) ? docsData : []);
     } catch (err) {
       console.error("Error fetching explorer data:", err);
     }
@@ -45,7 +45,7 @@ export default function DocumentManager({ user, onBack }) {
     const handleClickOutside = () => setContextMenu(null);
     window.addEventListener("click", handleClickOutside);
     return () => window.removeEventListener("click", handleClickOutside);
-  }, [API_BASE]);
+  }, []);
 
   // Navigation Handlers with History Support
   const navigateToFolder = (folderId) => {
@@ -118,13 +118,11 @@ export default function DocumentManager({ user, onBack }) {
     setUploading(true);
     try {
       const formData = new FormData();
-      formData.append("category_id", currentFolderId || "");
+      if (currentFolderId) formData.append("category_id", currentFolderId);
       formData.append("requires_board_key", false);
-      if (user?.id) formData.append("uploaded_by", user.id);
-
       files.forEach(file => formData.append("files", file));
 
-      const res = await fetch(`${API_BASE}/api/documents`, { method: "POST", body: formData });
+      const res = await apiFetch("/api/documents", { method: "POST", body: formData });
       if (res.ok) fetchData();
       else alert("Upload failed.");
     } catch (err) {
@@ -141,8 +139,8 @@ export default function DocumentManager({ user, onBack }) {
     setContextMenu({
       type, // "file", "folder", or "bg"
       item,
-      x: e.pageX,
-      y: e.pageY
+      x: e.clientX,
+      y: e.clientY
     });
   };
 
@@ -152,18 +150,41 @@ export default function DocumentManager({ user, onBack }) {
     if (!inputVal.trim()) return;
 
     try {
-      const res = await fetch(`${API_BASE}/api/documents/categories`, {
+      const res = await apiFetch("/api/documents/categories", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: inputVal.trim(), parent_id: currentFolderId }),
       });
       if (res.ok) {
         setInputVal("");
         setModalType(null);
         fetchData();
+      } else {
+        alert("Folder creation failed.");
       }
     } catch (err) {
       console.error("Folder creation error:", err);
+    }
+  };
+
+  const handleRenameSubmit = async (e) => {
+    e.preventDefault();
+    if (!inputVal.trim() || !modalData?.id) return;
+
+    try {
+      const res = await apiFetch(`/api/documents/categories/${modalData.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ name: inputVal.trim() }),
+      });
+      if (res.ok) {
+        setInputVal("");
+        setModalType(null);
+        setModalData(null);
+        fetchData();
+      } else {
+        alert("Rename failed.");
+      }
+    } catch (err) {
+      console.error("Folder rename error:", err);
     }
   };
 
@@ -172,10 +193,10 @@ export default function DocumentManager({ user, onBack }) {
     if (!confirm(`Are you sure you want to delete this ${type}?`)) return;
 
     try {
-      const endpoint = type === "file" ? `${API_BASE}/api/documents/${id}` : `${API_BASE}/api/documents/categories/${id}`;
-      // Note: If you don't have a backend route for category deletion yet, ensure it cascades or use file delete.
-      const res = await fetch(`${API_BASE}/api/documents/${id}`, { method: "DELETE" });
+      const endpoint = type === "file" ? `/api/documents/${id}` : `/api/documents/categories/${id}`;
+      const res = await apiFetch(endpoint, { method: "DELETE" });
       if (res.ok) fetchData();
+      else alert(`Failed to delete ${type}.`);
     } catch (err) {
       console.error("Delete error:", err);
     }
@@ -193,19 +214,13 @@ export default function DocumentManager({ user, onBack }) {
       ];
 
       for (const f of foldersToCreate) {
-        await fetch(`${API_BASE}/api/documents/categories`, {
+        await apiFetch("/api/documents/categories", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(f),
         });
       }
 
-      // Re-fetch to get the newly created folder IDs
-      const catsRes = await fetch(`${API_BASE}/api/documents/categories`);
-      const catsData = await catsRes.json();
-      setFolders(catsData || []);
-
-      alert("Demo folders seeded successfully! Refresh or navigate to see them.");
+      alert("Demo folders seeded successfully.");
       fetchData();
     } catch (err) {
       console.error("Seeding error:", err);
@@ -214,7 +229,7 @@ export default function DocumentManager({ user, onBack }) {
   };
 
   return (
-    <div className={styles.formCard} style={{ marginTop: "10px", maxWidth: "100%", position: "min-height" }}>
+    <div className={styles.formCard} style={{ marginTop: "10px", maxWidth: "100%", position: "relative" }}>
       {/* TOP MISSION CONTROL & ACTION BAR */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
         <button className={styles.cancelBtn} onClick={onBack}>← Back to Mission Control</button>
@@ -342,7 +357,7 @@ export default function DocumentManager({ user, onBack }) {
       {contextMenu && (
         <div 
           style={{ 
-            position: "absolute", 
+            position: "fixed", 
             top: contextMenu.y, 
             left: contextMenu.x, 
             background: "white", 
@@ -402,6 +417,29 @@ export default function DocumentManager({ user, onBack }) {
               />
               <div style={{ display: "flex", gap: "10px" }}>
                 <button type="submit" className={styles.submitBtn} style={{ flex: 1 }}>Create</button>
+                <button type="button" className={styles.cancelBtn} onClick={() => setModalType(null)} style={{ flex: 1 }}>Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {modalType === "rename" && (
+        <div className={styles.modalBackdrop} onClick={() => setModalType(null)}>
+          <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+            <h3>Rename Folder</h3>
+            <form onSubmit={handleRenameSubmit} style={{ display: "flex", flexDirection: "column", gap: "15px", marginTop: "15px" }}>
+              <input
+                type="text"
+                placeholder="Folder Name..."
+                value={inputVal}
+                onChange={(e) => setInputVal(e.target.value)}
+                style={{ padding: "12px", borderRadius: "8px", border: "1px solid #cbd5e1", width: "100%", boxSizing: "border-box" }}
+                required
+                autoFocus
+              />
+              <div style={{ display: "flex", gap: "10px" }}>
+                <button type="submit" className={styles.submitBtn} style={{ flex: 1 }}>Save</button>
                 <button type="button" className={styles.cancelBtn} onClick={() => setModalType(null)} style={{ flex: 1 }}>Cancel</button>
               </div>
             </form>

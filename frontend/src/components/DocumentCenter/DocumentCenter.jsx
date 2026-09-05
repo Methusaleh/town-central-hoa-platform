@@ -1,26 +1,28 @@
 import { useState, useEffect } from "react";
 import styles from "./DocumentCenter.module.css";
+import { apiFetch } from "../../api";
 
 export default function DocumentCenter({ user }) {
   const [documents, setDocuments] = useState([]);
   const [categories, setCategories] = useState([]);
   const [expandedCategory, setExpandedCategory] = useState(null);
   const [loading, setLoading] = useState(true);
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
   useEffect(() => {
-    // Fetch both tables simultaneously
     Promise.all([
-      fetch(`${API_URL}/api/documents/categories`).then(res => res.json()),
-      fetch(`${API_URL}/api/documents`).then(res => res.json())
+      apiFetch("/api/documents/categories").then(res => res.json()),
+      apiFetch("/api/documents").then(res => res.json())
     ])
     .then(([catsData, docsData]) => {
-      setCategories(catsData);
-      setDocuments(docsData);
+      setCategories(Array.isArray(catsData) ? catsData : []);
+      setDocuments(Array.isArray(docsData) ? docsData : []);
       setLoading(false);
     })
-    .catch(err => console.error("Error fetching repository data:", err));
-  }, [API_URL]);
+    .catch(err => {
+      console.error("Error fetching repository data:", err);
+      setLoading(false);
+    });
+  }, []);
 
   const toggleCategory = (categoryId) => {
     // If clicking the already open category, close it. Otherwise, open the new one.

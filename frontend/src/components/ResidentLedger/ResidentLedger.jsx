@@ -1,18 +1,18 @@
 import { useState, useEffect } from "react";
 import styles from "./ResidentLedger.module.css";
+import { apiFetch } from "../../api";
 
 export default function ResidentLedger({ user }) {
   const [transactions, setTransactions] = useState([]);
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
   useEffect(() => {
     if (user?.address) {
-      fetch(`${API_URL}/api/dues/history/${encodeURIComponent(user.address)}`)
+      apiFetch(`/api/dues/history/${encodeURIComponent(user.address)}`)
         .then((res) => res.json())
-        .then((data) => setTransactions(data))
+        .then((data) => setTransactions(Array.isArray(data) ? data : []))
         .catch((err) => console.error("History fetch error:", err));
     }
-  }, [user?.address, API_URL]);
+  }, [user?.address]);
 
   return (
     <div className={styles.ledgerContainer}>

@@ -3,13 +3,14 @@ const router = express.Router();
 const multer = require("multer");
 const db = require("../db");
 const { uploadToR2 } = require("../utils/s3Storage");
-const { checkImageSafety, checkTextToxicity } = require("../utils/safetyFilter"); // Added safety filter import
+const { checkImageSafety, checkTextToxicity } = require("../utils/safetyFilter");
+const { authRequired, boardRequired } = require("../middleware/auth");
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
 
 // GET: Get all announcements (Stickies sorted first, then newest)
-router.get("/", async (req, res) => {
+router.get("/", authRequired, async (req, res) => {
   try {
     const query = `
       SELECT * FROM announcements 
@@ -30,7 +31,7 @@ router.get("/", async (req, res) => {
 });
 
 // POST: Post a new announcement (Board/Admin only) with safety filters
-router.post("/", upload.single("image"), async (req, res) => {
+router.post("/", boardRequired, upload.single("image"), async (req, res) => {
   const { title, content, priority, channel_type, is_sticky } = req.body;
 
   if (!title || !content) {
@@ -81,7 +82,7 @@ router.post("/", upload.single("image"), async (req, res) => {
 });
 
 // POST: Add a comment/reply to an announcement with safety filters
-router.post("/:announcementId/comments", async (req, res) => {
+router.post("/:announcementId/comments", authRequired, async (req, res) => {
   const { announcementId } = req.params;
   const { author_name, content } = req.body;
 
@@ -109,7 +110,7 @@ router.post("/:announcementId/comments", async (req, res) => {
 });
 
 // PATCH: Admin removal with stock reason
-router.patch("/:id/moderate", async (req, res) => {
+router.patch("/:id/moderate", boardRequired, async (req, res) => {
   const { id } = req.params;
   const { removal_reason } = req.body;
   const replacementText = "[This announcement has been removed by an admin for violating community guidelines.]";

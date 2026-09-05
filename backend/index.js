@@ -1,7 +1,9 @@
 const express = require("express");
 const cors = require("cors");
-const db = require("./db"); // Import our new connection file
-const announcementRoutes = require("./routes/announcementRoutes"); // 1. ADD THIS
+require("dotenv").config();
+
+const db = require("./db");
+const announcementRoutes = require("./routes/announcementRoutes");
 const duesRoutes = require("./routes/duesRoutes");
 const requestRoutes = require("./routes/requestRoutes");
 const eventRoutes = require("./routes/eventRoutes");
@@ -10,11 +12,10 @@ const vendorRoutes = require("./routes/vendorRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const documentRoutes = require("./routes/documentRoutes");
 const alertRoutes = require("./routes/alertRoutes");
-const billingRoutes = require("./routes/billingRoutes");
 const watercoolerRoutes = require("./routes/watercoolerRoutes");
-const app = express();
-const port = process.env.PORT || 8080; // Use Cloud Run's assigned port or default to 8080
 
+const app = express();
+const port = process.env.PORT || 8080;
 
 const allowedOrigins = [
   "http://localhost:5173",
@@ -34,11 +35,13 @@ app.use(
   }),
 );
 
-// Allows our base64 image streams to pass through smoothly up to 2MB
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ limit: "2mb", extended: true }));
 
-// 2. ADD THIS: Plug in the announcements route
+app.get("/health", (_req, res) => {
+  res.json({ ok: true });
+});
+
 app.use("/api/announcements", announcementRoutes);
 app.use("/api/dues", duesRoutes);
 app.use("/api/requests", requestRoutes);
@@ -48,12 +51,16 @@ app.use("/api/vendors", vendorRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/documents", documentRoutes);
 app.use("/api/alerts", alertRoutes);
-app.use("/api/billing", billingRoutes);
 app.use("/api/watercooler", watercoolerRoutes);
 
-// We will plug in separate route files here as we build them
-// app.use('/api/residents', residentRoutes);
-// app.use('/api/board', boardRoutes);
+async function start() {
+  try {
+    await db.runMigrations();
+  } catch (err) {
+    console.error("Migration warning:", err.message);
+  }
 
-// File: ./backend/index.js
-app.listen(port, "0.0.0.0", () => console.log(`Server running on port ${port}`));
+  app.listen(port, "0.0.0.0", () => console.log(`Server running on port ${port}`));
+}
+
+start();

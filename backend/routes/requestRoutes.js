@@ -1,28 +1,17 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../db");
-const nodemailer = require("nodemailer");
-
-// 1. Initialize secure Zoho backend mail carrier using environment variables
-const transporter = nodemailer.createTransport({
-  host: "smtp.zoho.com",
-  port: 465,
-  secure: true,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS 
-  }
-});
+const { sendMail } = require("../utils/mailer");
+const { authRequired, boardRequired } = require("../middleware/auth");
 
 // POST a new maintenance, ARC, or board contact message
-router.post("/", async (req, res) => {
+router.post("/", authRequired, async (req, res) => {
   try {
     const { resident_id, first_name, last_name, type, subject, description } = req.body;
 
     // 2. CHECK TYPE: If it is a direct Board Message, email it silently
     if (type === "Board Message") {
-      const mailOptions = {
-        from: `"Town Central Portal" <${process.env.EMAIL_USER}>`,
+      await sendMail({
         to: "board@towncentralhoa.org",
         subject: `[Portal Contact Form] ${subject}`,
         text: `Message from ${first_name}:\n\n${description}`,
@@ -53,11 +42,6 @@ router.post("/", async (req, res) => {
             </div>
           </div>
         `
-      };
-
-      transporter.sendMail(mailOptions, (err, info) => {
-        if (err) console.error("SMTP Delivery Fault:", err.message);
-        else console.log("Direct background email transmission successful:", info.response);
       });
 
       return res.status(201).json({ success: true, message: "Email transmitted to the board successfully." });
@@ -69,7 +53,7 @@ router.post("/", async (req, res) => {
       VALUES ($1, $2, $3, $4, $5, $6, 'Open')
       RETURNING *;
     `;
-    const values = [resident_id || null, first_name, last_name || "", type, subject, description];
+    const values = [req.user?.id || resident_id || null, first_name, last_name || "", type, subject, description];
     const { rows } = await db.query(dbQuery, values);
     
     res.status(201).json(rows[0]);
@@ -80,7 +64,7 @@ router.post("/", async (req, res) => {
 });
 
 // GET all requests for the Board Portal
-router.get("/admin/all", async (req, res) => {
+router.get("/admin/all", boardRequired, async (req, res) => {
   try {
     const { rows } = await db.query(
       "SELECT * FROM community_requests ORDER BY created_at DESC",
@@ -92,7 +76,7 @@ router.get("/admin/all", async (req, res) => {
 });
 
 // PATCH to update request status (Resolve / Close)
-router.patch("/:id/resolve", async (req, res) => {
+router.patch("/:id/resolve", boardRequired, async (req, res) => {
   const { id } = req.params;
   const { adminName } = req.body;
 
@@ -118,7 +102,7 @@ router.patch("/:id/resolve", async (req, res) => {
 });
 
 // PATCH to update status or append replies/notes to a ticket
-router.patch("/:id/update", async (req, res) => {
+router.patch("/:id/update", boardRequired, async (req, res) => {
   const { id } = req.params;
   const { status, admin_notes } = req.body;
 

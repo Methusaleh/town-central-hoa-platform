@@ -1,6 +1,7 @@
 // frontend/src/pages/Login/Login.jsx
 import { useState } from "react";
 import styles from "./Login.module.css";
+import { apiFetch } from "../../api";
 
 export default function Login({ onBack, onLoginSuccess, onNavigateToClaim }) {
   const [email, setEmail] = useState("");
@@ -8,24 +9,21 @@ export default function Login({ onBack, onLoginSuccess, onNavigateToClaim }) {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setErrorMsg("");
 
     try {
-      const res = await fetch(`${API_URL}/api/residents/login`, {
+      const res = await apiFetch("/api/residents/login", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim(), password })
       });
 
       const data = await res.json();
 
       if (res.ok) {
-        onLoginSuccess(data.user);
+        onLoginSuccess(data);
       } else {
         setErrorMsg(data.error || "Invalid email or password.");
       }

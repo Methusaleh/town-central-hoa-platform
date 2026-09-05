@@ -3,7 +3,8 @@ const router = express.Router();
 const multer = require("multer");
 const db = require("../db");
 const { uploadToR2 } = require("../utils/s3Storage");
-const { checkImageSafety, checkTextToxicity } = require("../utils/safetyFilter"); // Added safety filter import
+const { checkImageSafety, checkTextToxicity } = require("../utils/safetyFilter");
+const { authRequired, boardRequired } = require("../middleware/auth");
 
 // Use memory storage for temporary file handling (max 5MB)
 const storage = multer.memoryStorage();
@@ -13,7 +14,7 @@ const upload = multer({
 });
 
 // GET: Fetch all active alerts and their comments
-router.get("/", async (req, res) => {
+router.get("/", authRequired, async (req, res) => {
   try {
     const alertsQuery = "SELECT * FROM community_alerts ORDER BY created_at DESC";
     const alertsRes = await db.query(alertsQuery);
@@ -32,7 +33,7 @@ router.get("/", async (req, res) => {
 });
 
 // POST: Publish a new community alert with an optional image file attachment & safety filters
-router.post("/", upload.single("image"), async (req, res) => {
+router.post("/", authRequired, upload.single("image"), async (req, res) => {
   const { category, author, content } = req.body;
 
   if (!category || !content) {
@@ -81,7 +82,7 @@ router.post("/", upload.single("image"), async (req, res) => {
 });
 
 // POST: Add a comment/reply to a community alert with safety filters
-router.post("/:alertId/comments", async (req, res) => {
+router.post("/:alertId/comments", authRequired, async (req, res) => {
   const { alertId } = req.params;
   const { author_name, content } = req.body;
 
@@ -110,7 +111,7 @@ router.post("/:alertId/comments", async (req, res) => {
 });
 
 // PATCH: Handle community reporting/flagging
-router.patch("/:id/flag", async (req, res) => {
+router.patch("/:id/flag", authRequired, async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -141,7 +142,7 @@ router.patch("/:id/flag", async (req, res) => {
 });
 
 // PATCH: Edit an existing community alert
-router.patch("/:id/edit", async (req, res) => {
+router.patch("/:id/edit", authRequired, async (req, res) => {
   const { id } = req.params;
   const { content } = req.body;
 
@@ -175,7 +176,7 @@ router.patch("/:id/edit", async (req, res) => {
 });
 
 // PATCH: Admin stock-reason moderation removal
-router.patch("/:id/moderate", async (req, res) => {
+router.patch("/:id/moderate", boardRequired, async (req, res) => {
   const { id } = req.params;
   const { removal_reason } = req.body;
   const replacementText = "[This alert has been removed by an admin for violating community guidelines.]";

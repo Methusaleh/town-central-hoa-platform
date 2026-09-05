@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import styles from "./WaterCooler.module.css";
+import { apiFetch } from "../../api";
 
 export default function WaterCooler({ user }) {
   const [posts, setPosts] = useState([]);
@@ -24,12 +25,11 @@ export default function WaterCooler({ user }) {
     "Unkind or disrespectful tone"
   ];
 
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
   const isAdmin = user?.role === "board_member" || user?.role === "super_admin";
 
   const fetchWaterCoolerData = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/watercooler`);
+      const res = await apiFetch("/api/watercooler");
       const data = await res.json();
       if (res.ok) {
         setPosts(data.posts || []);
@@ -49,7 +49,7 @@ export default function WaterCooler({ user }) {
 
   useEffect(() => {
     fetchWaterCoolerData();
-  }, [API_URL]);
+  }, []);
 
   const handleCreatePost = async (e) => {
     e.preventDefault();
@@ -64,7 +64,7 @@ export default function WaterCooler({ user }) {
       if (selectedFile) formData.append("image", selectedFile);
       if (gifUrl) formData.append("image_url", gifUrl);
 
-      const res = await fetch(`${API_URL}/api/watercooler`, {
+      const res = await apiFetch("/api/watercooler", {
         method: "POST",
         body: formData,
       });
@@ -95,7 +95,7 @@ export default function WaterCooler({ user }) {
       formData.append("content", text.trim());
       if (file) formData.append("image", file);
 
-      const res = await fetch(`${API_URL}/api/watercooler/${postId}/comments`, {
+      const res = await apiFetch(`/api/watercooler/${postId}/comments`, {
         method: "POST",
         body: formData,
       });
@@ -113,9 +113,8 @@ export default function WaterCooler({ user }) {
   const handleModerate = async () => {
     if (!modModalItem) return;
     try {
-      const res = await fetch(`${API_URL}/api/watercooler/${modModalItem.type}/${modModalItem.id}/moderate`, {
+      const res = await apiFetch(`/api/watercooler/${modModalItem.type}/${modModalItem.id}/moderate`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ removal_reason: removalReason }),
       });
 

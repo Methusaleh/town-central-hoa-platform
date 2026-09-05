@@ -5,7 +5,7 @@ import styles from "../BoardPortal.module.css";
 export default function FinancialLedger({ 
   masterRoster = [], 
   onBack,
-  currentUser // Passed from BoardPortal
+  user
 }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -77,7 +77,7 @@ export default function FinancialLedger({
       {selectedLot && (
         <div className={styles.formCard} style={{ border: "1px solid #e2e8f0", maxWidth: "600px" }}>
           <AdminPaymentForm 
-            user={currentUser} 
+            user={user} 
             street_address={selectedLot.street_address}
             onPaymentSuccess={() => {
               alert("Payment applied successfully!");

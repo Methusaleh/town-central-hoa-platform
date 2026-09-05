@@ -1,9 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../db");
+const { authRequired, boardRequired } = require("../middleware/auth");
 
 // 1. GET all notifications for the resident's dashboard feed
-router.get("/", async (req, res) => {
+router.get("/", authRequired, async (req, res) => {
   try {
     const query = `
       SELECT * FROM neighborhood_notifications 
@@ -19,7 +20,7 @@ router.get("/", async (req, res) => {
 });
 
 // 2. POST a new notification from the Executive Board Portal
-router.post("/", async (req, res) => {
+router.post("/", boardRequired, async (req, res) => {
   const { title, message, channel_type, sender_id } = req.body;
 
   if (!title || !message || !channel_type) {

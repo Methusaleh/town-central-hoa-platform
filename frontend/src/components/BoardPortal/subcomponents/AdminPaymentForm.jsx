@@ -1,6 +1,6 @@
-// Replace ./frontend/src/components/BoardPortal/subcomponents/AdminPaymentForm.jsx
 import { useState } from "react";
 import styles from "./AdminPaymentForm.module.css";
+import { apiFetch } from "../../../api";
 
 export default function AdminPaymentForm({ user, street_address, onPaymentSuccess }) {
   const [formData, setFormData] = useState({
@@ -12,9 +12,6 @@ export default function AdminPaymentForm({ user, street_address, onPaymentSucces
   const [displayAmount, setDisplayAmount] = useState("");
   const [status, setStatus] = useState("");
 
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
-
-  // Handles raw number typing and auto-formats to two decimal places
   const handleAmountChange = (e) => {
     const rawValue = e.target.value.replace(/\D/g, ""); // Strip non-digits
     if (!rawValue) {
@@ -33,9 +30,8 @@ export default function AdminPaymentForm({ user, street_address, onPaymentSucces
     setStatus("Processing...");
 
     try {
-      const res = await fetch(`${API_URL}/api/dues/manual-payment`, {
+      const res = await apiFetch("/api/dues/manual-payment", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           street_address,
           ...formData,

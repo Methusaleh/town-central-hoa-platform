@@ -1,5 +1,6 @@
 import { useState } from "react";
 import styles from "./Claim.module.css";
+import { apiFetch } from "../../api";
 
 export default function Claim({ onBack, onClaimSuccess }) {
   const [step, setStep] = useState(1);
@@ -13,14 +14,11 @@ export default function Claim({ onBack, onClaimSuccess }) {
     last_name: "" 
   });
 
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
-
   const handleVerify = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch(`${API_URL}/api/residents/verify`, {
+      const res = await apiFetch("/api/residents/verify", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           street_address: formData.street_address, 
           onboarding_token: formData.onboarding_token 
@@ -44,9 +42,8 @@ export default function Claim({ onBack, onClaimSuccess }) {
   const handleFinalize = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch(`${API_URL}/api/residents/claim`, {
+      const res = await apiFetch("/api/residents/claim", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
           residentId
@@ -56,12 +53,7 @@ export default function Claim({ onBack, onClaimSuccess }) {
       const data = await res.json();
 
       if (res.ok) {
-        onClaimSuccess({
-          first_name: formData.first_name,
-          email: formData.email,
-          role: "resident",
-          address: formData.street_address
-        });
+        onClaimSuccess(data);
       } else {
         alert(data.error || "There was an issue creating your account. Please try again.");
       }

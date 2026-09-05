@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import styles from "./AnnouncementFeed.module.css";
+import { apiFetch } from "../../api";
 
 export default function AnnouncementFeed({ user }) {
   const [announcements, setAnnouncements] = useState([]);
@@ -32,12 +33,11 @@ export default function AnnouncementFeed({ user }) {
   ];
 
   const AVAILABLE_EMOJIS = ["👍", "❤️", "🎉", "💡", "⚠️"];
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
   const isAdmin = user?.role === "board_member" || user?.role === "super_admin";
 
   const fetchAnnouncements = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/announcements`);
+      const res = await apiFetch("/api/announcements");
       const data = await res.json();
       if (res.ok) {
         setAnnouncements(data.announcements || []);
@@ -56,7 +56,7 @@ export default function AnnouncementFeed({ user }) {
 
   useEffect(() => {
     fetchAnnouncements();
-  }, [API_URL]);
+  }, []);
 
   const handleCreateAnnouncement = async (e) => {
     e.preventDefault();
@@ -73,7 +73,7 @@ export default function AnnouncementFeed({ user }) {
       if (selectedFile) formData.append("image", selectedFile);
       if (gifUrl) formData.append("image_url", gifUrl);
 
-      const res = await fetch(`${API_URL}/api/announcements`, {
+      const res = await apiFetch("/api/announcements", {
         method: "POST",
         body: formData,
       });
@@ -136,9 +136,8 @@ export default function AnnouncementFeed({ user }) {
     if (!text?.trim()) return;
 
     try {
-      const res = await fetch(`${API_URL}/api/announcements/${announcementId}/comments`, {
+      const res = await apiFetch(`/api/announcements/${announcementId}/comments`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           author_name: user?.first_name || "Resident",
           content: text.trim()
@@ -157,9 +156,8 @@ export default function AnnouncementFeed({ user }) {
   const handleModerate = async () => {
     if (!modModalId) return;
     try {
-      const res = await fetch(`${API_URL}/api/announcements/${modModalId}/moderate`, {
+      const res = await apiFetch(`/api/announcements/${modModalId}/moderate`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ removal_reason: removalReason }),
       });
 

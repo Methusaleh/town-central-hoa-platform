@@ -1,20 +1,23 @@
 import { useState, useEffect } from "react";
 import styles from "./VendorDirectory.module.css";
+import { apiFetch } from "../../api";
 
 export default function VendorDirectory() {
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
   useEffect(() => {
-    fetch(`${API_URL}/api/vendors`)
+    apiFetch("/api/vendors")
       .then((res) => res.json())
       .then((data) => {
-        setVendors(data);
+        setVendors(Array.isArray(data) ? data : []);
         setLoading(false);
       })
-      .catch((err) => console.error("Error pulling vendors:", err));
-  }, [API_URL]);
+      .catch((err) => {
+        console.error("Error pulling vendors:", err);
+        setLoading(false);
+      });
+  }, []);
 
   if (loading) return <p>Loading trusted vendor listings...</p>;
 

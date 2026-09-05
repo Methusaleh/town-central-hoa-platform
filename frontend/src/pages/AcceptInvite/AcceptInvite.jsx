@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import styles from "./AcceptInvite.module.css";
+import { apiFetch } from "../../api";
 
-export default function AcceptInvite({ onBack, onJoinSuccess }) {
+export default function AcceptInvite({ onBack, onJoinSuccess, inviteToken }) {
   const [token, setToken] = useState(null);
   const [status, setStatus] = useState("verifying"); // "verifying", "valid", "invalid"
   const [inviteData, setInviteData] = useState(null);
@@ -11,22 +12,17 @@ export default function AcceptInvite({ onBack, onJoinSuccess }) {
     password: ""
   });
 
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+  const API_TOKEN = inviteToken || new URLSearchParams(window.location.search).get("invite");
 
   useEffect(() => {
-    // Extract the token from the URL parameters
-    const params = new URLSearchParams(window.location.search);
-    const inviteToken = params.get("invite");
-
-    if (!inviteToken) {
+    if (!API_TOKEN) {
       setStatus("invalid");
       return;
     }
 
-    setToken(inviteToken);
+    setToken(API_TOKEN);
 
-    // Verify the token has not been used yet
-    fetch(`${API_URL}/api/residents/invite/${inviteToken}`)
+    apiFetch(`/api/residents/invite/${API_TOKEN}`)
       .then((res) => {
         if (!res.ok) throw new Error("Invalid or expired token");
         return res.json();
@@ -36,15 +32,14 @@ export default function AcceptInvite({ onBack, onJoinSuccess }) {
         setStatus("valid");
       })
       .catch(() => setStatus("invalid"));
-  }, [API_URL]);
+  }, [API_TOKEN]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     try {
-      const res = await fetch(`${API_URL}/api/residents/invite/accept`, {
+      const res = await apiFetch("/api/residents/invite/accept", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           token,
           first_name: formData.first_name,
@@ -54,9 +49,8 @@ export default function AcceptInvite({ onBack, onJoinSuccess }) {
       });
 
       if (res.ok) {
-        // Clear the URL parameter so it doesn't persist on refresh
-        window.history.replaceState({}, document.title, window.location.pathname);
-        onJoinSuccess();
+        const data = await res.json();
+        onJoinSuccess(data);
       } else {
         alert("Failed to create account. Please try again.");
       }

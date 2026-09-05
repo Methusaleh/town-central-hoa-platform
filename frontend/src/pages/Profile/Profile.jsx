@@ -1,6 +1,7 @@
 import { useState } from "react";
 import InviteMember from "../../components/InviteMember/InviteMember";
 import styles from "./Profile.module.css";
+import { apiFetch } from "../../api";
 
 export default function Profile({ user, onBack, onUserUpdate }) {
   // Local state to manage notification toggles
@@ -11,7 +12,6 @@ export default function Profile({ user, onBack, onUserUpdate }) {
   });
 
   const [uploading, setUploading] = useState(false);
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
   const handleToggle = (key) => {
     setNotifications((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -36,11 +36,9 @@ export default function Profile({ user, onBack, onUserUpdate }) {
       const base64String = reader.result;
 
       try {
-        const response = await fetch(`${API_URL}/api/residents/avatar`, {
+        const response = await apiFetch("/api/residents/avatar", {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            email: user?.email,
             photoData: base64String
           })
         });
@@ -55,7 +53,7 @@ export default function Profile({ user, onBack, onUserUpdate }) {
           if (onUserUpdate) {
             onUserUpdate({
               ...user,
-              photo: base64String
+              photo: data.user?.photo || base64String
             });
           }
         } else {

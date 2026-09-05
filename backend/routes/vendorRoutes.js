@@ -1,9 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../db");
+const { authRequired, boardRequired } = require("../middleware/auth");
 
 // 1. READ: Get all verified vendors
-router.get("/", async (req, res) => {
+router.get("/", authRequired, async (req, res) => {
   try {
     const { rows } = await db.query("SELECT * FROM verified_vendors ORDER BY company_name ASC");
     res.json(rows);
@@ -13,7 +14,7 @@ router.get("/", async (req, res) => {
 });
 
 // 2. CREATE: Add a new trusted company
-router.post("/", async (req, res) => {
+router.post("/", boardRequired, async (req, res) => {
   const { company_name, service_type, contact_phone, contact_email, website_url, notes } = req.body;
   try {
     const query = `
@@ -29,7 +30,7 @@ router.post("/", async (req, res) => {
 });
 
 // 3. UPDATE: Edit an existing company's details
-router.put("/:id", async (req, res) => {
+router.put("/:id", boardRequired, async (req, res) => {
   const { id } = req.params;
   const { company_name, service_type, contact_phone, contact_email, website_url, notes } = req.body;
   try {
@@ -47,7 +48,7 @@ router.put("/:id", async (req, res) => {
 });
 
 // 4. DELETE: Remove a company completely
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", boardRequired, async (req, res) => {
   const { id } = req.params;
   try {
     await db.query("DELETE FROM verified_vendors WHERE id = $1", [id]);

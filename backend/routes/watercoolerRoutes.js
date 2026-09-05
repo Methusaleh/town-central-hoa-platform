@@ -3,13 +3,14 @@ const router = express.Router();
 const multer = require("multer");
 const db = require("../db");
 const { uploadToR2 } = require("../utils/s3Storage");
-const { checkImageSafety, checkTextToxicity } = require("../utils/safetyFilter"); // Added safety filter import
+const { checkImageSafety, checkTextToxicity } = require("../utils/safetyFilter");
+const { authRequired, boardRequired } = require("../middleware/auth");
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
 
 // GET: Fetch all active/visible water-cooler posts with their comments
-router.get("/", async (req, res) => {
+router.get("/", authRequired, async (req, res) => {
   try {
     const postsQuery = `
       SELECT * FROM watercooler_posts 
@@ -35,7 +36,7 @@ router.get("/", async (req, res) => {
 });
 
 // POST: Publish a new water-cooler post (supports image file attachment & safety filters)
-router.post("/", upload.single("image"), async (req, res) => {
+router.post("/", authRequired, upload.single("image"), async (req, res) => {
   const { author_name, author_email, content } = req.body;
 
   if (!content || !content.trim()) {
@@ -83,7 +84,7 @@ router.post("/", upload.single("image"), async (req, res) => {
 });
 
 // POST: Add a comment/reply to a water-cooler post (supports safety filters)
-router.post("/:postId/comments", upload.single("image"), async (req, res) => {
+router.post("/:postId/comments", authRequired, upload.single("image"), async (req, res) => {
   const { postId } = req.params;
   const { author_name, content } = req.body;
 
@@ -131,7 +132,7 @@ router.post("/:postId/comments", upload.single("image"), async (req, res) => {
 });
 
 // PATCH: Admin/Board Moderation Removal with Stock Reason
-router.patch("/:type/:id/moderate", async (req, res) => {
+router.patch("/:type/:id/moderate", boardRequired, async (req, res) => {
   const { type, id } = req.params; // type is 'posts' or 'comments'
   const { removal_reason } = req.body;
 

@@ -2,13 +2,14 @@ const express = require("express");
 const router = express.Router();
 const multer = require("multer");
 const db = require("../db");
+const { authRequired, boardRequired } = require("../middleware/auth");
 const { uploadToR2 } = require("../utils/s3Storage");
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
 
 // GET: Fetch all neighborhood events sorted by date
-router.get("/", async (req, res) => {
+router.get("/", authRequired, async (req, res) => {
   try {
     const { rows } = await db.query(
       "SELECT * FROM neighborhood_events ORDER BY event_date ASC",
@@ -20,7 +21,7 @@ router.get("/", async (req, res) => {
 });
 
 // POST: Board-managed event creation with optional file attachment
-router.post("/", upload.single("attachment"), async (req, res) => {
+router.post("/", boardRequired, upload.single("attachment"), async (req, res) => {
   const { title, event_date, event_time, location, description, category } = req.body;
 
   if (!title || !event_date) {

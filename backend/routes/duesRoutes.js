@@ -1,40 +1,14 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../db");
+const { authRequired, boardRequired, isBoard } = require("../middleware/auth");
 
-// GET /api/dues/:email - Pull ledger data matching the user's home address string
-router.get("/:email", async (req, res) => {
-  try {
-    const { email } = req.params;
-    
-    // 1. Grab the user's registered street address text directly
-    const userQuery = "SELECT address FROM users WHERE email = $1";
-    const userResult = await db.query(userQuery, [email.trim().toLowerCase()]);
-    
-    if (userResult.rows.length === 0) {
-      return res.status(404).json({ error: "Portal profile not found." });
-    }
-    
-    const streetAddress = userResult.rows[0].address;
-
-    // 2. Fetch dues statement row linked directly to that address text
-    const duesQuery = "SELECT * FROM resident_dues WHERE street_address ILIKE $1";
-    const { rows } = await db.query(duesQuery, [streetAddress.trim()]);
-    
-    res.json(rows[0] || { 
-      street_address: streetAddress, 
-      balance: 0.00, 
-      status: "No Record", 
-      next_due_date: "2026-12-31" 
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-router.get("/history/:address", async (req, res) => {
+router.get("/history/:address", authRequired, async (req, res) => {
   try {
     const { address } = req.params;
+    if (address.trim().toLowerCase() !== (req.user.address || "").toLowerCase() && !isBoard(req.user)) {
+      return res.status(403).json({ error: "You can only view your own ledger." });
+    }
     const { rows } = await db.query(
       "SELECT * FROM ledger_transactions WHERE address = $1 ORDER BY created_at DESC",
       [address.trim()]
@@ -45,8 +19,37 @@ router.get("/history/:address", async (req, res) => {
   }
 });
 
+router.get("/:email", authRequired, async (req, res) => {
+  try {
+    const { email } = req.params;
+    if (email.trim().toLowerCase() !== req.user.email && !isBoard(req.user)) {
+      return res.status(403).json({ error: "You can only view your own dues." });
+    }
+
+    const userQuery = "SELECT address FROM users WHERE email = $1";
+    const userResult = await db.query(userQuery, [email.trim().toLowerCase()]);
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: "Portal profile not found." });
+    }
+
+    const streetAddress = userResult.rows[0].address;
+    const duesQuery = "SELECT * FROM resident_dues WHERE street_address ILIKE $1";
+    const { rows } = await db.query(duesQuery, [streetAddress.trim()]);
+
+    res.json(rows[0] || {
+      street_address: streetAddress,
+      balance: 0.00,
+      status: "No Record",
+      next_due_date: "2026-12-31"
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // PUT /api/dues/update-balance - Admin modification targeting the address text field directly
-router.put("/update-balance", async (req, res) => {
+router.put("/update-balance", boardRequired, async (req, res) => {
   const { street_address, balance, status } = req.body;
 
   if (!street_address) {
@@ -79,7 +82,7 @@ router.put("/update-balance", async (req, res) => {
 });
 
 // POST /api/dues/manual-payment - Admin logs a Payment or Issue Charge (Activates property in resident_dues)
-router.post("/manual-payment", async (req, res) => {
+router.post("/manual-payment", boardRequired, async (req, res) => {
   const { street_address, amount, payment_method, reference_note, admin_name, transaction_type } = req.body;
 
   if (!street_address || !amount) {

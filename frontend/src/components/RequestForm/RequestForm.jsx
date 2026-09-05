@@ -1,5 +1,6 @@
 import { useState } from "react";
 import styles from "./RequestForm.module.css";
+import { apiFetch } from "../../api";
 
 export default function RequestForm({ user }) {
   const [formData, setFormData] = useState({
@@ -9,26 +10,20 @@ export default function RequestForm({ user }) {
   });
   const [status, setStatus] = useState(null);
 
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setStatus(null); // Clear previous status before a new attempt
 
     try {
-      const response = await fetch(
-        `${API_URL}/api/requests`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ...formData,
-            first_name: user?.first_name || "Guest",
-            last_name: "Resident",
-            resident_id: 1,
-          }),
-        },
-      );
+      const response = await apiFetch("/api/requests", {
+        method: "POST",
+        body: JSON.stringify({
+          ...formData,
+          first_name: user?.first_name || "Guest",
+          last_name: user?.last_name || "Resident",
+          resident_id: user?.id || null,
+        }),
+      });
 
       if (response.ok) {
         setStatus("success");

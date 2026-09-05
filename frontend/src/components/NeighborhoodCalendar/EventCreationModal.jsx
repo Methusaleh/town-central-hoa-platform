@@ -1,5 +1,6 @@
 import { useState } from "react";
 import styles from "./NeighborhoodCalendar.module.css";
+import { apiFetch } from "../../api";
 
 export default function EventCreationModal({ onClose, onEventCreated }) {
   const [title, setTitle] = useState("");
@@ -10,8 +11,6 @@ export default function EventCreationModal({ onClose, onEventCreated }) {
   const [description, setDescription] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
   const [loading, setLoading] = useState(false);
-
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -28,7 +27,7 @@ export default function EventCreationModal({ onClose, onEventCreated }) {
       formData.append("description", description.trim());
       if (selectedFile) formData.append("attachment", selectedFile);
 
-      const res = await fetch(`${API_URL}/api/events`, {
+      const res = await apiFetch("/api/events", {
         method: "POST",
         body: formData,
       });

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import styles from "../BoardPortal.module.css";
+import { apiFetch } from "../../../api";
 
 export default function RosterDirectory({ 
   masterRoster = [], 
@@ -21,9 +22,6 @@ export default function RosterDirectory({
   const [sending, setSending] = useState(false);
   const [emailStatus, setEmailStatus] = useState("");
 
-  const API_BASE = import.meta.env.VITE_API_URL || "https://town-central-hoa-platform-469564564131.us-central1.run.app";
-
-  // Filter logic for the table search bar
   const filteredRoster = masterRoster.filter(res => 
     `${res.first_name} ${res.last_name} ${res.street_address} ${res.email}`.toLowerCase().includes(filterQuery.toLowerCase())
   );
@@ -67,9 +65,8 @@ export default function RosterDirectory({
       .map(r => r.email);
 
     try {
-      const res = await fetch(`${API_BASE}/api/residents/broadcast`, {
+      const res = await apiFetch("/api/residents/broadcast", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           targetType: "selected", 
           selectedEmails, 

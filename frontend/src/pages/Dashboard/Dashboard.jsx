@@ -16,6 +16,7 @@ import DocumentCenter from "../../components/DocumentCenter/DocumentCenter";
 import DocumentManager from "../../components/BoardPortal/subcomponents/DocumentManager";
 import GuidelinesModal from "../../components/GuidelinesModal/GuidelinesModal";
 import styles from "./Dashboard.module.css";
+import { apiFetch } from "../../api";
 
 export default function Dashboard({ user, onLogout, onNavigateToProfile, onUserUpdate }) {
   const [activeTab, setActiveTab] = useState("feed");
@@ -45,44 +46,50 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile, onUserU
   const [financeStatus, setFinanceStatus] = useState({ text: "", type: "" });
   const [contactForm, setContactForm] = useState({ subject: "", message: "" });
 
-  const API_BASE = import.meta.env.VITE_API_URL || "https://town-central-hoa-platform-469564564131.us-central1.run.app";
   const settingsRef = useRef(null);
+  const isBoard = user?.role === "board_member" || user?.role === "super_admin";
 
-  // Data Fetching Logic (Ensures dashboard widgets get live database data for Announcements, Alerts, & Water-Cooler)
   useEffect(() => {
-    fetch(`${API_BASE}/api/requests/admin/all`)
-      .then((res) => res.json())
-      .then((data) => {
-        setRequests(data || []);
-        setLoading(false);
-      })
-      .catch((err) => console.error("Admin requests fetch error:", err));
+    if (isBoard) {
+      apiFetch("/api/requests/admin/all")
+        .then((res) => res.json())
+        .then((data) => {
+          setRequests(Array.isArray(data) ? data : []);
+          setLoading(false);
+        })
+        .catch((err) => {
+          console.error("Admin requests fetch error:", err);
+          setLoading(false);
+        });
+    } else {
+      setLoading(false);
+    }
 
-    fetch(`${API_BASE}/api/alerts`)
+    apiFetch("/api/alerts")
       .then((res) => res.json())
       .then((data) => {
-        setRecentAlerts(data.alerts || data || []);
+        setRecentAlerts(Array.isArray(data.alerts) ? data.alerts : []);
       })
       .catch((err) => console.error("Alerts preview fetch error:", err));
 
-    fetch(`${API_BASE}/api/watercooler`)
+    apiFetch("/api/watercooler")
       .then((res) => res.json())
       .then((data) => {
-        setRecentPosts(data.posts || []);
+        setRecentPosts(Array.isArray(data.posts) ? data.posts : []);
       })
       .catch((err) => console.error("Watercooler preview fetch error:", err));
 
-    fetch(`${API_BASE}/api/announcements`)
+    apiFetch("/api/announcements")
       .then((res) => res.json())
       .then((data) => {
-        setRecentAnnouncements(data.announcements || data || []);
+        setRecentAnnouncements(Array.isArray(data.announcements) ? data.announcements : []);
       })
       .catch((err) => console.error("Announcements preview fetch error:", err));
-  }, [API_BASE]);
+  }, [isBoard]);
 
   const fetchRosterData = async () => {
     try {
-      const response = await fetch(`${API_BASE}/api/residents/master-list-placeholder`);
+      const response = await apiFetch("/api/residents/master-list-placeholder");
       const data = await response.json();
       setMasterRoster(data || []);
     } catch (err) {
@@ -92,7 +99,7 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile, onUserU
 
   const fetchVendorsData = async () => {
     try {
-      const response = await fetch(`${API_BASE}/api/vendors`);
+      const response = await apiFetch("/api/vendors");
       const data = await response.json();
       setVendorsList(data || []);
     } catch (err) {
@@ -103,13 +110,12 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile, onUserU
   useEffect(() => {
     if (activeTab === "roster" || activeTab === "financials") fetchRosterData();
     if (activeTab === "vendors" || activeTab === "admin-vendors") fetchVendorsData();
-  }, [activeTab, API_BASE]);
+  }, [activeTab]);
 
   const handleResolve = async (requestId) => {
     try {
-      const response = await fetch(`${API_BASE}/api/requests/${requestId}/resolve`, {
+      const response = await apiFetch(`/api/requests/${requestId}/resolve`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ adminName: user?.first_name || "Admin" }),
       });
       if (response.ok) {
@@ -128,13 +134,12 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile, onUserU
     e.preventDefault();
     setSending(true);
     try {
-      const response = await fetch(`${API_BASE}/api/requests`, {
+      const response = await apiFetch("/api/requests", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           resident_id: user?.id || null,
           first_name: user?.first_name || "Resident",
-          last_name: "ContactForm",
+          last_name: user?.last_name || "",
           type: "Board Message",
           subject: contactForm.subject,
           description: contactForm.message,
@@ -160,9 +165,8 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile, onUserU
     const generatedToken = Math.random().toString(36).substring(2, 8).toUpperCase();
     
     try {
-      const response = await fetch(`${API_BASE}/api/residents`, {
+      const response = await apiFetch("/api/residents", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...rosterForm,
           onboarding_token: generatedToken,
@@ -343,7 +347,7 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile, onUserU
                   <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                     {recentAlerts.slice(0, 5).map(alert => (
                       <div key={alert.id} style={{ padding: "6px 0", borderBottom: "1px solid #f1f5f9", fontSize: "0.85rem" }}>
-                        <strong>{alert.category}:</strong> {alert.content.substring(0, 45)}...
+                        <strong>{alert.category}:</strong> {(alert.content || "").substring(0, 45)}...
                       </div>
                     ))}
                   </div>
@@ -362,7 +366,7 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile, onUserU
                   <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                     {recentPosts.slice(0, 5).map(post => (
                       <div key={post.id} style={{ padding: "6px 0", borderBottom: "1px solid #f1f5f9", fontSize: "0.85rem" }}>
-                        <strong>{post.author_name}:</strong> {post.content.substring(0, 45)}...
+                        <strong>{post.author_name}:</strong> {(post.content || "").substring(0, 45)}...
                       </div>
                     ))}
                   </div>
@@ -382,7 +386,7 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile, onUserU
                 <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                   {recentAnnouncements.slice(0, 5).map(ann => (
                     <div key={ann.id} style={{ padding: "8px 0", borderBottom: "1px solid #f1f5f9", fontSize: "0.9rem" }}>
-                      <strong>{ann.title}</strong> — <span style={{ color: "#64748b" }}>{ann.content.substring(0, 60)}...</span>
+                      <strong>{ann.title}</strong> — <span style={{ color: "#64748b" }}>{(ann.content || "").substring(0, 60)}...</span>
                     </div>
                   ))}
                 </div>
@@ -433,8 +437,8 @@ export default function Dashboard({ user, onLogout, onNavigateToProfile, onUserU
             />
           </div>
         )}
-        {activeTab === "financials" && <div className={styles.fadeContent}><FinancialLedger onBack={() => setActiveTab("mission-control")} masterRoster={masterRoster} financeForm={financeForm} setFinanceForm={setFinanceForm} financeStatus={financeStatus} /></div>}
-        {activeTab === "admin-vendors" && <div className={styles.fadeContent}><VendorControls onBack={() => setActiveTab("mission-control")} vendorsList={vendorsList} /></div>}
+        {activeTab === "financials" && <div className={styles.fadeContent}><FinancialLedger onBack={() => setActiveTab("mission-control")} masterRoster={masterRoster} user={user} /></div>}
+        {activeTab === "admin-vendors" && <div className={styles.fadeContent}><VendorControls onBack={() => setActiveTab("mission-control")} /></div>}
         {activeTab === "admin-documents" && <div className={styles.fadeContent}><DocumentManager user={user} onBack={() => setActiveTab("mission-control")} /></div>}
       </main>
 
