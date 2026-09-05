@@ -112,7 +112,7 @@ export default function FinancialLedger({ onBack, user }) {
     <div className={styles.page}>
       <button type="button" className={styles.back} onClick={onBack}>
         <ArrowLeft size={16} />
-        Admin
+        Admin tools
       </button>
 
       <header className={styles.intro}>

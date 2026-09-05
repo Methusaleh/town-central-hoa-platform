@@ -94,7 +94,7 @@ export default function RosterDirectory({
   return (
     <div className={styles.tableCard} style={{ marginTop: "10px" }}>
       <div style={{ marginBottom: "20px" }}>
-        <button className={styles.cancelBtn} onClick={onBack}>← Back to Mission Control</button>
+        <button className={styles.cancelBtn} onClick={onBack}>← Admin tools</button>
       </div>
 
       <div className={styles.tableHeader}>

@@ -16,7 +16,7 @@ export default function OperationsDashboard({
     <>
       <div style={{ marginBottom: "20px" }}>
         <button className={styles.cancelBtn} onClick={onBack}>
-          ← Back to Mission Control
+          ← Admin tools
         </button>
       </div>
 

@@ -379,7 +379,7 @@ export default function DocumentManager({ onBack }) {
   return (
     <div className={styles.page}>
       <div className={styles.backRow}>
-        <button className={styles.backBtn} onClick={onBack}>← Mission Control</button>
+        <button className={styles.backBtn} onClick={onBack}>← Admin tools</button>
       </div>
 
       <div className={styles.window}>

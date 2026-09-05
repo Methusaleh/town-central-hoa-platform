@@ -80,7 +80,7 @@ export default function VendorControls({ onBack }) {
     <div className={styles.tableCard} style={{ marginTop: "10px" }}>
       <div style={{ marginBottom: "20px" }}>
         <button className={styles.cancelBtn} onClick={onBack}>
-          ← Back to Mission Control
+          ← Admin tools
         </button>
       </div>
 
