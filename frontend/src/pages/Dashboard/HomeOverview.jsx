@@ -326,7 +326,11 @@ export default function HomeOverview() {
                 <li key={post.id}>
                   <button type="button" className={styles.chatRow} onClick={() => navigate(`${PATHS.porch}/${post.id}`)}>
                     <div className={styles.avatar} aria-hidden="true">
-                      {(post.author_name || "R").charAt(0).toUpperCase()}
+                      {post.author_photo ? (
+                        <img src={post.author_photo} alt="" />
+                      ) : (
+                        (post.author_name || "R").charAt(0).toUpperCase()
+                      )}
                     </div>
                     <div className={styles.chatCopy}>
                       <div className={styles.chatMeta}>

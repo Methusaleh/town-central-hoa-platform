@@ -57,6 +57,10 @@
   margin: 5px 0;
 }
 
+.pastDue {
+  color: var(--tc-warn) !important;
+}
+
 .payBtn {
   background: var(--tc-brand);
   color: var(--tc-bg-elevated);

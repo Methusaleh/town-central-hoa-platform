@@ -174,7 +174,7 @@ export default function CommunityAlerts({ user }) {
     setSightingError("");
     try {
       const formData = new FormData();
-      formData.append("author_name", user?.first_name || "Neighbor");
+      formData.append("author_name", `${user?.first_name || "Neighbor"} ${user?.last_name || ""}`.trim());
       formData.append("content", sighting.trim() || PHOTO_PLACEHOLDER);
       if (sightingFile) formData.append("image", sightingFile);
 
@@ -237,6 +237,7 @@ export default function CommunityAlerts({ user }) {
         ) : (
           <article className={styles.detail}>
             <div className={styles.detailMeta}>
+              <Avatar name={active.author} photo={active.author_photo} size="sm" />
               <span className={`${styles.flag} ${styles[toneClass(active.category)]}`}>{meta.kicker}</span>
               <span>{relativeTime(active.created_at)}</span>
               <span>Posted by {active.author || "Neighbor"}</span>
@@ -289,7 +290,7 @@ export default function CommunityAlerts({ user }) {
                     const note = item.content && item.content !== PHOTO_PLACEHOLDER ? item.content : "";
                     return (
                       <div key={item.id} className={styles.sighting}>
-                        <Avatar name={item.author_name} size="sm" />
+                        <Avatar name={item.author_name} photo={item.author_photo} size="sm" />
                         <div className={styles.sightingBody}>
                           <strong>
                             {item.author_name || "Neighbor"}
@@ -430,6 +431,7 @@ export default function CommunityAlerts({ user }) {
                   </div>
                   <p className={alert.is_removed ? styles.removed : ""}>{clip(alert.content, 160)}</p>
                   <span className={styles.who}>
+                    <Avatar name={alert.author} photo={alert.author_photo} size="sm" />
                     Posted by {alert.author || "Neighbor"}
                     {isLostPet(alert.category) &&
                       (petSightings.length
@@ -496,7 +498,7 @@ function CreateModal({ user, onClose, onCreated }) {
     try {
       const formData = new FormData();
       formData.append("category", category);
-      formData.append("author", user?.first_name || "Neighbor");
+      formData.append("author", `${user?.first_name || "Neighbor"} ${user?.last_name || ""}`.trim());
       formData.append("content", content.trim());
       if (file) formData.append("image", file);
 

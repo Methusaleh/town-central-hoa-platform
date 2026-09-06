@@ -11,6 +11,7 @@ const {
   publicUser,
 } = require("../middleware/auth");
 const { sendWelcomePacket, sendClaimCodeEmail, sendHouseholdInvite, sendMail, sendPasswordReset } = require("../utils/mailer");
+const { checkImageDataUrl } = require("../utils/safetyFilter");
 
 const USER_COLUMNS = `
   id, first_name, last_name, email, address, role,
@@ -555,6 +556,11 @@ router.put("/avatar", authRequired, async (req, res) => {
   }
 
   try {
+    const photoCheck = await checkImageDataUrl(photoData);
+    if (!photoCheck.safe) {
+      return res.status(400).json({ error: photoCheck.reason });
+    }
+
     const { rows } = await db.query(
       `UPDATE users
        SET profile_photo = $1

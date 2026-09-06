@@ -50,6 +50,11 @@ export default function DuesCard({ user }) {
           <div className={styles.details}>
             <p>Next Due Date: <strong>June 1, 2026</strong></p>
             <p>Last Payment: <strong>{duesInfo?.last_payment_date ? new Date(duesInfo.last_payment_date).toLocaleDateString() : "N/A"}</strong></p>
+            {Number(duesInfo?.balance) > 0 && Number(duesInfo?.days_past_due) > 0 && (
+              <p className={styles.pastDue}>
+                Past due: <strong>{duesInfo.days_past_due} day{Number(duesInfo.days_past_due) === 1 ? "" : "s"}</strong>
+              </p>
+            )}
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "15px" }}>

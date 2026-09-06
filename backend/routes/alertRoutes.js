@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require("multer");
 const db = require("../db");
 const { uploadToR2 } = require("../utils/s3Storage");
-const { checkImageSafety, checkTextToxicity } = require("../utils/safetyFilter");
+const { checkImageSafety, checkTextToxicity, checkImageBuffer } = require("../utils/safetyFilter");
 const { authRequired, boardRequired } = require("../middleware/auth");
 
 // Use memory storage for temporary file handling (max 5MB)
@@ -17,10 +17,36 @@ const upload = multer({
 router.get("/", authRequired, async (req, res) => {
   try {
     const alertsRes = await db.query(
-      "SELECT * FROM community_alerts ORDER BY created_at DESC",
+      `SELECT a.*, u.profile_photo AS author_photo
+       FROM community_alerts a
+       LEFT JOIN LATERAL (
+         SELECT profile_photo
+         FROM users
+         WHERE lower(trim(first_name || ' ' || last_name)) = lower(trim(a.author))
+            OR lower(trim(first_name)) = lower(trim(a.author))
+         ORDER BY CASE
+           WHEN lower(trim(first_name || ' ' || last_name)) = lower(trim(a.author)) THEN 0
+           ELSE 1
+         END
+         LIMIT 1
+       ) u ON true
+       ORDER BY a.created_at DESC`,
     );
     const commentsRes = await db.query(
-      "SELECT * FROM alert_comments ORDER BY created_at ASC",
+      `SELECT c.*, u.profile_photo AS author_photo
+       FROM alert_comments c
+       LEFT JOIN LATERAL (
+         SELECT profile_photo
+         FROM users
+         WHERE lower(trim(first_name || ' ' || last_name)) = lower(trim(c.author_name))
+            OR lower(trim(first_name)) = lower(trim(c.author_name))
+         ORDER BY CASE
+           WHEN lower(trim(first_name || ' ' || last_name)) = lower(trim(c.author_name)) THEN 0
+           ELSE 1
+         END
+         LIMIT 1
+       ) u ON true
+       ORDER BY c.created_at ASC`,
     );
     res.json({
       alerts: alertsRes.rows,
@@ -51,6 +77,10 @@ router.post("/", authRequired, upload.single("image"), async (req, res) => {
 
     // If an image file was attached, send it to Cloudflare R2 storage
     if (req.file) {
+      const bufferCheck = await checkImageBuffer(req.file.buffer, req.file.mimetype, req.file.originalname);
+      if (!bufferCheck.safe) {
+        return res.status(400).json({ error: bufferCheck.reason });
+      }
       imageUrl = await uploadToR2(req.file.buffer, req.file.originalname, req.file.mimetype);
     }
 
@@ -114,6 +144,10 @@ router.post("/:alertId/comments", authRequired, upload.single("image"), async (r
 
     let imageUrl = null;
     if (req.file) {
+      const bufferCheck = await checkImageBuffer(req.file.buffer, req.file.mimetype, req.file.originalname);
+      if (!bufferCheck.safe) {
+        return res.status(400).json({ error: bufferCheck.reason });
+      }
       imageUrl = await uploadToR2(req.file.buffer, req.file.originalname, req.file.mimetype);
       const imageCheck = await checkImageSafety(imageUrl);
       if (!imageCheck.safe) {

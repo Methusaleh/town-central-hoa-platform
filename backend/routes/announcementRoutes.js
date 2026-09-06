@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require("multer");
 const db = require("../db");
 const { uploadToR2 } = require("../utils/s3Storage");
-const { checkImageSafety, checkTextToxicity } = require("../utils/safetyFilter");
+const { checkImageSafety, checkTextToxicity, checkImageBuffer } = require("../utils/safetyFilter");
 const { authRequired, boardRequired } = require("../middleware/auth");
 
 const storage = multer.memoryStorage();
@@ -40,6 +40,10 @@ router.post("/", boardRequired, upload.single("image"), async (req, res) => {
 
     let imageUrl = req.body.image_url || null;
     if (req.file) {
+      const bufferCheck = await checkImageBuffer(req.file.buffer, req.file.mimetype, req.file.originalname);
+      if (!bufferCheck.safe) {
+        return res.status(400).json({ error: bufferCheck.reason });
+      }
       imageUrl = await uploadToR2(req.file.buffer, req.file.originalname, req.file.mimetype);
     }
 

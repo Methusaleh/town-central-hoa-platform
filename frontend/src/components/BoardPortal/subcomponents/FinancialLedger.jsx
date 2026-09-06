@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Search } from "lucide-react";
+import { ArrowLeft, Download, Search } from "lucide-react";
 import AdminPaymentForm from "./AdminPaymentForm";
 import { apiFetch } from "../../../api";
 import styles from "./FinancialLedger.module.css";
@@ -7,8 +7,13 @@ import styles from "./FinancialLedger.module.css";
 const FILTERS = [
   { id: "all", label: "All" },
   { id: "due", label: "Balance due" },
+  { id: "due30", label: "Past due 30+" },
+  { id: "due60", label: "Past due 60+" },
+  { id: "due90", label: "Past due 90+" },
   { id: "paid", label: "Paid" },
   { id: "none", label: "No record" },
+  { id: "claimed", label: "Claimed" },
+  { id: "unclaimed", label: "Unclaimed" },
 ];
 
 function money(value) {
@@ -26,6 +31,8 @@ function statusTone(account) {
 
 function statusLabel(account) {
   const tone = statusTone(account);
+  const days = Number(account?.days_past_due || 0);
+  if (tone === "due" && days > 0) return `${days}d past due`;
   if (tone === "due") return "Balance due";
   if (tone === "paid") return "Paid";
   return "No record";
@@ -33,6 +40,43 @@ function statusLabel(account) {
 
 function membersOf(account) {
   return Array.isArray(account?.members) ? account.members : [];
+}
+
+function csvEscape(value) {
+  const text = String(value ?? "");
+  if (/[",\n]/.test(text)) return `"${text.replace(/"/g, '""')}"`;
+  return text;
+}
+
+function downloadLedgerCsv(rows) {
+  const header = [
+    "street_address",
+    "household",
+    "emails",
+    "balance",
+    "status",
+    "days_past_due",
+    "last_payment",
+    "claimed",
+  ];
+  const body = rows.map((account) => [
+    account.street_address,
+    memberNames(account).join("; "),
+    membersOf(account).map((person) => person.email).filter(Boolean).join("; "),
+    Number(account.balance || 0).toFixed(2),
+    statusLabel(account),
+    Number(account.days_past_due || 0),
+    account.last_payment_date ? new Date(account.last_payment_date).toLocaleDateString() : "",
+    account.is_claimed ? "claimed" : "unclaimed",
+  ]);
+  const csv = [header, ...body].map((row) => row.map(csvEscape).join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "town-central-assessment-ledger.csv";
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 function memberNames(account) {
@@ -115,9 +159,15 @@ export default function FinancialLedger({ onBack, user }) {
     const needle = query.trim().toLowerCase();
     return accounts.filter((item) => {
       const tone = statusTone(item);
+      const days = Number(item.days_past_due || 0);
       if (filter === "due" && tone !== "due") return false;
+      if (filter === "due30" && !(tone === "due" && days >= 30)) return false;
+      if (filter === "due60" && !(tone === "due" && days >= 60)) return false;
+      if (filter === "due90" && !(tone === "due" && days >= 90)) return false;
       if (filter === "paid" && tone !== "paid") return false;
       if (filter === "none" && tone !== "none") return false;
+      if (filter === "claimed" && !item.is_claimed) return false;
+      if (filter === "unclaimed" && item.is_claimed) return false;
       if (!needle) return true;
       const haystack = `${memberNames(item).join(" ")} ${item.street_address || ""}`.toLowerCase();
       return haystack.includes(needle);
@@ -227,6 +277,27 @@ export default function FinancialLedger({ onBack, user }) {
                   {item.label}
                 </button>
               ))}
+            </div>
+            <div className={styles.filters}>
+              <button
+                type="button"
+                className={selectedStreets.length === visible.length && visible.length ? styles.filterOn : ""}
+                onClick={() => setSelectedStreets(visible.map((item) => item.street_address))}
+              >
+                Select all
+              </button>
+              <button type="button" onClick={() => setSelectedStreets([])}>Clear</button>
+              <button
+                type="button"
+                onClick={() => downloadLedgerCsv(
+                  selectedStreets.length
+                    ? accounts.filter((item) => selectedStreets.includes(item.street_address))
+                    : visible
+                )}
+              >
+                <Download size={14} />
+                Download CSV
+              </button>
             </div>
           </div>
 

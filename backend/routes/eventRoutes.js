@@ -4,7 +4,7 @@ const multer = require("multer");
 const db = require("../db");
 const { authRequired, boardRequired } = require("../middleware/auth");
 const { uploadToR2 } = require("../utils/s3Storage");
-const { checkImageSafety } = require("../utils/safetyFilter");
+const { checkImageSafety, checkImageBuffer } = require("../utils/safetyFilter");
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
@@ -39,6 +39,12 @@ function normalizeType(value, category) {
 
 async function uploadSafeImage(file) {
   if (!file) return null;
+  const bufferCheck = await checkImageBuffer(file.buffer, file.mimetype, file.originalname);
+  if (!bufferCheck.safe) {
+    const err = new Error(bufferCheck.reason || "Image did not pass safety checks.");
+    err.status = 400;
+    throw err;
+  }
   const url = await uploadToR2(file.buffer, file.originalname, file.mimetype);
   const check = await checkImageSafety(url);
   if (!check.safe) {
@@ -106,10 +112,11 @@ router.get("/:id", authRequired, async (req, res) => {
 
     const rsvps = await db.query(
       `
-      SELECT display_name
-      FROM event_rsvps
-      WHERE event_id = $1
-      ORDER BY created_at ASC
+      SELECT r.display_name, u.profile_photo AS photo
+      FROM event_rsvps r
+      LEFT JOIN users u ON u.id = r.user_id
+      WHERE r.event_id = $1
+      ORDER BY r.created_at ASC
     `,
       [req.params.id],
     );
@@ -150,7 +157,11 @@ router.patch("/:id/rsvp", authRequired, async (req, res) => {
       [req.params.id],
     );
     const names = await db.query(
-      "SELECT display_name FROM event_rsvps WHERE event_id = $1 ORDER BY created_at ASC",
+      `SELECT r.display_name, u.profile_photo AS photo
+       FROM event_rsvps r
+       LEFT JOIN users u ON u.id = r.user_id
+       WHERE r.event_id = $1
+       ORDER BY r.created_at ASC`,
       [req.params.id],
     );
 

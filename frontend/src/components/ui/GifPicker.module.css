@@ -1,0 +1,79 @@
+.panel {
+  width: min(360px, 92vw);
+  background: var(--tc-bg-elevated);
+  border: 1px solid var(--tc-line);
+  border-radius: var(--tc-radius);
+  box-shadow: var(--tc-shadow);
+  overflow: hidden;
+}
+
+.top {
+  display: flex;
+  gap: 8px;
+  padding: 10px;
+  border-bottom: 1px solid var(--tc-line);
+}
+
+.search {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid var(--tc-line);
+  border-radius: 6px;
+  background: var(--tc-bg);
+  color: var(--tc-ink);
+  font: inherit;
+  font-size: 0.85rem;
+}
+
+.close {
+  border: none;
+  background: none;
+  color: var(--tc-muted);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.body {
+  max-height: 280px;
+  overflow: auto;
+  padding: 8px 10px 12px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.cell {
+  border: none;
+  padding: 0;
+  background: var(--tc-bg);
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  aspect-ratio: 1.2;
+}
+
+.cell img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.muted,
+.error {
+  margin: 8px 2px;
+  font-size: 0.82rem;
+}
+
+.muted {
+  color: var(--tc-muted);
+}
+
+.error {
+  color: var(--tc-danger);
+}

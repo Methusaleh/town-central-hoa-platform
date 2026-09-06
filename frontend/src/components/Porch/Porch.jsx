@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, ChevronRight, ImagePlus, MessageCircle, Smile, X } from "lucide-react";
 import EmojiPicker from "../ui/EmojiPicker";
+import GifPicker from "../ui/GifPicker";
 import Modal from "../ui/Modal";
 import Button from "../ui/Button";
 import Avatar from "../ui/Avatar";
@@ -97,7 +98,7 @@ export default function Porch({ user }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState("");
   const [gifUrl, setGifUrl] = useState("");
-  const [showGifField, setShowGifField] = useState(false);
+  const [showGifPicker, setShowGifPicker] = useState(false);
   const [showComposerEmoji, setShowComposerEmoji] = useState(false);
   const [posting, setPosting] = useState(false);
   const [error, setError] = useState("");
@@ -106,6 +107,7 @@ export default function Porch({ user }) {
   const [replyPreview, setReplyPreview] = useState("");
   const [showReplyEmoji, setShowReplyEmoji] = useState(false);
   const [showReplyGif, setShowReplyGif] = useState(false);
+  const [replyGifUrl, setReplyGifUrl] = useState("");
   const [replyError, setReplyError] = useState("");
   const [postingReply, setPostingReply] = useState(false);
   const [draggingReply, setDraggingReply] = useState(false);
@@ -148,6 +150,7 @@ export default function Porch({ user }) {
   useEffect(() => {
     setReplyText("");
     setReplyFile(null);
+    setReplyGifUrl("");
     setShowReplyEmoji(false);
     setShowReplyGif(false);
     setReplyError("");
@@ -183,7 +186,7 @@ export default function Porch({ user }) {
     setError("");
     try {
       const formData = new FormData();
-      formData.append("author_name", user?.first_name || "Resident");
+      formData.append("author_name", `${user?.first_name || "Resident"} ${user?.last_name || ""}`.trim());
       formData.append("author_email", user?.email || "");
       formData.append(
         "content",
@@ -198,7 +201,7 @@ export default function Porch({ user }) {
         setNewContent("");
         setSelectedFile(null);
         setGifUrl("");
-        setShowGifField(false);
+        setShowGifPicker(false);
         setShowComposerEmoji(false);
         loadFeed();
       } else {
@@ -213,14 +216,18 @@ export default function Porch({ user }) {
 
   const handleAddComment = async (id) => {
     if (postingReply) return;
-    if (!replyText.trim() && !replyFile) return;
+    if (!replyText.trim() && !replyFile && !replyGifUrl) return;
     setPostingReply(true);
     setReplyError("");
     try {
       const formData = new FormData();
-      formData.append("author_name", user?.first_name || "Resident");
-      formData.append("content", replyText.trim() || (replyFile ? "Shared a photo" : ""));
+      formData.append("author_name", `${user?.first_name || "Resident"} ${user?.last_name || ""}`.trim());
+      formData.append(
+        "content",
+        replyText.trim() || (replyGifUrl ? "Shared a GIF" : replyFile ? "Shared a photo" : ""),
+      );
       if (replyFile) formData.append("image", replyFile);
+      if (replyGifUrl) formData.append("image_url", replyGifUrl);
       const res = await apiFetch(`/api/porch/${id}/comments`, {
         method: "POST",
         body: formData,
@@ -229,6 +236,7 @@ export default function Porch({ user }) {
       if (res.ok) {
         setReplyText("");
         setReplyFile(null);
+        setReplyGifUrl("");
         setShowReplyEmoji(false);
         setShowReplyGif(false);
         if (replyFileRef.current) replyFileRef.current.value = "";
@@ -305,6 +313,7 @@ export default function Porch({ user }) {
     }
     setReplyError("");
     setReplyFile(file);
+    setReplyGifUrl("");
     setShowReplyGif(false);
   };
 
@@ -366,7 +375,7 @@ export default function Porch({ user }) {
           <>
             <article className={styles.threadPost}>
               <header className={styles.cardHead}>
-                <Avatar name={activePost.author_name} size="md" />
+                  <Avatar name={activePost.author_name} photo={activePost.author_photo} size="md" />
                 <div className={styles.who}>
                   <strong>{activePost.author_name}</strong>
                   <time dateTime={activePost.created_at}>{relativeTime(activePost.created_at)}</time>
@@ -414,7 +423,7 @@ export default function Porch({ user }) {
 
               {threadComments.map((comment) => (
                 <div key={comment.id} className={styles.comment}>
-                  <Avatar name={comment.author_name} size="sm" />
+                  <Avatar name={comment.author_name} photo={comment.author_photo} size="sm" />
                   <div className={styles.commentBody}>
                     <strong>{comment.author_name}</strong>
                     {comment.content &&
@@ -490,19 +499,20 @@ export default function Porch({ user }) {
                     <button
                       type="button"
                       onClick={() => handleAddComment(activePost.id)}
-                      disabled={postingReply || (!replyText.trim() && !replyFile)}
+                      disabled={postingReply || (!replyText.trim() && !replyFile && !replyGifUrl)}
                     >
                       {postingReply ? "Posting…" : "Reply"}
                     </button>
                   </div>
-                  {replyPreview && (
+                  {(replyPreview || replyGifUrl) && (
                     <div className={styles.preview}>
-                      <img src={replyPreview} alt="" />
+                      <img src={replyPreview || replyGifUrl} alt="" />
                       <button
                         type="button"
                         className={styles.previewClear}
                         onClick={() => {
                           setReplyFile(null);
+                          setReplyGifUrl("");
                           if (replyFileRef.current) replyFileRef.current.value = "";
                         }}
                         aria-label="Remove photo"
@@ -557,7 +567,16 @@ export default function Porch({ user }) {
                     </div>
                   )}
                   {showReplyGif && (
-                    <p className={styles.gifSoon}>GIF search from Tenor will live here.</p>
+                    <div className={styles.pickerWrap}>
+                      <GifPicker
+                        onPick={(url) => {
+                          setReplyGifUrl(url);
+                          setReplyFile(null);
+                          setShowReplyGif(false);
+                        }}
+                        onClose={() => setShowReplyGif(false)}
+                      />
+                    </div>
                   )}
                 </div>
               )}
@@ -609,14 +628,17 @@ export default function Porch({ user }) {
               </button>
             </div>
           )}
-          {showGifField && (
-            <input
-              className={styles.gifField}
-              type="url"
-              placeholder="Paste a GIF link"
-              value={gifUrl}
-              onChange={(e) => setGifUrl(e.target.value)}
-            />
+          {showGifPicker && (
+            <div className={styles.pickerWrap}>
+              <GifPicker
+                onPick={(url) => {
+                  setSelectedFile(null);
+                  setGifUrl(url);
+                  setShowGifPicker(false);
+                }}
+                onClose={() => setShowGifPicker(false)}
+              />
+            </div>
           )}
           {error && <p className={styles.error}>{error}</p>}
           <div className={styles.composerBar}>
@@ -630,9 +652,20 @@ export default function Porch({ user }) {
                 type="file"
                 accept="image/*"
                 hidden
-                onChange={(e) => setSelectedFile(e.target.files[0] || null)}
+                onChange={(e) => {
+                  setGifUrl("");
+                  setShowGifPicker(false);
+                  setSelectedFile(e.target.files[0] || null);
+                }}
               />
-              <button type="button" className={styles.tool} onClick={() => setShowGifField((v) => !v)}>
+              <button
+                type="button"
+                className={styles.tool}
+                onClick={() => {
+                  setShowComposerEmoji(false);
+                  setShowGifPicker((v) => !v);
+                }}
+              >
                 GIF
               </button>
               <button
@@ -669,7 +702,7 @@ export default function Porch({ user }) {
             return (
               <article key={post.id} className={styles.row}>
                 <Link to={`${PATHS.porch}/${post.id}`} className={styles.rowMain}>
-                  <Avatar name={post.author_name} size="md" />
+                  <Avatar name={post.author_name} photo={post.author_photo} size="md" />
                   <div className={styles.rowCopy}>
                     <div className={styles.who}>
                       <strong>{post.author_name}</strong>

@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require("multer");
 const db = require("../db");
 const { uploadToR2 } = require("../utils/s3Storage");
-const { checkImageSafety, checkTextToxicity } = require("../utils/safetyFilter");
+const { checkImageSafety, checkTextToxicity, checkImageBuffer, isAllowedGifUrl } = require("../utils/safetyFilter");
 const { authRequired, boardRequired } = require("../middleware/auth");
 
 const storage = multer.memoryStorage();
@@ -17,12 +17,28 @@ const TABLES = {
 router.get("/", authRequired, async (req, res) => {
   try {
     const postsRes = await db.query(`
-      SELECT * FROM porch_posts
-      ORDER BY created_at DESC;
+      SELECT p.*, u.profile_photo AS author_photo
+      FROM porch_posts p
+      LEFT JOIN users u ON lower(trim(u.email)) = lower(trim(p.author_email))
+      ORDER BY p.created_at DESC;
     `);
     const commentsRes = await db.query(`
-      SELECT * FROM porch_comments
-      ORDER BY created_at ASC;
+      SELECT c.*, u.profile_photo AS author_photo
+      FROM porch_comments c
+      LEFT JOIN LATERAL (
+        SELECT profile_photo
+        FROM users
+        WHERE (c.author_email IS NOT NULL AND lower(trim(email)) = lower(trim(c.author_email)))
+           OR (
+             c.author_email IS NULL AND (
+               lower(trim(first_name || ' ' || last_name)) = lower(trim(c.author_name))
+               OR lower(trim(first_name)) = lower(trim(c.author_name))
+             )
+           )
+        ORDER BY CASE WHEN c.author_email IS NOT NULL THEN 0 ELSE 1 END
+        LIMIT 1
+      ) u ON true
+      ORDER BY c.created_at ASC;
     `);
 
     res.json({
@@ -51,7 +67,13 @@ router.post("/", authRequired, upload.single("image"), async (req, res) => {
     let imageUrl = req.body.image_url || null;
 
     if (req.file) {
+      const bufferCheck = await checkImageBuffer(req.file.buffer, req.file.mimetype, req.file.originalname);
+      if (!bufferCheck.safe) {
+        return res.status(400).json({ error: bufferCheck.reason });
+      }
       imageUrl = await uploadToR2(req.file.buffer, req.file.originalname, req.file.mimetype);
+    } else if (imageUrl && !isAllowedGifUrl(imageUrl)) {
+      return res.status(400).json({ error: "GIFs must be chosen from the GIF picker." });
     }
 
     if (imageUrl) {
@@ -67,7 +89,7 @@ router.post("/", authRequired, upload.single("image"), async (req, res) => {
       VALUES ($1, $2, $3, $4, '{}'::jsonb)
       RETURNING *;
     `,
-      [author_name || "Resident", author_email || null, content.trim(), imageUrl],
+      [author_name || req.user.first_name || "Resident", author_email || req.user.email || null, content.trim(), imageUrl],
     );
 
     res.status(201).json(rows[0]);
@@ -131,7 +153,13 @@ router.post("/:postId/comments", authRequired, upload.single("image"), async (re
 
     let imageUrl = req.body.image_url || null;
     if (req.file) {
+      const bufferCheck = await checkImageBuffer(req.file.buffer, req.file.mimetype, req.file.originalname);
+      if (!bufferCheck.safe) {
+        return res.status(400).json({ error: bufferCheck.reason });
+      }
       imageUrl = await uploadToR2(req.file.buffer, req.file.originalname, req.file.mimetype);
+    } else if (imageUrl && !isAllowedGifUrl(imageUrl)) {
+      return res.status(400).json({ error: "GIFs must be chosen from the GIF picker." });
     }
 
     if (imageUrl) {
@@ -143,11 +171,11 @@ router.post("/:postId/comments", authRequired, upload.single("image"), async (re
 
     const { rows } = await db.query(
       `
-      INSERT INTO porch_comments (post_id, author_name, content, image_url)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO porch_comments (post_id, author_name, author_email, content, image_url)
+      VALUES ($1, $2, $3, $4, $5)
       RETURNING *;
     `,
-      [postId, author_name || "Resident", note, imageUrl],
+      [postId, author_name || "Resident", req.user.email || null, note, imageUrl],
     );
 
     res.status(201).json(rows[0]);

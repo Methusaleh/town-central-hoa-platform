@@ -282,7 +282,7 @@ export default function Events({ user }) {
                 </div>
                 <div className={styles.rsvpPeople}>
                   {rsvps.slice(0, 5).map((row, i) => (
-                    <Avatar key={`${row.display_name}-${i}`} name={row.display_name} size="sm" />
+                    <Avatar key={`${row.display_name}-${i}`} name={row.display_name} photo={row.photo} size="sm" />
                   ))}
                 </div>
                 <Button

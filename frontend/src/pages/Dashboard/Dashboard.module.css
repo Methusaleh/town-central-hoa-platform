@@ -319,7 +319,7 @@
 
 .explorerWrap {
   max-width: none;
-  height: calc(100dvh - var(--tc-header-h) - var(--tc-bottom-h) - 24px);
+  height: calc(100dvh - var(--tc-header-h) - var(--tc-bottom-h) - 48px);
 }
 
 @keyframes fadeIn {

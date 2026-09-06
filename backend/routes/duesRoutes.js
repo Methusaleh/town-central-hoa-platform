@@ -3,6 +3,36 @@ const router = express.Router();
 const db = require("../db");
 const { authRequired, boardRequired, isBoard } = require("../middleware/auth");
 
+function daysPastDue(balance, dueSince) {
+  if (!(Number(balance) > 0) || !dueSince) return 0;
+  const start = new Date(dueSince).getTime();
+  if (Number.isNaN(start)) return 0;
+  return Math.max(0, Math.floor((Date.now() - start) / 86400000));
+}
+
+function withAging(account) {
+  return { ...account, days_past_due: daysPastDue(account.balance, account.due_since) };
+}
+
+async function dueSinceForStreet(street) {
+  const { rows } = await db.query(
+    `SELECT COALESCE(
+       (SELECT MIN(created_at) FROM ledger_transactions
+        WHERE lower(trim(address)) = lower(trim($1))
+          AND transaction_type = 'charge'
+          AND created_at > COALESCE(
+            (SELECT last_payment_date FROM resident_dues WHERE lower(trim(street_address)) = lower(trim($1))),
+            TIMESTAMP '1900-01-01'
+          )),
+       (SELECT MIN(created_at) FROM ledger_transactions
+        WHERE lower(trim(address)) = lower(trim($1))
+          AND transaction_type = 'charge')
+     ) AS due_since`,
+    [street],
+  );
+  return rows[0]?.due_since || null;
+}
+
 async function applyLedgerEntry({
   street_address,
   amount,
@@ -64,6 +94,18 @@ router.get("/admin/overview", boardRequired, async (_req, res) => {
         COALESCE(d.status, 'No Record') AS status,
         d.last_payment_date,
         COALESCE((
+          SELECT MIN(t.created_at)
+          FROM ledger_transactions t
+          WHERE lower(trim(t.address)) = lower(trim(r.street_address))
+            AND t.transaction_type = 'charge'
+            AND t.created_at > COALESCE(d.last_payment_date, TIMESTAMP '1900-01-01')
+        ), (
+          SELECT MIN(t.created_at)
+          FROM ledger_transactions t
+          WHERE lower(trim(t.address)) = lower(trim(r.street_address))
+            AND t.transaction_type = 'charge'
+        )) AS due_since,
+        COALESCE((
           SELECT json_agg(json_build_object(
             'id', u.id,
             'first_name', u.first_name,
@@ -78,7 +120,7 @@ router.get("/admin/overview", boardRequired, async (_req, res) => {
         ON lower(trim(d.street_address)) = lower(trim(r.street_address))
       ORDER BY COALESCE(d.balance, 0) DESC, r.street_address ASC
     `);
-    res.json({ accounts: rows });
+    res.json({ accounts: rows.map(withAging) });
   } catch (err) {
     console.error("Dues overview error:", err.message);
     res.status(500).json({ error: "Server error loading the assessment ledger." });
@@ -118,13 +160,14 @@ router.get("/:email", authRequired, async (req, res) => {
     const streetAddress = userResult.rows[0].address;
     const duesQuery = "SELECT * FROM resident_dues WHERE street_address ILIKE $1";
     const { rows } = await db.query(duesQuery, [streetAddress.trim()]);
-
-    res.json(rows[0] || {
+    const record = rows[0] || {
       street_address: streetAddress,
       balance: 0.00,
       status: "No Record",
-      next_due_date: "2026-12-31"
-    });
+      next_due_date: "2026-12-31",
+    };
+    record.due_since = await dueSinceForStreet(streetAddress);
+    res.json(withAging(record));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -96,6 +96,7 @@ END $$;`,
   )`,
   `ALTER TABLE neighborhood_roster ADD COLUMN IF NOT EXISTS claim_letter_sent_at TIMESTAMPTZ`,
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS welcome_letter_sent_at TIMESTAMPTZ`,
+  `ALTER TABLE porch_comments ADD COLUMN IF NOT EXISTS author_email VARCHAR`,
 ];
 
 async function migrate(query) {

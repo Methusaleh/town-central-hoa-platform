@@ -208,7 +208,11 @@
   }
 
   .main {
-    padding: 14px 14px calc(16px + var(--tc-bottom-h));
+    padding: 14px 14px calc(36px + var(--tc-bottom-h));
+  }
+
+  .mainBleed {
+    padding-bottom: calc(24px + var(--tc-bottom-h));
   }
 
   .tabbar {

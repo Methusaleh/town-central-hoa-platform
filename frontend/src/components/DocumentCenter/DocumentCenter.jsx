@@ -1,107 +1,179 @@
-import { useState, useEffect } from "react";
-import styles from "./DocumentCenter.module.css";
+import { useMemo, useState, useEffect } from "react";
+import { ChevronRight, FileText, Folder } from "lucide-react";
 import { apiFetch } from "../../api";
+import styles from "./DocumentCenter.module.css";
+
+function formatAdded(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function childrenOf(categories, parentId) {
+  return categories
+    .filter((category) => String(category.parent_id || "") === String(parentId || ""))
+    .sort((a, b) => String(a.name).localeCompare(String(b.name)));
+}
+
+function countDocs(categoryId, categories, documents) {
+  const direct = documents.filter((doc) => String(doc.category_id) === String(categoryId)).length;
+  return childrenOf(categories, categoryId).reduce(
+    (sum, child) => sum + countDocs(child.id, categories, documents),
+    direct,
+  );
+}
+
+function FolderBlock({ category, categories, documents, depth, forceOpen }) {
+  const kids = childrenOf(categories, category.id);
+  const files = documents
+    .filter((doc) => String(doc.category_id) === String(category.id))
+    .sort((a, b) => String(a.title).localeCompare(String(b.title)));
+  const total = countDocs(category.id, categories, documents);
+  const [open, setOpen] = useState(depth < 1);
+  const shown = forceOpen || open;
+
+  if (total === 0) return null;
+
+  return (
+    <div className={styles.folder} style={{ marginLeft: depth ? 12 : 0 }}>
+      <button type="button" className={styles.folderHead} onClick={() => setOpen((value) => !value)}>
+        <ChevronRight size={16} className={shown ? styles.chevOpen : styles.chev} />
+        <Folder size={16} />
+        <span>{category.name}</span>
+        <em>{total}</em>
+      </button>
+      {shown && (
+        <div className={styles.folderBody}>
+          {kids.map((child) => (
+            <FolderBlock
+              key={child.id}
+              category={child}
+              categories={categories}
+              documents={documents}
+              depth={depth + 1}
+              forceOpen={forceOpen}
+            />
+          ))}
+          {files.map((doc) => (
+            <a
+              key={doc.id}
+              className={styles.file}
+              href={doc.file_url}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <FileText size={16} />
+              <span>
+                <strong>{doc.title}</strong>
+                <em>{formatAdded(doc.created_at)}</em>
+              </span>
+              <b>Open</b>
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function DocumentCenter({ user }) {
   const [documents, setDocuments] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [expandedCategory, setExpandedCategory] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState("");
+
+  const isBoard = user?.role === "board_member" || user?.role === "super_admin";
 
   useEffect(() => {
     Promise.all([
-      apiFetch("/api/documents/categories").then(res => res.json()),
-      apiFetch("/api/documents").then(res => res.json())
+      apiFetch("/api/documents/categories").then((res) => res.json()),
+      apiFetch("/api/documents").then((res) => res.json()),
     ])
-    .then(([catsData, docsData]) => {
-      setCategories(Array.isArray(catsData) ? catsData : []);
-      setDocuments(Array.isArray(docsData) ? docsData : []);
-      setLoading(false);
-    })
-    .catch(err => {
-      console.error("Error fetching repository data:", err);
-      setLoading(false);
-    });
+      .then(([catsData, docsData]) => {
+        setCategories(Array.isArray(catsData) ? catsData : []);
+        setDocuments(Array.isArray(docsData) ? docsData : []);
+      })
+      .catch((err) => console.error("Error fetching repository data:", err))
+      .finally(() => setLoading(false));
   }, []);
 
-  const toggleCategory = (categoryId) => {
-    // If clicking the already open category, close it. Otherwise, open the new one.
-    setExpandedCategory(expandedCategory === categoryId ? null : categoryId);
-  };
+  const visibleDocuments = useMemo(() => {
+    const allowed = documents.filter(
+      (doc) => !doc.requires_board_key || isBoard,
+    );
+    const needle = query.trim().toLowerCase();
+    if (!needle) return allowed;
+    return allowed.filter((doc) => String(doc.title || "").toLowerCase().includes(needle));
+  }, [documents, isBoard, query]);
 
-  const handleDownload = (file) => {
-    window.open(file.file_url, "_blank");
-  };
+  const roots = childrenOf(categories, null);
+  const unfiled = visibleDocuments.filter((doc) => !doc.category_id);
+  const hasAnything = visibleDocuments.length > 0;
 
-  if (loading) return <p>Loading document repository...</p>;
-
-  // Security gate: Filter documents based on user role
-  const visibleDocuments = documents.filter(doc => 
-    !doc.requires_board_key || 
-    (user?.role === "board_member" || user?.role === "super_admin")
-  );
+  if (loading) return <p className={styles.loading}>Loading documents…</p>;
 
   return (
-    <div className={styles.container}>
+    <div className={styles.page}>
       <header className={styles.header}>
-        <h2>Community Document Repository</h2>
-        <p>Access official neighborhood files, categorized by the Executive Board.</p>
+        <div>
+          <p className={styles.kicker}>Library</p>
+          <h2>Documents</h2>
+          <p>Covenants, meeting packets, and neighborhood files, kept in the folders the board maintains.</p>
+        </div>
+        <label className={styles.search}>
+          <input
+            type="search"
+            placeholder="Search files…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </label>
       </header>
 
-      <div className={styles.accordionContainer}>
-        {categories.map(category => {
-          // Find all documents that belong to this specific category loop
-          const categoryDocs = visibleDocuments.filter(doc => doc.category_id === category.id);
-          
-          // Clean UX: Hide the category entirely if it has zero visible documents
-          if (categoryDocs.length === 0) return null;
-
-          const isExpanded = expandedCategory === category.id;
-
-          return (
-            <div key={category.id} className={styles.accordionItem}>
-              {/* Accordion Header */}
-              <button 
-                className={`${styles.accordionHeader} ${isExpanded ? styles.expanded : ""}`}
-                onClick={() => toggleCategory(category.id)}
-              >
-                <div className={styles.headerContent}>
-                  <span className={styles.categoryIcon} aria-hidden="true" />
-                  <h3>{category.name}</h3>
-                  <span className={styles.docCount}>({categoryDocs.length})</span>
-                </div>
-                <span className={styles.chevron}>{isExpanded ? "▲" : "▼"}</span>
-              </button>
-
-              {/* Accordion Body (Files) */}
-              {isExpanded && (
-                <div className={styles.accordionContent}>
-                  <ul className={styles.fileList}>
-                    {categoryDocs.map(doc => (
-                      <li key={doc.id} className={styles.fileRow}>
-                        <div className={styles.fileInfo}>
-                          <span className={styles.fileName}>📄 {doc.title}</span>
-                          <span className={styles.fileSize}>Added: {new Date(doc.created_at).toLocaleDateString()}</span>
-                        </div>
-                        {/* Updated to 'View' button */}
-                        <a 
-                          href={doc.file_url} 
-                          target="_blank" 
-                          rel="noopener noreferrer" 
-                          className={styles.downloadBtn}
-                          style={{ textDecoration: 'none' }} // Ensure it looks like a button
-                        >
-                          👁️ <span className={styles.btnText}>View</span>
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+      {!hasAnything ? (
+        <p className={styles.empty}>No documents are posted yet.</p>
+      ) : (
+        <div className={styles.tree}>
+          {roots.map((category) => (
+            <FolderBlock
+              key={category.id}
+              category={category}
+              categories={categories}
+              documents={visibleDocuments}
+              depth={0}
+              forceOpen={Boolean(query.trim())}
+            />
+          ))}
+          {unfiled.length > 0 && (
+            <div className={styles.folder}>
+              <div className={styles.folderHead}>
+                <Folder size={16} />
+                <span>Unfiled</span>
+                <em>{unfiled.length}</em>
+              </div>
+              <div className={styles.folderBody}>
+                {unfiled.map((doc) => (
+                  <a
+                    key={doc.id}
+                    className={styles.file}
+                    href={doc.file_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <FileText size={16} />
+                    <span>
+                      <strong>{doc.title}</strong>
+                      <em>{formatAdded(doc.created_at)}</em>
+                    </span>
+                    <b>Open</b>
+                  </a>
+                ))}
+              </div>
             </div>
-          );
-        })}
-      </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
