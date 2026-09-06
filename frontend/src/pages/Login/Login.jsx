@@ -3,7 +3,7 @@ import { useState } from "react";
 import styles from "./Login.module.css";
 import { apiFetch } from "../../api";
 
-export default function Login({ onBack, onLoginSuccess, onNavigateToClaim }) {
+export default function Login({ onBack, onLoginSuccess, onNavigateToClaim, onNavigateToForgot }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -66,6 +66,11 @@ export default function Login({ onBack, onLoginSuccess, onNavigateToClaim }) {
               onChange={(e) => setPassword(e.target.value)} 
               required 
             />
+            {onNavigateToForgot && (
+              <button type="button" className={styles.forgotLink} onClick={onNavigateToForgot}>
+                Forgot password?
+              </button>
+            )}
           </div>
 
           <button type="submit" className={styles.submitBtn} disabled={loading}>

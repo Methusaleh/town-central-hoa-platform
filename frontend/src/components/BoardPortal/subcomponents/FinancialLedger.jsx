@@ -31,6 +31,21 @@ function statusLabel(account) {
   return "No record";
 }
 
+function membersOf(account) {
+  return Array.isArray(account?.members) ? account.members : [];
+}
+
+function memberNames(account) {
+  const members = membersOf(account);
+  if (members.length) {
+    return members
+      .map((person) => `${person.first_name || ""} ${person.last_name || ""}`.trim())
+      .filter(Boolean);
+  }
+  const listed = String(account?.household || "").trim();
+  return listed && listed !== "Household" ? [listed] : [];
+}
+
 export default function FinancialLedger({ onBack, user }) {
   const [accounts, setAccounts] = useState([]);
   const [loaded, setLoaded] = useState(false);
@@ -102,7 +117,7 @@ export default function FinancialLedger({ onBack, user }) {
       if (filter === "paid" && tone !== "paid") return false;
       if (filter === "none" && tone !== "none") return false;
       if (!needle) return true;
-      const haystack = `${item.household || ""} ${item.street_address || ""} ${item.lot_number || ""}`.toLowerCase();
+      const haystack = `${memberNames(item).join(" ")} ${item.street_address || ""}`.toLowerCase();
       return haystack.includes(needle);
     });
   }, [accounts, filter, query]);
@@ -191,7 +206,7 @@ export default function FinancialLedger({ onBack, user }) {
               <Search size={16} />
               <input
                 type="search"
-                placeholder="Name, street, or lot…"
+                placeholder="Name or street…"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
               />
@@ -216,37 +231,51 @@ export default function FinancialLedger({ onBack, user }) {
             <p className={styles.empty}>No households match that.</p>
           ) : (
             <div className={styles.list}>
-              {visible.map((account) => (
+              {visible.map((account) => {
+                const names = memberNames(account);
+                return (
                 <div
                   key={account.id}
-                  className={`${styles.row} ${
+                  className={`${styles.rowBlock} ${
                     bulkMode
                       ? selectedStreets.includes(account.street_address) ? styles.rowOn : ""
                       : String(account.id) === String(selectedId) ? styles.rowOn : ""
                   }`}
                 >
-                  <label className={styles.check} onClick={(e) => e.stopPropagation()}>
-                    <input
-                      type="checkbox"
-                      checked={selectedStreets.includes(account.street_address)}
-                      onChange={() => toggleStreet(account.street_address)}
-                    />
-                  </label>
-                  <button type="button" className={styles.rowMain} onClick={() => openAccount(account)}>
-                    <div className={styles.rowCopy}>
-                      <strong>{account.household || "Household"}</strong>
-                      <span>
-                        {account.street_address}
-                        {account.lot_number ? ` · Lot ${account.lot_number}` : ""}
-                      </span>
-                    </div>
-                    <div className={styles.rowMoney}>
-                      <b className={styles[statusTone(account)]}>{money(account.balance)}</b>
-                      <em>{statusLabel(account)}</em>
-                    </div>
-                  </button>
+                  <div className={styles.row}>
+                    <label className={styles.check}>
+                      <input
+                        type="checkbox"
+                        checked={selectedStreets.includes(account.street_address)}
+                        onChange={() => toggleStreet(account.street_address)}
+                      />
+                    </label>
+                    <button type="button" className={styles.rowMain} onClick={() => openAccount(account)}>
+                      <div className={styles.rowCopy}>
+                        <strong>{account.street_address}</strong>
+                      </div>
+                      <div className={styles.rowMoney}>
+                        <b className={styles[statusTone(account)]}>{money(account.balance)}</b>
+                        <em>{statusLabel(account)}</em>
+                      </div>
+                    </button>
+                  </div>
+                  <ul className={styles.memberList}>
+                    {membersOf(account).length === 0 && names.length === 0 ? (
+                      <li className={styles.memberMuted}>No logins yet</li>
+                    ) : membersOf(account).length > 0 ? (
+                      membersOf(account).map((person) => (
+                        <li key={person.id}>
+                          {`${person.first_name || ""} ${person.last_name || ""}`.trim() || person.email}
+                        </li>
+                      ))
+                    ) : (
+                      names.map((name) => <li key={name}>{name}</li>)
+                    )}
+                  </ul>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>
@@ -272,10 +301,9 @@ export default function FinancialLedger({ onBack, user }) {
                 {selectedAccounts.map((account) => (
                   <li key={account.id}>
                     <div>
-                      <strong>{account.household || "Household"}</strong>
+                      <strong>{account.street_address}</strong>
                       <span>
-                        {account.street_address}
-                        {account.lot_number ? ` · Lot ${account.lot_number}` : ""}
+                        {memberNames(account).join(", ") || "No logins yet"}
                         {" · "}
                         {money(account.balance)}
                       </span>
@@ -327,11 +355,8 @@ export default function FinancialLedger({ onBack, user }) {
               </button>
               <div className={styles.accountHead}>
                 <div>
-                  <h3>{selected.household || "Household"}</h3>
-                  <p>
-                    {selected.street_address}
-                    {selected.lot_number ? ` · Lot ${selected.lot_number}` : ""}
-                  </p>
+                  <h3>{selected.street_address}</h3>
+                  <p>{memberNames(selected).join(", ") || "No logins yet"}</p>
                 </div>
                 <div className={styles.balanceCard}>
                   <span>Current balance</span>

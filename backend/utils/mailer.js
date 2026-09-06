@@ -89,11 +89,29 @@ function sendHouseholdInvite({ to, address, token }) {
   });
 }
 
+function sendPasswordReset({ to, firstName, token }) {
+  const resetUrl = `${FRONTEND_URL}/reset/${token}`;
+  return sendMail({
+    to,
+    subject: "Reset your Town Central password",
+    html: wrapEmail(
+      "Password reset",
+      `
+        <p>Hello${firstName ? ` ${firstName}` : ""},</p>
+        <p>We received a request to reset the password for your Town Central resident portal account.</p>
+        <p><a href="${resetUrl}" style="display: inline-block; background: #2ecc71; color: #ffffff; text-decoration: none; font-weight: 700; padding: 12px 18px; border-radius: 8px;">Choose a new password</a></p>
+        <p>This link expires in one hour. If you did not ask for a reset, you can ignore this email.</p>
+      `,
+    ),
+  });
+}
+
 module.exports = {
   transporter,
   sendMail,
   sendWelcomePacket,
   sendClaimCodeEmail,
   sendHouseholdInvite,
+  sendPasswordReset,
   FRONTEND_URL,
 };

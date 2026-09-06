@@ -89,7 +89,7 @@
 
 .workspace {
   display: grid;
-  grid-template-columns: minmax(280px, 360px) 1fr;
+  grid-template-columns: minmax(420px, 0.48fr) minmax(0, 1fr);
   gap: 16px;
   align-items: start;
 }
@@ -172,22 +172,45 @@
 
 .row {
   display: flex;
-  align-items: stretch;
+  align-items: flex-start;
   gap: 8px;
   width: 100%;
-  padding: 0 8px 0 12px;
-  border-bottom: 1px solid var(--tc-line);
+  padding: 10px 12px 4px;
   background: none;
   color: inherit;
+}
+
+.rowBlock {
+  border-bottom: 1px solid var(--tc-line);
+}
+
+.memberList {
+  list-style: none;
+  margin: 0;
+  padding: 0 12px 10px 36px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.memberList li,
+.memberMuted {
+  font-size: 0.8rem;
+  color: var(--tc-ink-soft);
+}
+
+.memberMuted {
+  color: var(--tc-muted);
 }
 
 .rowMain {
   display: flex;
   justify-content: space-between;
-  gap: 10px;
+  align-items: flex-start;
+  gap: 12px;
   flex: 1;
   min-width: 0;
-  padding: 12px 6px 12px 0;
+  padding: 0;
   border: none;
   background: none;
   text-align: left;
@@ -199,6 +222,8 @@
 .check {
   display: flex;
   align-items: center;
+  height: 1.35rem;
+  flex-shrink: 0;
 }
 
 .bulk {
@@ -324,6 +349,7 @@
 .rowCopy strong {
   font-size: 0.9rem;
   font-weight: 650;
+  line-height: 1.35rem;
 }
 
 .rowCopy span {
@@ -337,6 +363,7 @@
   align-items: flex-end;
   gap: 2px;
   flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .rowMoney b,

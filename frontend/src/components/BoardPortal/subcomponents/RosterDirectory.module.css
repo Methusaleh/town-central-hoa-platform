@@ -230,7 +230,7 @@
 
 .workspace {
   display: grid;
-  grid-template-columns: minmax(280px, 380px) 1fr;
+  grid-template-columns: minmax(400px, 0.46fr) minmax(0, 1fr);
   gap: 16px;
   align-items: start;
 }
@@ -378,12 +378,15 @@
   max-height: 70vh;
 }
 
+.rowBlock {
+  border-bottom: 1px solid var(--tc-line);
+}
+
 .row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--tc-line);
+  padding: 10px 12px 4px;
 }
 
 .rowOn {
@@ -393,6 +396,8 @@
 .check {
   display: flex;
   align-items: center;
+  height: 1.35rem;
+  flex-shrink: 0;
 }
 
 .rowMain {
@@ -413,6 +418,39 @@
 .rowMain strong {
   font-size: 0.9rem;
   font-weight: 650;
+  line-height: 1.35rem;
+}
+
+.memberList {
+  list-style: none;
+  margin: 0;
+  padding: 0 12px 10px 36px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.memberList li label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: var(--tc-ink-soft);
+  cursor: pointer;
+}
+
+.memberMuted {
+  font-size: 0.8rem;
+  color: var(--tc-muted);
+}
+
+.sectionLabel {
+  margin: 8px 0 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tc-muted);
 }
 
 .rowMain span {
@@ -428,6 +466,8 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
   flex-shrink: 0;
+  white-space: nowrap;
+  line-height: 1.35rem;
 }
 
 .claimed {

@@ -12,6 +12,12 @@ export default function Profile({ user, onBack, onUserUpdate }) {
   });
 
   const [uploading, setUploading] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordMsg, setPasswordMsg] = useState("");
+  const [passwordError, setPasswordError] = useState("");
 
   const handleToggle = (key) => {
     setNotifications((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -66,6 +72,46 @@ export default function Profile({ user, onBack, onUserUpdate }) {
         setUploading(false);
       }
     };
+  };
+
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+    setPasswordMsg("");
+    setPasswordError("");
+
+    if (newPassword.length < 8) {
+      setPasswordError("New password must be at least 8 characters.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError("New passwords do not match.");
+      return;
+    }
+
+    setPasswordSaving(true);
+    try {
+      const response = await apiFetch("/api/residents/password", {
+        method: "PUT",
+        body: JSON.stringify({
+          current_password: currentPassword,
+          new_password: newPassword,
+        }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setPasswordMsg("Password updated.");
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+      } else {
+        setPasswordError(data.error || "Could not update the password.");
+      }
+    } catch (err) {
+      console.error("Password change error:", err);
+      setPasswordError("Network error updating password.");
+    } finally {
+      setPasswordSaving(false);
+    }
   };
 
   return (
@@ -174,6 +220,63 @@ export default function Profile({ user, onBack, onUserUpdate }) {
             >
               Save Preferences
             </button>
+          </div>
+
+          <div className={styles.card}>
+            <h3>Password</h3>
+            <p className={styles.subtext}>
+              Change the password for this login. If you forgot your current password, sign out and use Forgot password on the sign-in page.
+            </p>
+
+            <form onSubmit={handlePasswordChange}>
+              <div className={styles.field}>
+                <label htmlFor="current-password">Current password</label>
+                <input
+                  id="current-password"
+                  type="password"
+                  autoComplete="current-password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  required
+                />
+              </div>
+              <div className={styles.field}>
+                <label htmlFor="new-password">New password</label>
+                <input
+                  id="new-password"
+                  type="password"
+                  autoComplete="new-password"
+                  placeholder="At least 8 characters"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                  minLength={8}
+                />
+              </div>
+              <div className={styles.field}>
+                <label htmlFor="confirm-password">Confirm new password</label>
+                <input
+                  id="confirm-password"
+                  type="password"
+                  autoComplete="new-password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  minLength={8}
+                />
+              </div>
+
+              {passwordError && <p className={styles.statusErr}>{passwordError}</p>}
+              {passwordMsg && <p className={styles.statusOk}>{passwordMsg}</p>}
+
+              <button
+                type="submit"
+                className={styles.saveBtn}
+                disabled={passwordSaving}
+              >
+                {passwordSaving ? "Updating..." : "Update password"}
+              </button>
+            </form>
           </div>
 
           {/* Household Management Card */}

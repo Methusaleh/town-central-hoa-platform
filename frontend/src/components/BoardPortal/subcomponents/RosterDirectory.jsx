@@ -94,11 +94,13 @@ export default function RosterDirectory({ onBack }) {
   const [transfer, setTransfer] = useState(EMPTY_TRANSFER);
   const [showTransfer, setShowTransfer] = useState(false);
   const [compose, setCompose] = useState("");
+  const [composeAudience, setComposeAudience] = useState("households");
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [emailStatus, setEmailStatus] = useState("");
   const [mobileDetail, setMobileDetail] = useState(false);
+  const [selectedPeople, setSelectedPeople] = useState([]);
 
   const selected = lots.find((lot) => String(lot.id) === String(selectedId)) || null;
 
@@ -145,18 +147,30 @@ export default function RosterDirectory({ onBack }) {
     setMobileDetail(true);
   };
 
+  const togglePerson = (person, street) => {
+    setSelectedPeople((current) =>
+      current.some((item) => item.id === person.id)
+        ? current.filter((item) => item.id !== person.id)
+        : [...current, { id: person.id, email: person.email, name: displayName(person), street }],
+    );
+    setMobileDetail(true);
+  };
+
   const selectByStatus = (statusType) => {
     if (statusType === "all") setSelectedIds(lots.map((lot) => lot.id));
     else if (statusType === "claimed") setSelectedIds(lots.filter((lot) => lot.is_claimed).map((lot) => lot.id));
     else if (statusType === "unclaimed") setSelectedIds(lots.filter((lot) => !lot.is_claimed).map((lot) => lot.id));
-    else setSelectedIds([]);
+    else {
+      setSelectedIds([]);
+      setSelectedPeople([]);
+    }
     setCompose("");
     setEmailStatus("");
     setMobileDetail(statusType !== "clear");
   };
 
   const openLot = (lot) => {
-    if (selectedIds.length > 0) return;
+    if (selectedIds.length > 0 || selectedPeople.length > 0) return;
     setSelectedId(lot.id);
     setMobileDetail(true);
     setShowTransfer(false);
@@ -292,20 +306,30 @@ export default function RosterDirectory({ onBack }) {
     }
   };
 
-  const sendBroadcast = async (e, kind) => {
+  const sendBroadcast = async (e, kind, audience) => {
     e.preventDefault();
     setSending(true);
     setEmailStatus("Sending…");
     try {
       const res = await apiFetch("/api/residents/broadcast", {
         method: "POST",
-        body: JSON.stringify({
-          targetType: "selected",
-          selectedIds,
-          subject,
-          message,
-          kind,
-        }),
+        body: JSON.stringify(
+          audience === "people"
+            ? {
+                targetType: "people",
+                selectedEmails: selectedPeople.map((person) => person.email).filter(Boolean),
+                subject,
+                message,
+                kind,
+              }
+            : {
+                targetType: "selected",
+                selectedIds,
+                subject,
+                message,
+                kind,
+              },
+        ),
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
@@ -342,15 +366,16 @@ export default function RosterDirectory({ onBack }) {
 
   const claimedCount = lots.filter((lot) => lot.is_claimed).length;
   const loginCount = lots.reduce((sum, lot) => sum + householdOf(lot).length, 0);
-  const batchMode = selectedIds.length > 0;
+  const batchMode = selectedIds.length > 0 || selectedPeople.length > 0;
   const selectedLots = lots.filter((lot) => selectedIds.includes(lot.id));
   const reachableLots = selectedLots.filter(lotHasEmail);
   const printLots = selectedLots.filter((lot) => !lotHasEmail(lot));
   const claimEmailLots = selectedLots.filter((lot) => !lot.is_claimed && lot.email && lot.onboarding_token);
   const claimPrintLots = selectedLots.filter((lot) => !lot.is_claimed && (!lot.email || !lot.onboarding_token));
 
-  const startCompose = (kind) => {
+  const startCompose = (kind, audience = "households") => {
     setCompose(kind);
+    setComposeAudience(audience);
     setEmailStatus("");
     if (kind === "newsletter" && !subject) setSubject("Town Central Newsletter");
   };
@@ -509,34 +534,50 @@ export default function RosterDirectory({ onBack }) {
               {visible.map((lot) => {
                 const members = householdOf(lot);
                 const checked = selectedIds.includes(lot.id);
+                const peopleOn = members.some((person) => selectedPeople.some((item) => item.id === person.id));
                 return (
                   <div
                     key={lot.id}
-                    className={`${styles.row} ${
+                    className={`${styles.rowBlock} ${
                       batchMode
-                        ? checked ? styles.rowOn : ""
+                        ? checked || peopleOn ? styles.rowOn : ""
                         : String(lot.id) === String(selectedId) ? styles.rowOn : ""
                     }`}
                   >
-                    <label className={styles.check} onClick={(e) => e.stopPropagation()}>
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => toggleOne(lot.id)}
-                      />
-                    </label>
-                    <button type="button" className={styles.rowMain} onClick={() => openLot(lot)}>
-                      <strong>{lot.street_address}</strong>
-                      <span>
-                        {displayName(lot)}
-                        {members.length
-                          ? ` · ${members.length} login${members.length === 1 ? "" : "s"}`
-                          : " · no logins yet"}
-                      </span>
-                    </button>
-                    <em className={lot.is_claimed ? styles.claimed : styles.pending}>
-                      {lot.is_claimed ? "Claimed" : "Pending"}
-                    </em>
+                    <div className={styles.row}>
+                      <label className={styles.check}>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleOne(lot.id)}
+                        />
+                      </label>
+                      <button type="button" className={styles.rowMain} onClick={() => openLot(lot)}>
+                        <strong>{lot.street_address}</strong>
+                      </button>
+                      <em className={lot.is_claimed ? styles.claimed : styles.pending}>
+                        {lot.is_claimed ? "Claimed" : "Pending"}
+                      </em>
+                    </div>
+                    <ul className={styles.memberList}>
+                      {members.length === 0 ? (
+                        <li className={styles.memberMuted}>{displayName(lot)} · no login yet</li>
+                      ) : (
+                        members.map((person) => (
+                          <li key={person.id}>
+                            <label>
+                              <input
+                                type="checkbox"
+                                checked={selectedPeople.some((item) => item.id === person.id)}
+                                onChange={() => togglePerson(person, lot.street_address)}
+                                disabled={!person.email}
+                              />
+                              <span>{displayName(person)}</span>
+                            </label>
+                          </li>
+                        ))
+                      )}
+                    </ul>
                   </div>
                 );
               })}
@@ -554,78 +595,128 @@ export default function RosterDirectory({ onBack }) {
             <>
               <div className={styles.accountHead}>
                 <div>
-                  <h3>{selectedLots.length} household{selectedLots.length === 1 ? "" : "s"} selected</h3>
+                  <h3>
+                    {selectedPeople.length > 0 && selectedLots.length > 0
+                      ? `${selectedPeople.length} people · ${selectedLots.length} streets`
+                      : selectedPeople.length > 0
+                        ? `${selectedPeople.length} ${selectedPeople.length === 1 ? "person" : "people"} selected`
+                        : `${selectedLots.length} household${selectedLots.length === 1 ? "" : "s"} selected`}
+                  </h3>
                   <p>
-                    {reachableLots.length} can be emailed
-                    {printLots.length ? ` · ${printLots.length} need a printed packet` : ""}
-                    {claimEmailLots.length ? ` · ${claimEmailLots.length} can get a claim letter` : ""}
+                    Check a name to email that person only. Check a street for household mail, claim letters, and the CSV packet.
                   </p>
                 </div>
                 <Button variant="ghost" onClick={() => selectByStatus("clear")}>Clear selection</Button>
               </div>
 
-              <p className={styles.emptyInline}>
-                Email goes to every login at these streets. Streets without an email stay on the
-                CSV for hand delivery — we will not skip them silently.
-              </p>
+              {selectedPeople.length > 0 && (
+                <>
+                  <h4 className={styles.sectionLabel}>People</h4>
+                  <ul className={styles.review}>
+                    {selectedPeople.map((person) => (
+                      <li key={person.id}>
+                        <div>
+                          <strong>{person.name}</strong>
+                          <span>{person.street}{person.email ? ` · ${person.email}` : " · no email"}</span>
+                        </div>
+                        <button type="button" onClick={() => togglePerson({ id: person.id, email: person.email, first_name: person.name, last_name: "" }, person.street)}>Remove</button>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className={styles.formActions}>
+                    <Button
+                      onClick={() => startCompose("email", "people")}
+                      disabled={!selectedPeople.some((person) => person.email)}
+                    >
+                      <Mail size={16} />
+                      Email these people
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => startCompose("newsletter", "people")}
+                      disabled={!selectedPeople.some((person) => person.email)}
+                    >
+                      Newsletter to these people
+                    </Button>
+                  </div>
+                </>
+              )}
 
-              <ul className={styles.review}>
-                {selectedLots.map((lot) => (
-                  <li key={lot.id}>
-                    <div>
-                      <strong>{lot.street_address}</strong>
-                      <span>
-                        {displayName(lot)}
-                        {lotHasEmail(lot)
-                          ? ` · ${lot.email || householdOf(lot).map((person) => person.email).filter(Boolean)[0]}`
-                          : " · no email — print packet"}
-                      </span>
-                    </div>
-                    <button type="button" onClick={() => toggleOne(lot.id)}>Remove</button>
-                  </li>
-                ))}
-              </ul>
-
-              <div className={styles.formActions}>
-                <Button onClick={() => startCompose("email")} disabled={reachableLots.length === 0}>
-                  <Mail size={16} />
-                  Custom email
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={() => startCompose("newsletter")}
-                  disabled={reachableLots.length === 0}
-                >
-                  Newsletter
-                </Button>
-                <Button
-                  variant="secondary"
-                  disabled={sending || claimEmailLots.length === 0}
-                  onClick={emailClaimCodes}
-                >
-                  Email claim codes
-                </Button>
-                <Button variant="secondary" onClick={() => downloadClaimPacket(selectedLots)}>
-                  <Download size={16} />
-                  Download CSV
-                </Button>
-              </div>
-
-              {claimPrintLots.length > 0 && (
-                <p className={styles.emptyInline}>
-                  {claimPrintLots.length} unclaimed street{claimPrintLots.length === 1 ? "" : "s"} have no email.
-                  Use the CSV to print claim codes for door-drop.
-                </p>
+              {selectedLots.length > 0 && (
+                <>
+                  <h4 className={styles.sectionLabel}>Streets</h4>
+                  <p className={styles.emptyInline}>
+                    Household email goes to every login at these streets. Streets without an email stay on the
+                    CSV for hand delivery.
+                  </p>
+                  <ul className={styles.review}>
+                    {selectedLots.map((lot) => (
+                      <li key={lot.id}>
+                        <div>
+                          <strong>{lot.street_address}</strong>
+                          <span>
+                            {displayName(lot)}
+                            {lotHasEmail(lot)
+                              ? ` · ${lot.email || householdOf(lot).map((person) => person.email).filter(Boolean)[0]}`
+                              : " · no email — print packet"}
+                          </span>
+                        </div>
+                        <button type="button" onClick={() => toggleOne(lot.id)}>Remove</button>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className={styles.formActions}>
+                    <Button onClick={() => startCompose("email", "households")} disabled={reachableLots.length === 0}>
+                      <Mail size={16} />
+                      Email households
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => startCompose("newsletter", "households")}
+                      disabled={reachableLots.length === 0}
+                    >
+                      Newsletter
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      disabled={sending || claimEmailLots.length === 0}
+                      onClick={emailClaimCodes}
+                    >
+                      Email claim codes
+                    </Button>
+                    <Button variant="secondary" onClick={() => downloadClaimPacket(selectedLots)}>
+                      <Download size={16} />
+                      Download CSV
+                    </Button>
+                  </div>
+                  {claimPrintLots.length > 0 && (
+                    <p className={styles.emptyInline}>
+                      {claimPrintLots.length} unclaimed street{claimPrintLots.length === 1 ? "" : "s"} have no email.
+                      Use the CSV to print claim codes for door-drop.
+                    </p>
+                  )}
+                </>
               )}
 
               {(compose === "email" || compose === "newsletter") && (
-                <form className={styles.form} onSubmit={(e) => sendBroadcast(e, compose)}>
-                  <h4>{compose === "newsletter" ? "Send newsletter" : "Custom email"}</h4>
+                <form className={styles.form} onSubmit={(e) => sendBroadcast(e, compose, composeAudience)}>
+                  <h4>
+                    {composeAudience === "people"
+                      ? compose === "newsletter"
+                        ? "Newsletter to selected people"
+                        : "Email selected people"
+                      : compose === "newsletter"
+                        ? "Send newsletter to households"
+                        : "Email households"}
+                  </h4>
                   <p>
-                    {reachableLots.length} household{reachableLots.length === 1 ? "" : "s"} will receive this.
-                    {printLots.length
-                      ? ` ${printLots.length} without email will not. Download the CSV for those streets.`
-                      : ""}
+                    {composeAudience === "people"
+                      ? `${selectedPeople.filter((person) => person.email).length} people will receive this.`
+                      : `${reachableLots.length} household${reachableLots.length === 1 ? "" : "s"} will receive this.${
+                          printLots.length
+                            ? ` ${printLots.length} without email will not. Download the CSV for those streets.`
+                            : ""
+                        }`}
                   </p>
                   <label>
                     Subject

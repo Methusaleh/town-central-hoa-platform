@@ -55,23 +55,27 @@ router.get("/admin/overview", boardRequired, async (_req, res) => {
   try {
     const { rows } = await db.query(`
       SELECT
-        MIN(r.id) AS id,
-        string_agg(
-          TRIM(COALESCE(r.first_name, '') || ' ' || COALESCE(r.last_name, '')),
-          ', '
-          ORDER BY r.last_name, r.first_name
-        ) AS household,
-        MIN(r.street_address) AS street_address,
-        MIN(r.lot_number) AS lot_number,
-        BOOL_OR(COALESCE(r.is_claimed, false)) AS is_claimed,
-        COALESCE(MAX(d.balance), 0)::numeric AS balance,
-        COALESCE(MAX(d.status), 'No Record') AS status,
-        MAX(d.last_payment_date) AS last_payment_date
+        r.id,
+        TRIM(COALESCE(r.first_name, '') || ' ' || COALESCE(r.last_name, '')) AS household,
+        r.street_address,
+        COALESCE(r.is_claimed, false) AS is_claimed,
+        COALESCE(d.balance, 0)::numeric AS balance,
+        COALESCE(d.status, 'No Record') AS status,
+        d.last_payment_date,
+        COALESCE((
+          SELECT json_agg(json_build_object(
+            'id', u.id,
+            'first_name', u.first_name,
+            'last_name', u.last_name,
+            'email', u.email
+          ) ORDER BY u.last_name, u.first_name)
+          FROM users u
+          WHERE lower(trim(u.address)) = lower(trim(r.street_address))
+        ), '[]'::json) AS members
       FROM neighborhood_roster r
       LEFT JOIN resident_dues d
         ON lower(trim(d.street_address)) = lower(trim(r.street_address))
-      GROUP BY lower(trim(r.street_address))
-      ORDER BY COALESCE(MAX(d.balance), 0) DESC, MIN(r.last_name) ASC, MIN(r.first_name) ASC
+      ORDER BY COALESCE(d.balance, 0) DESC, r.street_address ASC
     `);
     res.json({ accounts: rows });
   } catch (err) {

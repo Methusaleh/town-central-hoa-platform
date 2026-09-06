@@ -10,7 +10,7 @@ const {
   signToken,
   publicUser,
 } = require("../middleware/auth");
-const { sendWelcomePacket, sendClaimCodeEmail, sendHouseholdInvite, sendMail } = require("../utils/mailer");
+const { sendWelcomePacket, sendClaimCodeEmail, sendHouseholdInvite, sendMail, sendPasswordReset } = require("../utils/mailer");
 
 const USER_COLUMNS = `
   id, first_name, last_name, email, address, role,
@@ -125,6 +125,122 @@ router.post("/login", async (req, res) => {
   } catch (err) {
     console.error("Login verification fault:", err.message);
     res.status(500).json({ error: "Server error during login processing." });
+  }
+});
+
+function hashResetToken(token) {
+  return crypto.createHash("sha256").update(token).digest("hex");
+}
+
+function validPassword(password) {
+  return typeof password === "string" && password.length >= 8;
+}
+
+router.put("/password", authRequired, async (req, res) => {
+  const currentPassword = req.body.current_password || req.body.currentPassword;
+  const newPassword = req.body.new_password || req.body.newPassword;
+
+  if (!currentPassword || !validPassword(newPassword)) {
+    return res.status(400).json({ error: "Enter your current password and a new password of at least 8 characters." });
+  }
+
+  try {
+    const { rows } = await db.query(
+      `SELECT ${USER_COLUMNS} FROM users WHERE id = $1`,
+      [req.user.id],
+    );
+    const record = rows[0];
+    if (!record?.password_hash) {
+      return res.status(400).json({ error: "This account cannot change password yet." });
+    }
+
+    const match = await bcrypt.compare(currentPassword, record.password_hash);
+    if (!match) {
+      return res.status(400).json({ error: "Current password is incorrect." });
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await db.query("UPDATE users SET password_hash = $1 WHERE id = $2", [passwordHash, req.user.id]);
+    await db.query(
+      "UPDATE password_reset_tokens SET used_at = CURRENT_TIMESTAMP WHERE user_id = $1 AND used_at IS NULL",
+      [req.user.id],
+    );
+    res.json({ success: true, message: "Password updated." });
+  } catch (err) {
+    console.error("Password change error:", err.message);
+    res.status(500).json({ error: "Could not update the password." });
+  }
+});
+
+router.post("/password/forgot", async (req, res) => {
+  const email = String(req.body.email || "").trim().toLowerCase();
+  const generic = { success: true, message: "If that email is on an account, we sent a reset link." };
+
+  if (!email) {
+    return res.status(400).json({ error: "Email is required." });
+  }
+
+  try {
+    const { rows } = await db.query(
+      `SELECT id, first_name, email FROM users WHERE lower(email) = $1`,
+      [email],
+    );
+    const user = rows[0];
+    if (user) {
+      const token = crypto.randomBytes(32).toString("hex");
+      await db.query(
+        "UPDATE password_reset_tokens SET used_at = CURRENT_TIMESTAMP WHERE user_id = $1 AND used_at IS NULL",
+        [user.id],
+      );
+      await db.query(
+        `INSERT INTO password_reset_tokens (user_id, token_hash, expires_at)
+         VALUES ($1, $2, NOW() + INTERVAL '1 hour')`,
+        [user.id, hashResetToken(token)],
+      );
+      const mailed = await sendPasswordReset({ to: user.email, firstName: user.first_name, token });
+      if (mailed?.skipped) {
+        console.log(`Password reset email skipped. Reset URL for ${user.email}: /reset/${token}`);
+      }
+    }
+    res.json(generic);
+  } catch (err) {
+    console.error("Password forgot error:", err.message);
+    res.json(generic);
+  }
+});
+
+router.post("/password/reset", async (req, res) => {
+  const token = String(req.body.token || "").trim();
+  const newPassword = req.body.new_password || req.body.newPassword;
+
+  if (!token || !validPassword(newPassword)) {
+    return res.status(400).json({ error: "A valid reset link and a new password of at least 8 characters are required." });
+  }
+
+  try {
+    const { rows } = await db.query(
+      `SELECT id, user_id FROM password_reset_tokens
+       WHERE token_hash = $1
+         AND used_at IS NULL
+         AND expires_at > NOW()
+       LIMIT 1`,
+      [hashResetToken(token)],
+    );
+    const reset = rows[0];
+    if (!reset) {
+      return res.status(400).json({ error: "This reset link is invalid or has expired." });
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await db.query("UPDATE users SET password_hash = $1 WHERE id = $2", [passwordHash, reset.user_id]);
+    await db.query(
+      "UPDATE password_reset_tokens SET used_at = CURRENT_TIMESTAMP WHERE id = $1",
+      [reset.id],
+    );
+    res.json({ success: true, message: "Password updated. You can sign in now." });
+  } catch (err) {
+    console.error("Password reset error:", err.message);
+    res.status(500).json({ error: "Could not reset the password." });
   }
 });
 
@@ -598,7 +714,6 @@ router.get("/master-list-placeholder", boardRequired, async (_req, res) => {
         r.last_name,
         r.email,
         r.street_address,
-        r.lot_number,
         r.is_claimed,
         r.onboarding_token,
         COALESCE((
@@ -767,7 +882,13 @@ router.post("/broadcast", boardRequired, async (req, res) => {
   try {
     let emailList = [];
 
-    if (targetType === "selected") {
+    if (targetType === "people") {
+      emailList = [...new Set(
+        (selectedEmails || [])
+          .map((item) => String(item || "").trim().toLowerCase())
+          .filter((item) => item.includes("@")),
+      )];
+    } else if (targetType === "selected") {
       let ids = (selectedIds || []).map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0);
       if (!ids.length && Array.isArray(selectedEmails) && selectedEmails.length) {
         const { rows } = await db.query(

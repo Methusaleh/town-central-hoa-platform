@@ -140,6 +140,46 @@
   cursor: pointer;
 }
 
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+
+.field label {
+  font-size: 0.8rem;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.field input {
+  padding: 0.7rem 0.8rem;
+  border: 1px solid #eaeaea;
+  border-radius: 6px;
+  font-size: 1rem;
+  background: var(--tc-bg);
+  color: #333;
+}
+
+.field input:focus {
+  outline: none;
+  border-color: var(--tc-brand);
+}
+
+.statusErr {
+  color: #b42318;
+  font-size: 0.88rem;
+  margin: 0 0 0.5rem;
+}
+
+.statusOk {
+  color: #17663a;
+  font-size: 0.88rem;
+  margin: 0 0 0.5rem;
+}
+
 .saveBtn {
   margin-top: 2rem;
   background: #0070f3;
@@ -154,4 +194,9 @@
 
 .saveBtn:hover {
   background: #0051cb;
+}
+
+.saveBtn:disabled {
+  opacity: 0.65;
+  cursor: wait;
 }

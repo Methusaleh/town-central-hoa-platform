@@ -24,6 +24,8 @@ import AcceptInvite from "./pages/AcceptInvite/AcceptInvite";
 import Profile from "./pages/Profile/Profile";
 import Claim from "./pages/Claim/Claim";
 import Login from "./pages/Login/Login";
+import ForgotPassword from "./pages/Login/ForgotPassword";
+import ResetPassword from "./pages/Login/ResetPassword";
 import AppShell from "./layout/AppShell";
 import { PortalProvider } from "./layout/PortalContext";
 import { apiFetch, clearSession, getStoredUser, persistSession } from "./api";
@@ -53,6 +55,29 @@ function LoginPage({ onLoginSuccess }) {
       onBack={() => navigate("/")}
       onLoginSuccess={onLoginSuccess}
       onNavigateToClaim={() => navigate("/claim")}
+      onNavigateToForgot={() => navigate("/forgot-password")}
+    />
+  );
+}
+
+function ForgotPasswordPage() {
+  const navigate = useNavigate();
+  return (
+    <ForgotPassword
+      onBack={() => navigate("/")}
+      onNavigateToLogin={() => navigate("/login")}
+    />
+  );
+}
+
+function ResetPasswordPage() {
+  const navigate = useNavigate();
+  const { token } = useParams();
+  return (
+    <ResetPassword
+      token={token}
+      onBack={() => navigate("/")}
+      onNavigateToLogin={() => navigate("/login")}
     />
   );
 }
@@ -127,6 +152,8 @@ function AppRoutes() {
       <Routes>
         <Route path="/" element={<InviteRedirect />} />
         <Route path="/login" element={<LoginPage onLoginSuccess={handleAuthSuccess} />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset/:token" element={<ResetPasswordPage />} />
         <Route path="/claim" element={<ClaimPage onClaimSuccess={handleAuthSuccess} />} />
         <Route
           path="/invite/:token"
