@@ -102,10 +102,19 @@ export default function Porch({ user }) {
   const [posting, setPosting] = useState(false);
   const [error, setError] = useState("");
   const [replyText, setReplyText] = useState("");
+  const [replyFile, setReplyFile] = useState(null);
+  const [replyPreview, setReplyPreview] = useState("");
+  const [showReplyEmoji, setShowReplyEmoji] = useState(false);
+  const [showReplyGif, setShowReplyGif] = useState(false);
+  const [replyError, setReplyError] = useState("");
+  const [postingReply, setPostingReply] = useState(false);
+  const [draggingReply, setDraggingReply] = useState(false);
   const [modModalItem, setModModalItem] = useState(null);
   const [removalReason, setRemovalReason] = useState(STOCK_REASONS[0]);
   const [lightbox, setLightbox] = useState("");
   const fileRef = useRef(null);
+  const replyFileRef = useRef(null);
+  const replyDragCount = useRef(0);
 
   const isAdmin = user?.role === "board_member" || user?.role === "super_admin";
   const identity = user?.email || String(user?.id || "");
@@ -138,6 +147,12 @@ export default function Porch({ user }) {
 
   useEffect(() => {
     setReplyText("");
+    setReplyFile(null);
+    setShowReplyEmoji(false);
+    setShowReplyGif(false);
+    setReplyError("");
+    setDraggingReply(false);
+    replyDragCount.current = 0;
     setError("");
   }, [postId]);
 
@@ -150,6 +165,16 @@ export default function Porch({ user }) {
     setPreviewUrl(url);
     return () => URL.revokeObjectURL(url);
   }, [selectedFile]);
+
+  useEffect(() => {
+    if (!replyFile) {
+      setReplyPreview("");
+      return undefined;
+    }
+    const url = URL.createObjectURL(replyFile);
+    setReplyPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [replyFile]);
 
   const handleCreatePost = async (e) => {
     e.preventDefault();
@@ -187,21 +212,35 @@ export default function Porch({ user }) {
   };
 
   const handleAddComment = async (id) => {
-    if (!replyText.trim()) return;
+    if (postingReply) return;
+    if (!replyText.trim() && !replyFile) return;
+    setPostingReply(true);
+    setReplyError("");
     try {
       const formData = new FormData();
       formData.append("author_name", user?.first_name || "Resident");
-      formData.append("content", replyText.trim());
+      formData.append("content", replyText.trim() || (replyFile ? "Shared a photo" : ""));
+      if (replyFile) formData.append("image", replyFile);
       const res = await apiFetch(`/api/porch/${id}/comments`, {
         method: "POST",
         body: formData,
       });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         setReplyText("");
+        setReplyFile(null);
+        setShowReplyEmoji(false);
+        setShowReplyGif(false);
+        if (replyFileRef.current) replyFileRef.current.value = "";
         loadFeed();
+      } else {
+        setReplyError(data.error || "Couldn't post that reply.");
       }
     } catch (err) {
       console.error("Error adding reply:", err);
+      setReplyError("Couldn't post that reply.");
+    } finally {
+      setPostingReply(false);
     }
   };
 
@@ -247,6 +286,26 @@ export default function Porch({ user }) {
   const insertComposerEmoji = (glyph) => {
     setNewContent((value) => `${value}${glyph}`);
     setShowComposerEmoji(false);
+  };
+
+  const insertReplyEmoji = (glyph) => {
+    setReplyText((value) => `${value}${glyph}`);
+    setShowReplyEmoji(false);
+  };
+
+  const attachReplyPhoto = (file) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setReplyError("Use a photo file.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setReplyError("Photos need to be under 5MB.");
+      return;
+    }
+    setReplyError("");
+    setReplyFile(file);
+    setShowReplyGif(false);
   };
 
   const moderationModal = modModalItem ? (
@@ -310,7 +369,7 @@ export default function Porch({ user }) {
                 <Avatar name={activePost.author_name} size="md" />
                 <div className={styles.who}>
                   <strong>{activePost.author_name}</strong>
-                  <span>{relativeTime(activePost.created_at)}</span>
+                  <time dateTime={activePost.created_at}>{relativeTime(activePost.created_at)}</time>
                 </div>
                 {isAdmin && !activePost.is_removed && (
                   <button
@@ -340,14 +399,6 @@ export default function Porch({ user }) {
               {activePost.removal_reason && (
                 <p className={styles.removedNote}>Removed: {activePost.removal_reason}</p>
               )}
-
-              {!activePost.is_removed && (
-                <ReactionBar
-                  reactions={normalizeReactions(activePost.reactions)}
-                  identity={identity}
-                  onReact={(emoji) => handleReact(activePost.id, emoji)}
-                />
-              )}
             </article>
 
             <section className={styles.threadReplies}>
@@ -365,15 +416,17 @@ export default function Porch({ user }) {
                 <div key={comment.id} className={styles.comment}>
                   <Avatar name={comment.author_name} size="sm" />
                   <div className={styles.commentBody}>
-                    <strong>
-                      {comment.author_name}
-                      <span>{relativeTime(comment.created_at)}</span>
-                    </strong>
-                    <span className={comment.is_removed ? styles.removed : ""}>{comment.content}</span>
+                    <strong>{comment.author_name}</strong>
+                    {comment.content &&
+                    comment.content !== "Shared a photo" &&
+                    comment.content !== "Shared a GIF" ? (
+                      <span className={comment.is_removed ? styles.removed : ""}>{comment.content}</span>
+                    ) : null}
                     {comment.image_url && !comment.is_removed && (
                       <img src={comment.image_url} alt="" className={styles.commentImg} />
                     )}
                     {comment.removal_reason && <em>Removed: {comment.removal_reason}</em>}
+                    <time dateTime={comment.created_at}>{relativeTime(comment.created_at)}</time>
                   </div>
                   {isAdmin && !comment.is_removed && (
                     <button
@@ -388,23 +441,124 @@ export default function Porch({ user }) {
               ))}
 
               {!activePost.is_removed && (
-                <div className={styles.reply}>
-                  <Avatar name={user?.first_name} photo={user?.photo} size="sm" />
-                  <input
-                    type="text"
-                    placeholder="Write a reply…"
-                    value={replyText}
-                    onChange={(e) => setReplyText(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        handleAddComment(activePost.id);
-                      }
-                    }}
-                  />
-                  <button type="button" onClick={() => handleAddComment(activePost.id)}>
-                    Reply
-                  </button>
+                <div
+                  className={`${styles.replyBox} ${draggingReply ? styles.replyHot : ""}`}
+                  onDragEnter={(e) => {
+                    e.preventDefault();
+                    replyDragCount.current += 1;
+                    setDraggingReply(true);
+                  }}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDragLeave={(e) => {
+                    e.preventDefault();
+                    replyDragCount.current = Math.max(0, replyDragCount.current - 1);
+                    if (replyDragCount.current === 0) setDraggingReply(false);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    replyDragCount.current = 0;
+                    setDraggingReply(false);
+                    const file = Array.from(e.dataTransfer.files || []).find((item) =>
+                      item.type.startsWith("image/"),
+                    );
+                    attachReplyPhoto(file);
+                  }}
+                >
+                  <div className={styles.reply}>
+                    <Avatar name={user?.first_name} photo={user?.photo} size="sm" />
+                    <input
+                      type="text"
+                      placeholder="Write a reply…"
+                      value={replyText}
+                      onChange={(e) => setReplyText(e.target.value)}
+                      onPaste={(e) => {
+                        const file = Array.from(e.clipboardData?.files || []).find((item) =>
+                          item.type.startsWith("image/"),
+                        );
+                        if (file) {
+                          e.preventDefault();
+                          attachReplyPhoto(file);
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleAddComment(activePost.id);
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleAddComment(activePost.id)}
+                      disabled={postingReply || (!replyText.trim() && !replyFile)}
+                    >
+                      {postingReply ? "Posting…" : "Reply"}
+                    </button>
+                  </div>
+                  {replyPreview && (
+                    <div className={styles.preview}>
+                      <img src={replyPreview} alt="" />
+                      <button
+                        type="button"
+                        className={styles.previewClear}
+                        onClick={() => {
+                          setReplyFile(null);
+                          if (replyFileRef.current) replyFileRef.current.value = "";
+                        }}
+                        aria-label="Remove photo"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  )}
+                  {replyError && <p className={styles.error}>{replyError}</p>}
+                  <div className={styles.replyTools}>
+                    <button
+                      type="button"
+                      className={styles.tool}
+                      onClick={() => {
+                        setShowReplyGif(false);
+                        setShowReplyEmoji((v) => !v);
+                      }}
+                    >
+                      <Smile size={16} />
+                      Emoji
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.tool}
+                      onClick={() => replyFileRef.current?.click()}
+                    >
+                      <ImagePlus size={16} />
+                      Photo
+                    </button>
+                    <input
+                      ref={replyFileRef}
+                      type="file"
+                      accept="image/*"
+                      hidden
+                      onChange={(e) => attachReplyPhoto(e.target.files[0] || null)}
+                    />
+                    <button
+                      type="button"
+                      className={styles.tool}
+                      onClick={() => {
+                        setShowReplyEmoji(false);
+                        setShowReplyGif((v) => !v);
+                      }}
+                    >
+                      GIF
+                    </button>
+                  </div>
+                  {draggingReply && <p className={styles.dropHint}>Drop the photo here</p>}
+                  {showReplyEmoji && (
+                    <div className={styles.pickerWrap}>
+                      <EmojiPicker onPick={insertReplyEmoji} onClose={() => setShowReplyEmoji(false)} />
+                    </div>
+                  )}
+                  {showReplyGif && (
+                    <p className={styles.gifSoon}>GIF search from Tenor will live here.</p>
+                  )}
                 </div>
               )}
             </section>
@@ -519,7 +673,6 @@ export default function Porch({ user }) {
                   <div className={styles.rowCopy}>
                     <div className={styles.who}>
                       <strong>{post.author_name}</strong>
-                      <span>{relativeTime(post.created_at)}</span>
                     </div>
                     <p className={`${styles.snippet} ${post.is_removed ? styles.removed : ""}`}>
                       {snippet}
@@ -531,6 +684,7 @@ export default function Porch({ user }) {
                   <ChevronRight size={16} className={styles.chevron} aria-hidden="true" />
                 </Link>
                 <div className={styles.rowFoot}>
+                  <time dateTime={post.created_at}>{relativeTime(post.created_at)}</time>
                   <Link to={`${PATHS.porch}/${post.id}`} className={styles.replyHint}>
                     <MessageCircle size={14} />
                     {replyLabel(comments.length)}

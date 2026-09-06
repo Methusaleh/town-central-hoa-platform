@@ -116,13 +116,15 @@ router.patch("/:id/reactions", authRequired, async (req, res) => {
 router.post("/:postId/comments", authRequired, upload.single("image"), async (req, res) => {
   const { postId } = req.params;
   const { author_name, content } = req.body;
+  const text = (content || "").trim();
 
-  if (!content || !content.trim()) {
-    return res.status(400).json({ error: "Comment content is required." });
+  if (!text && !req.file && !req.body.image_url) {
+    return res.status(400).json({ error: "A note, photo, or GIF is required." });
   }
 
   try {
-    const textCheck = await checkTextToxicity(content.trim());
+    const note = text || (req.file ? "Shared a photo" : "Shared a GIF");
+    const textCheck = await checkTextToxicity(note);
     if (!textCheck.safe) {
       return res.status(400).json({ error: textCheck.reason });
     }
@@ -145,7 +147,7 @@ router.post("/:postId/comments", authRequired, upload.single("image"), async (re
       VALUES ($1, $2, $3, $4)
       RETURNING *;
     `,
-      [postId, author_name || "Resident", content.trim(), imageUrl],
+      [postId, author_name || "Resident", note, imageUrl],
     );
 
     res.status(201).json(rows[0]);
