@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, CalendarPlus, ChevronRight, MapPin } from "lucide-react";
+import { ArrowLeft, CalendarPlus, ChevronDown, ChevronRight, MapPin } from "lucide-react";
 import Avatar from "../ui/Avatar";
 import Button from "../ui/Button";
 import { apiFetch } from "../../api";
@@ -15,6 +15,8 @@ import {
   googleCalendarUrl,
   isUpcoming,
   mapsUrl,
+  openEventIcs,
+  outlookCalendarUrl,
   typeMeta,
 } from "./eventTypes";
 import styles from "./Events.module.css";
@@ -30,6 +32,68 @@ function Fact({ label, children }) {
     <div className={styles.fact}>
       <p className={styles.factLabel}>{label}</p>
       <p className={styles.factBody}>{children}</p>
+    </div>
+  );
+}
+
+function AddToCalendar({ event }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onDoc = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+
+  return (
+    <div className={styles.calWrap} ref={wrapRef}>
+      <button
+        type="button"
+        className={styles.calBtn}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        onClick={() => setOpen((current) => !current)}
+      >
+        <CalendarPlus size={15} />
+        Add to calendar
+        <ChevronDown size={14} />
+      </button>
+      {open && (
+        <div className={styles.calMenu} role="menu">
+          <a
+            href={googleCalendarUrl(event)}
+            target="_blank"
+            rel="noreferrer"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+          >
+            Google Calendar
+          </a>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              openEventIcs(event);
+              setOpen(false);
+            }}
+          >
+            Apple Calendar
+          </button>
+          <a
+            href={outlookCalendarUrl(event)}
+            target="_blank"
+            rel="noreferrer"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+          >
+            Outlook
+          </a>
+        </div>
+      )}
     </div>
   );
 }
@@ -231,10 +295,7 @@ export default function Events({ user }) {
               </div>
 
               <div className={styles.detailLinks}>
-                <a href={googleCalendarUrl(event)} target="_blank" rel="noreferrer">
-                  <CalendarPlus size={15} />
-                  Add to Google Calendar
-                </a>
+                <AddToCalendar event={event} />
                 {event.attachment_url && event.attachment_url !== cover && (
                   <a href={event.attachment_url} target="_blank" rel="noreferrer">
                     Flyer / handout

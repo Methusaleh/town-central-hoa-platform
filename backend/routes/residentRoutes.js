@@ -54,6 +54,23 @@ async function emailsForLotIds(ids) {
   return rows.map((row) => row.email).filter(Boolean);
 }
 
+async function markClaimLetterSent(lotId) {
+  await db.query(
+    "UPDATE neighborhood_roster SET claim_letter_sent_at = CURRENT_TIMESTAMP WHERE id = $1",
+    [lotId],
+  );
+}
+
+async function sendClaimLetter(lot) {
+  await sendClaimCodeEmail({
+    to: lot.email,
+    firstName: lot.first_name,
+    streetAddress: lot.street_address,
+    claimCode: lot.onboarding_token,
+  });
+  await markClaimLetterSent(lot.id);
+}
+
 async function emailsForClaimFilter(claimed) {
   const { rows } = await db.query(
     `
@@ -365,7 +382,12 @@ router.post("/claim", async (req, res) => {
     delete record.password_hash;
     const user = publicUser(record);
 
-    sendWelcomePacket({ to: email, firstName: first_name }).catch((err) => {
+    sendWelcomePacket({ to: email, firstName: first_name }).then(async () => {
+      await db.query(
+        "UPDATE users SET welcome_letter_sent_at = CURRENT_TIMESTAMP WHERE email = $1",
+        [email.trim().toLowerCase()],
+      );
+    }).catch((err) => {
       console.error("Welcome Packet Error:", err.message);
     });
 
@@ -435,12 +457,7 @@ async function onboardProperty({ first_name, last_name, email, street_address, o
   }
 
   if (send_welcome && resident.email) {
-    await sendClaimCodeEmail({
-      to: resident.email,
-      firstName: resident.first_name,
-      streetAddress: resident.street_address,
-      claimCode: resident.onboarding_token,
-    });
+    await sendClaimLetter(resident);
   }
 
   return resident;
@@ -716,13 +733,15 @@ router.get("/master-list-placeholder", boardRequired, async (_req, res) => {
         r.street_address,
         r.is_claimed,
         r.onboarding_token,
+        r.claim_letter_sent_at,
         COALESCE((
           SELECT json_agg(json_build_object(
             'id', u.id,
             'first_name', u.first_name,
             'last_name', u.last_name,
             'email', u.email,
-            'role', COALESCE(u.role, 'resident')
+            'role', COALESCE(u.role, 'resident'),
+            'welcome_letter_sent_at', u.welcome_letter_sent_at
           ) ORDER BY u.last_name, u.first_name)
           FROM users u
           WHERE lower(trim(u.address)) = lower(trim(r.street_address))
@@ -763,12 +782,7 @@ router.post("/lots/bulk-claim-letters", boardRequired, async (req, res) => {
         skipped.push({ street_address: lot.street_address, reason: "no_email" });
         continue;
       }
-      await sendClaimCodeEmail({
-        to: lot.email,
-        firstName: lot.first_name,
-        streetAddress: lot.street_address,
-        claimCode: lot.onboarding_token,
-      });
+      await sendClaimLetter(lot);
       sent.push(lot.street_address);
     }
 
@@ -786,6 +800,81 @@ router.post("/lots/bulk-claim-letters", boardRequired, async (req, res) => {
   }
 });
 
+router.post("/lots/bulk-welcome", boardRequired, async (req, res) => {
+  const ids = (req.body.ids || []).map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0);
+  const selectedEmails = [...new Set(
+    (req.body.emails || [])
+      .map((item) => String(item || "").trim().toLowerCase())
+      .filter((item) => item.includes("@")),
+  )];
+  const force = Boolean(req.body.force);
+
+  if (!ids.length && !selectedEmails.length) {
+    return res.status(400).json({ error: "Select households or people first." });
+  }
+
+  try {
+    const { rows } = await db.query(
+      `
+      SELECT DISTINCT ON (lower(trim(u.email)))
+        u.id, u.first_name, u.email, u.welcome_letter_sent_at, u.address
+      FROM users u
+      WHERE u.email IS NOT NULL AND trim(u.email) <> ''
+        AND (
+          (${ids.length} > 0 AND lower(trim(u.address)) IN (
+            SELECT lower(trim(street_address)) FROM neighborhood_roster WHERE id = ANY($1::int[])
+          ))
+          OR (${selectedEmails.length} > 0 AND lower(trim(u.email)) = ANY($2::text[]))
+        )
+      ORDER BY lower(trim(u.email)), u.id
+      `,
+      [ids, selectedEmails],
+    );
+
+    if (!rows.length) {
+      return res.status(400).json({ error: "No portal logins with email on that selection." });
+    }
+
+    const previouslySent = rows
+      .filter((row) => row.welcome_letter_sent_at)
+      .map((row) => ({
+        email: row.email,
+        name: row.first_name,
+        sent_at: row.welcome_letter_sent_at,
+      }));
+
+    if (previouslySent.length && !force) {
+      return res.json({
+        success: false,
+        needsConfirm: true,
+        previouslySent,
+        recipients: rows.length,
+        message: `${previouslySent.length} of ${rows.length} already received a welcome letter. Send again?`,
+      });
+    }
+
+    const sent = [];
+    for (const user of rows) {
+      await sendWelcomePacket({ to: user.email, firstName: user.first_name });
+      await db.query(
+        "UPDATE users SET welcome_letter_sent_at = CURRENT_TIMESTAMP WHERE id = $1",
+        [user.id],
+      );
+      sent.push(user.email);
+    }
+
+    res.json({
+      success: true,
+      sent: sent.length,
+      previouslySent,
+      message: `Welcome letters sent to ${sent.length} ${sent.length === 1 ? "person" : "people"}.`,
+    });
+  } catch (err) {
+    console.error("Bulk welcome error:", err.message);
+    res.status(500).json({ error: "Could not send those welcome letters." });
+  }
+});
+
 router.post("/lots/:id/resend-claim", boardRequired, async (req, res) => {
   try {
     const { rows } = await db.query(
@@ -799,12 +888,7 @@ router.post("/lots/:id/resend-claim", boardRequired, async (req, res) => {
       return res.status(400).json({ error: "Add an email on this lot before sending a claim letter." });
     }
 
-    await sendClaimCodeEmail({
-      to: lot.email,
-      firstName: lot.first_name,
-      streetAddress: lot.street_address,
-      claimCode: lot.onboarding_token,
-    });
+    await sendClaimLetter(lot);
     res.json({ success: true, message: "Claim letter sent." });
   } catch (err) {
     console.error("Resend claim error:", err.message);
@@ -850,12 +934,7 @@ router.post("/lots/:id/transfer", boardRequired, async (req, res) => {
     );
 
     if (send_welcome && resident.email) {
-      await sendClaimCodeEmail({
-        to: resident.email,
-        firstName: resident.first_name,
-        streetAddress: resident.street_address,
-        claimCode: resident.onboarding_token,
-      });
+      await sendClaimLetter(resident);
     }
 
     res.json({

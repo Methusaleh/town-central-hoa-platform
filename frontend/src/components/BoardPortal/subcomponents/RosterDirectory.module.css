@@ -228,6 +228,30 @@
   letter-spacing: 0.08em;
 }
 
+.sentStamp {
+  display: block;
+  margin-top: 4px;
+  font-style: normal;
+  font-size: 0.75rem;
+  font-weight: 650;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--tc-muted);
+}
+
+.confirmBox {
+  padding: 12px 14px;
+  border: 1px solid #c5d9cc;
+  background: var(--tc-brand-soft);
+  border-radius: 8px;
+}
+
+.confirmBox p {
+  margin: 0 0 10px;
+  color: var(--tc-ink);
+  font-size: 0.88rem;
+}
+
 .workspace {
   display: grid;
   grid-template-columns: minmax(400px, 0.46fr) minmax(0, 1fr);
@@ -374,8 +398,11 @@
 }
 
 .list {
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   max-height: 70vh;
+  scrollbar-gutter: stable;
+  padding-right: 8px;
 }
 
 .rowBlock {

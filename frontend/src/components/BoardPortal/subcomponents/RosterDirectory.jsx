@@ -40,6 +40,13 @@ function lotHasEmail(lot) {
   return householdOf(lot).some((person) => person.email);
 }
 
+function formatSent(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
 function csvEscape(value) {
   const text = String(value ?? "");
   if (/[",\n]/.test(text)) return `"${text.replace(/"/g, '""')}"`;
@@ -101,6 +108,7 @@ export default function RosterDirectory({ onBack }) {
   const [emailStatus, setEmailStatus] = useState("");
   const [mobileDetail, setMobileDetail] = useState(false);
   const [selectedPeople, setSelectedPeople] = useState([]);
+  const [welcomeConfirm, setWelcomeConfirm] = useState(null);
 
   const selected = lots.find((lot) => String(lot.id) === String(selectedId)) || null;
 
@@ -151,7 +159,13 @@ export default function RosterDirectory({ onBack }) {
     setSelectedPeople((current) =>
       current.some((item) => item.id === person.id)
         ? current.filter((item) => item.id !== person.id)
-        : [...current, { id: person.id, email: person.email, name: displayName(person), street }],
+        : [...current, {
+          id: person.id,
+          email: person.email,
+          name: displayName(person),
+          street,
+          welcome_letter_sent_at: person.welcome_letter_sent_at,
+        }],
     );
     setMobileDetail(true);
   };
@@ -166,6 +180,7 @@ export default function RosterDirectory({ onBack }) {
     }
     setCompose("");
     setEmailStatus("");
+    setWelcomeConfirm(null);
     setMobileDetail(statusType !== "clear");
   };
 
@@ -236,6 +251,7 @@ export default function RosterDirectory({ onBack }) {
         type: res.ok ? "ok" : "err",
         text: data.message || data.error || (res.ok ? "Claim letter sent." : "Could not send the letter."),
       });
+      if (res.ok) await loadLots();
     } catch {
       setStatus({ type: "err", text: "Network error sending the claim letter." });
     }
@@ -357,10 +373,59 @@ export default function RosterDirectory({ onBack }) {
       });
       const data = await res.json().catch(() => ({}));
       setEmailStatus(data.message || data.error || "Could not send those letters.");
+      if (res.ok) await loadLots();
     } catch {
       setEmailStatus("Network error sending claim letters.");
     } finally {
       setSending(false);
+    }
+  };
+
+  const emailWelcomeLetters = async (force = false) => {
+    setSending(true);
+    setEmailStatus(force ? "Sending welcome letters again…" : "Sending welcome letters…");
+    try {
+      const res = await apiFetch("/api/residents/lots/bulk-welcome", {
+        method: "POST",
+        body: JSON.stringify({
+          ids: selectedIds,
+          emails: selectedPeople.map((person) => person.email).filter(Boolean),
+          force,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data.needsConfirm) {
+        setWelcomeConfirm(data);
+        setEmailStatus(data.message || "Some of these already received a welcome letter.");
+      } else {
+        setWelcomeConfirm(null);
+        setEmailStatus(data.message || data.error || "Could not send those welcome letters.");
+        if (res.ok) await loadLots();
+      }
+    } catch {
+      setEmailStatus("Network error sending welcome letters.");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const sendLotWelcome = async (lot, force = false) => {
+    try {
+      const res = await apiFetch("/api/residents/lots/bulk-welcome", {
+        method: "POST",
+        body: JSON.stringify({ ids: [lot.id], force }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data.needsConfirm && window.confirm(data.message || "A welcome letter was already sent. Send again?")) {
+        return sendLotWelcome(lot, true);
+      }
+      setStatus({
+        type: res.ok && !data.needsConfirm ? "ok" : "err",
+        text: data.message || data.error || "Could not send the welcome letter.",
+      });
+      if (res.ok && !data.needsConfirm) await loadLots();
+    } catch {
+      setStatus({ type: "err", text: "Network error sending the welcome letter." });
     }
   };
 
@@ -372,6 +437,11 @@ export default function RosterDirectory({ onBack }) {
   const printLots = selectedLots.filter((lot) => !lotHasEmail(lot));
   const claimEmailLots = selectedLots.filter((lot) => !lot.is_claimed && lot.email && lot.onboarding_token);
   const claimPrintLots = selectedLots.filter((lot) => !lot.is_claimed && (!lot.email || !lot.onboarding_token));
+  const welcomeTargets = [
+    ...selectedPeople.filter((person) => person.email),
+    ...selectedLots.flatMap((lot) => householdOf(lot).filter((person) => person.email)),
+  ];
+  const welcomeCount = new Set(welcomeTargets.map((person) => String(person.email).toLowerCase())).size;
 
   const startCompose = (kind, audience = "households") => {
     setCompose(kind);
@@ -617,7 +687,10 @@ export default function RosterDirectory({ onBack }) {
                       <li key={person.id}>
                         <div>
                           <strong>{person.name}</strong>
-                          <span>{person.street}{person.email ? ` · ${person.email}` : " · no email"}</span>
+                          <span>
+                            {person.street}{person.email ? ` · ${person.email}` : " · no email"}
+                            {person.welcome_letter_sent_at ? ` · welcome ${formatSent(person.welcome_letter_sent_at)}` : ""}
+                          </span>
                         </div>
                         <button type="button" onClick={() => togglePerson({ id: person.id, email: person.email, first_name: person.name, last_name: "" }, person.street)}>Remove</button>
                       </li>
@@ -637,6 +710,13 @@ export default function RosterDirectory({ onBack }) {
                       disabled={!selectedPeople.some((person) => person.email)}
                     >
                       Newsletter to these people
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      disabled={sending || !selectedPeople.some((person) => person.email)}
+                      onClick={() => emailWelcomeLetters(false)}
+                    >
+                      Welcome letters
                     </Button>
                   </div>
                 </>
@@ -659,6 +739,7 @@ export default function RosterDirectory({ onBack }) {
                             {lotHasEmail(lot)
                               ? ` · ${lot.email || householdOf(lot).map((person) => person.email).filter(Boolean)[0]}`
                               : " · no email — print packet"}
+                            {lot.claim_letter_sent_at ? ` · claim letter ${formatSent(lot.claim_letter_sent_at)}` : ""}
                           </span>
                         </div>
                         <button type="button" onClick={() => toggleOne(lot.id)}>Remove</button>
@@ -683,6 +764,13 @@ export default function RosterDirectory({ onBack }) {
                       onClick={emailClaimCodes}
                     >
                       Email claim codes
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      disabled={sending || welcomeCount === 0}
+                      onClick={() => emailWelcomeLetters(false)}
+                    >
+                      Email welcome letters
                     </Button>
                     <Button variant="secondary" onClick={() => downloadClaimPacket(selectedLots)}>
                       <Download size={16} />
@@ -735,7 +823,27 @@ export default function RosterDirectory({ onBack }) {
                 </form>
               )}
 
-              {emailStatus && <p className={emailStatus.toLowerCase().includes("could not") || emailStatus.toLowerCase().includes("error") || emailStatus.toLowerCase().includes("no claim") ? styles.err : styles.ok}>{emailStatus}</p>}
+              {welcomeConfirm && (
+                <div className={styles.confirmBox}>
+                  <p>
+                    {welcomeConfirm.previouslySent?.length || 0} already got a welcome letter
+                    {welcomeConfirm.previouslySent?.[0]?.sent_at
+                      ? ` (last ${formatSent(welcomeConfirm.previouslySent[0].sent_at)})`
+                      : ""}
+                    . Send again to all {welcomeConfirm.recipients} people?
+                  </p>
+                  <div className={styles.formActions}>
+                    <Button disabled={sending} onClick={() => emailWelcomeLetters(true)}>
+                      Send anyway
+                    </Button>
+                    <Button type="button" variant="ghost" onClick={() => setWelcomeConfirm(null)}>
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {emailStatus && <p className={emailStatus.toLowerCase().includes("could not") || emailStatus.toLowerCase().includes("error") || emailStatus.toLowerCase().includes("no claim") || emailStatus.toLowerCase().includes("already received") ? styles.err : styles.ok}>{emailStatus}</p>}
             </>
           ) : !selected ? (
             <p className={styles.empty}>Choose a street, or use the filters to work a batch.</p>
@@ -755,6 +863,9 @@ export default function RosterDirectory({ onBack }) {
                 <div>
                   <span>Claim code</span>
                   <strong>{selected.onboarding_token || "—"}</strong>
+                  {selected.claim_letter_sent_at && (
+                    <em className={styles.sentStamp}>Letter sent {formatSent(selected.claim_letter_sent_at)}</em>
+                  )}
                 </div>
                 {selected.onboarding_token && (
                   <Button
@@ -767,7 +878,12 @@ export default function RosterDirectory({ onBack }) {
                 )}
                 {selected.email && (
                   <Button variant="ghost" onClick={() => resendClaim(selected)}>
-                    Email letter
+                    Email claim letter
+                  </Button>
+                )}
+                {householdOf(selected).some((person) => person.email) && (
+                  <Button variant="ghost" onClick={() => sendLotWelcome(selected)}>
+                    Email welcome
                   </Button>
                 )}
               </div>
@@ -786,7 +902,12 @@ export default function RosterDirectory({ onBack }) {
                       <li key={person.id}>
                         <div>
                           <strong>{displayName(person)}</strong>
-                          <span>{person.email}</span>
+                          <span>
+                            {person.email}
+                            {person.welcome_letter_sent_at
+                              ? ` · welcome ${formatSent(person.welcome_letter_sent_at)}`
+                              : ""}
+                          </span>
                         </div>
                         <button type="button" onClick={() => removeLogin(person)}>
                           Remove login

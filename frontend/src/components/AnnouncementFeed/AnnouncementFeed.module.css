@@ -252,24 +252,6 @@
   color: var(--tc-danger);
 }
 
-.contactBar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding-top: 18px;
-  border-top: 1px solid var(--tc-line);
-}
-
-.contactBar p {
-  margin: 0;
-  color: var(--tc-muted);
-  font-size: 0.88rem;
-  line-height: 1.45;
-  max-width: 28rem;
-}
-
 .form {
   display: flex;
   flex-direction: column;
@@ -368,7 +350,6 @@
 @media (max-width: 640px) {
   .intro,
   .noticeHead,
-  .contactBar,
   .formRow {
     flex-direction: column;
     align-items: flex-start;

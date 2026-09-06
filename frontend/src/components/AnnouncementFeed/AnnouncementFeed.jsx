@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, ChevronRight, ImagePlus, Mail } from "lucide-react";
+import { ArrowLeft, ChevronRight, ImagePlus } from "lucide-react";
 import Button from "../ui/Button";
 import Modal from "../ui/Modal";
 import { apiFetch } from "../../api";
@@ -96,11 +96,6 @@ export default function AnnouncementFeed({ user }) {
             item={active}
             isAdmin={isAdmin}
             onUnpublish={() => setUnpublishId(active.id)}
-            onContact={() =>
-              navigate(
-                `${PATHS.contact}?subject=${encodeURIComponent(`About: ${active.title}`)}`,
-              )
-            }
           />
         )}
 
@@ -117,7 +112,7 @@ export default function AnnouncementFeed({ user }) {
         <div>
           <p className={styles.kicker}>From the board</p>
           <h2>Announcements</h2>
-          <p>Official notices for the neighborhood. Questions go to the board, not a comment thread.</p>
+          <p>Official notices from the board. These are posted for the neighborhood to read, not a place to reply.</p>
         </div>
         {isAdmin && <Button onClick={() => setShowCreate(true)}>Post announcement</Button>}
       </header>
@@ -175,7 +170,7 @@ export default function AnnouncementFeed({ user }) {
   );
 }
 
-function Notice({ item, isAdmin, onUnpublish, onContact }) {
+function Notice({ item, isAdmin, onUnpublish }) {
   const priority = priorityMeta(item.priority);
   return (
     <article className={`${styles.notice} ${item.is_sticky ? styles.noticePinned : ""}`}>
@@ -195,15 +190,6 @@ function Notice({ item, isAdmin, onUnpublish, onContact }) {
       <p className={`${styles.body} ${item.is_removed ? styles.removed : ""}`}>{item.content}</p>
       {item.image_url && !item.is_removed && (
         <img src={item.image_url} alt="" className={styles.figure} />
-      )}
-      {!item.is_removed && (
-        <div className={styles.contactBar}>
-          <p>Questions about this notice belong with the board, not a public thread.</p>
-          <Button variant="secondary" onClick={onContact}>
-            <Mail size={15} />
-            Contact the board
-          </Button>
-        </div>
       )}
     </article>
   );

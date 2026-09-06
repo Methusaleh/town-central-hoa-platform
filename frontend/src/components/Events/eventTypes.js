@@ -113,20 +113,137 @@ export function formatEventTime(timeStr) {
   return `${hours}:${minutes} ${ampm}`;
 }
 
+function padHms(timeStr) {
+  const raw = String(timeStr || "").trim();
+  if (!raw) return "";
+  const parts = raw.split(":");
+  const hours = String(parts[0] ?? "0").padStart(2, "0");
+  const minutes = String(parts[1] ?? "00").padStart(2, "0");
+  const seconds = String(parts[2] ?? "00").padStart(2, "0");
+  return `${hours}:${minutes}:${seconds}`;
+}
+
+function addOneHour(ymd, hms) {
+  const [hours, minutes, seconds] = hms.split(":").map((part) => Number(part) || 0);
+  const nextHours = hours + 1;
+  if (nextHours < 24) {
+    return {
+      ymd,
+      hms: `${String(nextHours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`,
+    };
+  }
+  const d = new Date(`${ymd}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + 1);
+  return { ymd: formatUtcYmd(d), hms: `00:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}` };
+}
+
 export function googleCalendarUrl(event) {
   const dateStr = formatUtcYmd(event.event_date).replace(/-/g, "");
   if (!dateStr) return "#";
   let dates = `${dateStr}/${dateStr}`;
   if (event.event_time) {
-    const compact = String(event.event_time).replace(/:/g, "").slice(0, 4);
-    dates = `${dateStr}T${compact}00/${dateStr}T${compact}00`;
+    const compact = padHms(event.event_time).replace(/:/g, "").slice(0, 4);
+    const end = addOneHour(formatUtcYmd(event.event_date), padHms(event.event_time));
+    const endCompact = end.hms.replace(/:/g, "").slice(0, 4);
+    dates = `${dateStr}T${compact}00/${end.ymd.replace(/-/g, "")}T${endCompact}00`;
   }
-  const details = [event.description, event.location].filter(Boolean).join("\n");
-  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(event.title)}&dates=${dates}&details=${encodeURIComponent(details)}`;
+  const params = new URLSearchParams({
+    action: "TEMPLATE",
+    text: event.title || "",
+    dates,
+    details: event.description || "",
+  });
+  if (event.location) params.set("location", event.location);
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+}
+
+export function outlookCalendarUrl(event) {
+  const ymd = formatUtcYmd(event.event_date);
+  if (!ymd) return "#";
+  const params = new URLSearchParams({
+    rru: "addevent",
+    subject: event.title || "",
+    body: event.description || "",
+    location: event.location || "",
+  });
+  if (event.event_time) {
+    const start = padHms(event.event_time);
+    const end = addOneHour(ymd, start);
+    params.set("startdt", `${ymd}T${start}`);
+    params.set("enddt", `${end.ymd}T${end.hms}`);
+  } else {
+    params.set("startdt", ymd);
+    const d = new Date(`${ymd}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() + 1);
+    params.set("enddt", formatUtcYmd(d));
+    params.set("allday", "true");
+  }
+  return `https://outlook.live.com/calendar/0/deeplink/compose?${params.toString()}`;
 }
 
 export function mapsUrl(location) {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`;
+}
+
+function icsEscape(value) {
+  return String(value || "")
+    .replace(/\\/g, "\\\\")
+    .replace(/\n/g, "\\n")
+    .replace(/,/g, "\\,")
+    .replace(/;/g, "\\;");
+}
+
+function icsStamp(date = new Date()) {
+  return date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+}
+
+export function eventIcs(event) {
+  const dateStr = formatUtcYmd(event.event_date).replace(/-/g, "");
+  const uid = `event-${event.id || dateStr}@towncentralhoa.org`;
+  const summary = icsEscape(event.title);
+  const location = icsEscape(event.location);
+  const description = icsEscape(
+    [event.description, event.location].filter(Boolean).join("\n"),
+  );
+  let startLine = `DTSTART;VALUE=DATE:${dateStr}`;
+  let endLine = "";
+  if (event.event_time) {
+    const compact = String(event.event_time).replace(/:/g, "").slice(0, 4).padEnd(4, "0");
+    const hours = Number(compact.slice(0, 2));
+    const mins = Number(compact.slice(2, 4));
+    const endHours = String((hours + 1) % 24).padStart(2, "0");
+    const endMins = String(mins).padStart(2, "0");
+    startLine = `DTSTART:${dateStr}T${compact}00`;
+    endLine = `DTEND:${dateStr}T${endHours}${endMins}00`;
+  }
+  return [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Town Central HOA//Events//EN",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    "BEGIN:VEVENT",
+    `UID:${uid}`,
+    `DTSTAMP:${icsStamp()}`,
+    startLine,
+    endLine,
+    `SUMMARY:${summary}`,
+    location ? `LOCATION:${location}` : "",
+    description ? `DESCRIPTION:${description}` : "",
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ].filter(Boolean).join("\r\n");
+}
+
+export function openEventIcs(event) {
+  const blob = new Blob([eventIcs(event)], { type: "text/calendar;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.target = "_blank";
+  link.rel = "noreferrer";
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
 
 export function coverFor(event) {

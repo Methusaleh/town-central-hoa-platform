@@ -5,6 +5,12 @@
   width: 100%;
 }
 
+.page *,
+.page *::before,
+.page *::after {
+  box-sizing: border-box;
+}
+
 .back,
 .mobileBack {
   display: none;
@@ -166,8 +172,11 @@
 }
 
 .list {
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   max-height: 70vh;
+  scrollbar-gutter: stable;
+  padding-right: 10px;
 }
 
 .row {
@@ -175,7 +184,7 @@
   align-items: flex-start;
   gap: 8px;
   width: 100%;
-  padding: 10px 12px 4px;
+  padding: 10px 16px 4px 12px;
   background: none;
   color: inherit;
 }
@@ -187,7 +196,7 @@
 .memberList {
   list-style: none;
   margin: 0;
-  padding: 0 12px 10px 36px;
+  padding: 0 16px 10px 36px;
   display: flex;
   flex-direction: column;
   gap: 1px;
@@ -245,7 +254,7 @@
 }
 
 .bulk input,
-.bulk button {
+.bulk select {
   font: inherit;
   font-weight: 500;
   letter-spacing: 0;
@@ -257,17 +266,47 @@
   color: var(--tc-ink);
 }
 
-.bulk button {
+.bulk button[type="submit"] {
+  font: inherit;
+  letter-spacing: 0;
+  text-transform: none;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 10px 12px;
   background: var(--tc-brand);
   color: #fff;
-  border-color: transparent;
   font-weight: 650;
   cursor: pointer;
 }
 
-.bulk button:disabled {
+.bulk button[type="submit"]:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+.bulkTypes {
+  display: flex;
+  gap: 8px;
+}
+
+.typeBtn,
+.typeOn {
+  flex: 1;
+  border: 1px solid var(--tc-line);
+  background: var(--tc-bg);
+  color: var(--tc-ink);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.typeOn {
+  background: var(--tc-brand-soft);
+  border-color: #c5d9cc;
+  color: var(--tc-brand-ink);
 }
 
 .clear {
@@ -364,6 +403,8 @@
   gap: 2px;
   flex-shrink: 0;
   white-space: nowrap;
+  min-width: 7.5rem;
+  padding-right: 2px;
 }
 
 .rowMoney b,

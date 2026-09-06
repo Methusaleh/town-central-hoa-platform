@@ -33,6 +33,7 @@ async function applyLedgerEntry({
     `UPDATE resident_dues
      SET balance = balance ${isCharge ? "+" : "-"} $1,
          status = CASE WHEN (balance ${isCharge ? "+" : "-"} $1) <= 0 THEN 'Paid' ELSE 'Pending' END
+         ${isCharge ? "" : ", last_payment_date = CURRENT_TIMESTAMP"}
      WHERE street_address = $2
      RETURNING balance, status`,
     [amount, street],
@@ -195,37 +196,62 @@ router.post("/manual-payment", boardRequired, async (req, res) => {
   }
 });
 
-router.post("/bulk-charge", boardRequired, async (req, res) => {
-  const { street_addresses, amount, reference_note, admin_name } = req.body;
+async function postBulkLedger({ street_addresses, amount, reference_note, admin_name, transaction_type, payment_method }) {
   const streets = [...new Set((street_addresses || []).map((item) => String(item || "").trim()).filter(Boolean))];
-  const chargeAmount = Number(amount);
+  const entryAmount = Number(amount);
+  const txType = transaction_type === "payment" ? "payment" : "charge";
+  const isPayment = txType === "payment";
 
-  if (!streets.length || !chargeAmount || Number.isNaN(chargeAmount) || chargeAmount <= 0) {
-    return res.status(400).json({ error: "Choose households and enter a charge amount." });
+  if (!streets.length || !entryAmount || Number.isNaN(entryAmount) || entryAmount <= 0) {
+    const error = new Error(isPayment ? "Choose households and enter a payment amount." : "Choose households and enter a charge amount.");
+    error.status = 400;
+    throw error;
   }
 
+  await db.query("BEGIN");
   try {
-    await db.query("BEGIN");
     for (const street of streets) {
       await applyLedgerEntry({
         street_address: street,
-        amount: chargeAmount,
-        payment_method: "system",
-        reference_note: reference_note || "Bulk household charge",
+        amount: entryAmount,
+        payment_method: payment_method || (isPayment ? "check" : "system"),
+        reference_note: reference_note || (isPayment ? "Bulk household payment" : "Bulk household charge"),
         admin_name: admin_name || "Board Treasurer",
-        transaction_type: "charge",
+        transaction_type: txType,
       });
     }
     await db.query("COMMIT");
-    res.json({
-      success: true,
-      count: streets.length,
-      message: `Charged ${streets.length} household${streets.length === 1 ? "" : "s"}.`,
-    });
   } catch (err) {
     await db.query("ROLLBACK");
+    throw err;
+  }
+
+  return {
+    success: true,
+    count: streets.length,
+    message: isPayment
+      ? `Recorded payments for ${streets.length} household${streets.length === 1 ? "" : "s"}.`
+      : `Charged ${streets.length} household${streets.length === 1 ? "" : "s"}.`,
+  };
+}
+
+router.post("/bulk-charge", boardRequired, async (req, res) => {
+  try {
+    const result = await postBulkLedger({ ...req.body, transaction_type: "charge" });
+    res.json(result);
+  } catch (err) {
     console.error("Bulk charge error:", err);
-    res.status(500).json({ error: err.message || "Failed to post bulk charges." });
+    res.status(err.status || 500).json({ error: err.message || "Failed to post bulk charges." });
+  }
+});
+
+router.post("/bulk-entry", boardRequired, async (req, res) => {
+  try {
+    const result = await postBulkLedger(req.body);
+    res.json(result);
+  } catch (err) {
+    console.error("Bulk ledger error:", err);
+    res.status(err.status || 500).json({ error: err.message || "Failed to post those ledger entries." });
   }
 });
 

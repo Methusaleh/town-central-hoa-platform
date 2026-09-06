@@ -58,6 +58,8 @@ export default function FinancialLedger({ onBack, user }) {
   const [mobileDetail, setMobileDetail] = useState(false);
   const [bulkAmount, setBulkAmount] = useState("");
   const [bulkNote, setBulkNote] = useState("");
+  const [bulkKind, setBulkKind] = useState("charge");
+  const [bulkMethod, setBulkMethod] = useState("check");
   const [bulkStatus, setBulkStatus] = useState({ type: "", text: "" });
   const [bulkSending, setBulkSending] = useState(false);
 
@@ -138,33 +140,36 @@ export default function FinancialLedger({ onBack, user }) {
     setMobileDetail(true);
   };
 
-  const postBulkCharge = async (e) => {
+  const postBulkEntry = async (e) => {
     e.preventDefault();
     if (!selectedStreets.length || !bulkAmount || bulkSending) return;
     setBulkSending(true);
     setBulkStatus({ type: "", text: "" });
+    const isPayment = bulkKind === "payment";
     try {
-      const res = await apiFetch("/api/dues/bulk-charge", {
+      const res = await apiFetch("/api/dues/bulk-entry", {
         method: "POST",
         body: JSON.stringify({
           street_addresses: selectedStreets,
           amount: Number(bulkAmount),
-          reference_note: bulkNote || "Bulk household charge",
+          reference_note: bulkNote || (isPayment ? "Bulk household payment" : "Bulk household charge"),
           admin_name: user?.first_name || "Board Treasurer",
+          transaction_type: bulkKind,
+          payment_method: isPayment ? bulkMethod : "system",
         }),
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        setBulkStatus({ type: "ok", text: data.message || "Charges posted." });
+        setBulkStatus({ type: "ok", text: data.message || (isPayment ? "Payments posted." : "Charges posted.") });
         setBulkAmount("");
         setBulkNote("");
         loadAccounts();
         setHistoryTick((n) => n + 1);
       } else {
-        setBulkStatus({ type: "err", text: data.error || "Could not post those charges." });
+        setBulkStatus({ type: "err", text: data.error || "Could not post those entries." });
       }
     } catch {
-      setBulkStatus({ type: "err", text: "Network error posting bulk charges." });
+      setBulkStatus({ type: "err", text: "Network error posting bulk ledger entries." });
     } finally {
       setBulkSending(false);
     }
@@ -289,8 +294,11 @@ export default function FinancialLedger({ onBack, user }) {
               </button>
               <div className={styles.accountHead}>
                 <div>
-                  <h3>Charge {selectedAccounts.length} household{selectedAccounts.length === 1 ? "" : "s"}</h3>
-                  <p>Review the list here, then post one amount to all of them.</p>
+                  <h3>
+                    {bulkKind === "payment" ? "Record payments for" : "Charge"}{" "}
+                    {selectedAccounts.length} household{selectedAccounts.length === 1 ? "" : "s"}
+                  </h3>
+                  <p>Review the list here, then post one amount to all of them as a charge or a payment.</p>
                 </div>
                 <button type="button" className={styles.clear} onClick={() => setSelectedStreets([])}>
                   Clear selection
@@ -315,7 +323,23 @@ export default function FinancialLedger({ onBack, user }) {
                 ))}
               </ul>
 
-              <form className={styles.bulk} onSubmit={postBulkCharge}>
+              <form className={styles.bulk} onSubmit={postBulkEntry}>
+                <div className={styles.bulkTypes}>
+                  <button
+                    type="button"
+                    className={bulkKind === "charge" ? styles.typeOn : styles.typeBtn}
+                    onClick={() => setBulkKind("charge")}
+                  >
+                    Post a charge
+                  </button>
+                  <button
+                    type="button"
+                    className={bulkKind === "payment" ? styles.typeOn : styles.typeBtn}
+                    onClick={() => setBulkKind("payment")}
+                  >
+                    Record payment
+                  </button>
+                </div>
                 <label>
                   Amount
                   <input
@@ -328,17 +352,35 @@ export default function FinancialLedger({ onBack, user }) {
                     required
                   />
                 </label>
+                {bulkKind === "payment" && (
+                  <label>
+                    How it arrived
+                    <select value={bulkMethod} onChange={(e) => setBulkMethod(e.target.value)}>
+                      <option value="check">Paper check</option>
+                      <option value="zelle">Zelle</option>
+                      <option value="ach">ACH / bill pay</option>
+                    </select>
+                  </label>
+                )}
                 <label>
                   Memo
                   <input
                     type="text"
-                    placeholder="e.g. 2026 annual assessment"
+                    placeholder={
+                      bulkKind === "payment"
+                        ? "e.g. check drop at the clubhouse"
+                        : "e.g. 2026 annual assessment"
+                    }
                     value={bulkNote}
                     onChange={(e) => setBulkNote(e.target.value)}
                   />
                 </label>
                 <button type="submit" disabled={bulkSending}>
-                  {bulkSending ? "Posting…" : `Post charge to ${selectedAccounts.length} household${selectedAccounts.length === 1 ? "" : "s"}`}
+                  {bulkSending
+                    ? "Posting…"
+                    : bulkKind === "payment"
+                      ? `Apply payment to ${selectedAccounts.length} household${selectedAccounts.length === 1 ? "" : "s"}`
+                      : `Post charge to ${selectedAccounts.length} household${selectedAccounts.length === 1 ? "" : "s"}`}
                 </button>
                 {bulkStatus.text && (
                   <p className={bulkStatus.type === "ok" ? styles.paid : styles.due}>{bulkStatus.text}</p>
@@ -346,7 +388,7 @@ export default function FinancialLedger({ onBack, user }) {
               </form>
             </>
           ) : !selected ? (
-            <p className={styles.empty}>Choose a household, or check several to post a bulk charge.</p>
+            <p className={styles.empty}>Choose a household, or check several to post a bulk charge or payment.</p>
           ) : (
             <>
               <button type="button" className={styles.mobileBack} onClick={() => setMobileDetail(false)}>

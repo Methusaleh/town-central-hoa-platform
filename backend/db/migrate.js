@@ -94,6 +94,8 @@ END $$;`,
     used_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
   )`,
+  `ALTER TABLE neighborhood_roster ADD COLUMN IF NOT EXISTS claim_letter_sent_at TIMESTAMPTZ`,
+  `ALTER TABLE users ADD COLUMN IF NOT EXISTS welcome_letter_sent_at TIMESTAMPTZ`,
 ];
 
 async function migrate(query) {
