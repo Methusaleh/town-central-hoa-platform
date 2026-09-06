@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Outlet, useLocation, useNavigate, useOutletContext } from "react-router-dom";
+import { Outlet, useNavigate, useOutletContext } from "react-router-dom";
 import MissionControl from "../../components/BoardPortal/subcomponents/MissionControl";
 import RosterDirectory from "../../components/BoardPortal/subcomponents/RosterDirectory";
 import FinancialLedger from "../../components/BoardPortal/subcomponents/FinancialLedger";
@@ -24,29 +24,9 @@ import { apiFetch } from "../../api";
 
 export default function DashboardLayout() {
   const { user, isBoard } = usePortal();
-  const location = useLocation();
   const [requests, setRequests] = useState([]);
-  const [masterRoster, setMasterRoster] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState("active");
-  const [showForm, setShowForm] = useState(false);
-  const [rosterForm, setRosterForm] = useState({
-    first_name: "",
-    last_name: "",
-    email: "",
-    street_address: "",
-  });
-  const [financeStatus, setFinanceStatus] = useState({ text: "", type: "" });
-
-  const fetchRosterData = async () => {
-    try {
-      const response = await apiFetch("/api/residents/master-list-placeholder");
-      const data = await response.json();
-      setMasterRoster(data || []);
-    } catch (err) {
-      console.error("Roster fetch error:", err);
-    }
-  };
 
   useEffect(() => {
     if (!isBoard) {
@@ -65,12 +45,6 @@ export default function DashboardLayout() {
       });
   }, [isBoard]);
 
-  useEffect(() => {
-    if (location.pathname.includes("/admin/roster") || location.pathname.includes("/admin/financials")) {
-      fetchRosterData();
-    }
-  }, [location.pathname]);
-
   const handleResolve = async (requestId) => {
     try {
       const response = await apiFetch(`/api/requests/${requestId}/resolve`, {
@@ -87,30 +61,6 @@ export default function DashboardLayout() {
     }
   };
 
-  const handleOnboardResident = async (e, sendWelcomePacket) => {
-    e.preventDefault();
-    const generatedToken = Math.random().toString(36).substring(2, 8).toUpperCase();
-    try {
-      const response = await apiFetch("/api/residents", {
-        method: "POST",
-        body: JSON.stringify({
-          ...rosterForm,
-          onboarding_token: generatedToken,
-          send_welcome: sendWelcomePacket,
-        }),
-      });
-      if (response.ok) {
-        window.alert(`Property added! Claim Code: ${generatedToken}`);
-        fetchRosterData();
-        setShowForm(false);
-        setRosterForm({ first_name: "", last_name: "", email: "", street_address: "" });
-      }
-    } catch (err) {
-      console.error("Onboarding error:", err);
-      window.alert("Failed to save property.");
-    }
-  };
-
   return (
     <Outlet
       context={{
@@ -120,13 +70,6 @@ export default function DashboardLayout() {
         handleResolve,
         viewMode,
         setViewMode,
-        masterRoster,
-        showForm,
-        setShowForm,
-        rosterForm,
-        setRosterForm,
-        financeStatus,
-        handleOnboardResident,
       }}
     />
   );
@@ -250,31 +193,20 @@ export function AdminRequestsPage() {
 }
 
 export function AdminRosterPage() {
-  const ctx = useOutletContext();
   const navigate = useNavigate();
   return (
     <Panel wide>
-      <RosterDirectory
-        onBack={() => navigate(PATHS.admin)}
-        masterRoster={ctx.masterRoster}
-        showRosterModal={ctx.showForm}
-        setShowRosterModal={ctx.setShowForm}
-        rosterForm={ctx.rosterForm || {}}
-        setRosterForm={ctx.setRosterForm}
-        rosterStatus={ctx.financeStatus}
-        handleOnboardResident={ctx.handleOnboardResident}
-      />
+      <RosterDirectory onBack={() => navigate(PATHS.admin)} />
     </Panel>
   );
 }
 
 export function AdminFinancialsPage() {
-  const ctx = useOutletContext();
   const navigate = useNavigate();
   const { user } = usePortal();
   return (
     <Panel wide>
-      <FinancialLedger onBack={() => navigate(PATHS.admin)} masterRoster={ctx.masterRoster} user={user} />
+      <FinancialLedger onBack={() => navigate(PATHS.admin)} user={user} />
     </Panel>
   );
 }

@@ -73,6 +73,19 @@ END $$;`,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (event_id, user_id)
   )`,
+  `DELETE FROM neighborhood_roster a
+     USING neighborhood_roster b
+   WHERE lower(trim(a.street_address)) = lower(trim(b.street_address))
+     AND a.id <> b.id
+     AND (
+       (COALESCE(b.is_claimed, false) AND NOT COALESCE(a.is_claimed, false))
+       OR (
+         COALESCE(a.is_claimed, false) = COALESCE(b.is_claimed, false)
+         AND a.id > b.id
+       )
+     )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS neighborhood_roster_street_unique
+     ON neighborhood_roster ((lower(trim(street_address))))`,
 ];
 
 async function migrate(query) {

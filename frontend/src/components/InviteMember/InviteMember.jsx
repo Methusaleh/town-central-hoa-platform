@@ -34,7 +34,10 @@ export default function InviteMember({ user }) {
   return (
     <div className={styles.inviteContainer}>
       <h4>Invite Household Member</h4>
-      <p>Send an invitation link to a roommate or family member to join your household account.</p>
+      <p>
+        Invite a roommate or family member. They get their own login for The Porch, the same
+        household access you have, and they are included on board email to this address.
+      </p>
       <form onSubmit={handleInvite} className={styles.form}>
         <input 
           type="email" 

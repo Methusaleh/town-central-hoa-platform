@@ -37,11 +37,18 @@ export default function FinancialLedger({ onBack, user }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
   const [selectedId, setSelectedId] = useState(null);
+  const [selectedStreets, setSelectedStreets] = useState([]);
   const [history, setHistory] = useState([]);
   const [historyTick, setHistoryTick] = useState(0);
   const [mobileDetail, setMobileDetail] = useState(false);
+  const [bulkAmount, setBulkAmount] = useState("");
+  const [bulkNote, setBulkNote] = useState("");
+  const [bulkStatus, setBulkStatus] = useState({ type: "", text: "" });
+  const [bulkSending, setBulkSending] = useState(false);
 
   const selected = accounts.find((item) => String(item.id) === String(selectedId)) || null;
+  const bulkMode = selectedStreets.length > 0;
+  const selectedAccounts = accounts.filter((item) => selectedStreets.includes(item.street_address));
 
   const loadAccounts = async () => {
     try {
@@ -68,7 +75,7 @@ export default function FinancialLedger({ onBack, user }) {
   }, []);
 
   useEffect(() => {
-    if (!selected?.street_address) {
+    if (bulkMode || !selected?.street_address) {
       setHistory([]);
       return undefined;
     }
@@ -85,7 +92,7 @@ export default function FinancialLedger({ onBack, user }) {
     return () => {
       cancelled = true;
     };
-  }, [selected?.street_address, historyTick]);
+  }, [selected?.street_address, historyTick, bulkMode]);
 
   const visible = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -104,8 +111,48 @@ export default function FinancialLedger({ onBack, user }) {
   const outstanding = accounts.reduce((sum, item) => sum + Math.max(0, Number(item.balance) || 0), 0);
 
   const openAccount = (account) => {
+    if (selectedStreets.length > 0) return;
     setSelectedId(account.id);
     setMobileDetail(true);
+  };
+
+  const toggleStreet = (street) => {
+    setSelectedStreets((current) =>
+      current.includes(street) ? current.filter((item) => item !== street) : [...current, street],
+    );
+    setMobileDetail(true);
+  };
+
+  const postBulkCharge = async (e) => {
+    e.preventDefault();
+    if (!selectedStreets.length || !bulkAmount || bulkSending) return;
+    setBulkSending(true);
+    setBulkStatus({ type: "", text: "" });
+    try {
+      const res = await apiFetch("/api/dues/bulk-charge", {
+        method: "POST",
+        body: JSON.stringify({
+          street_addresses: selectedStreets,
+          amount: Number(bulkAmount),
+          reference_note: bulkNote || "Bulk household charge",
+          admin_name: user?.first_name || "Board Treasurer",
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setBulkStatus({ type: "ok", text: data.message || "Charges posted." });
+        setBulkAmount("");
+        setBulkNote("");
+        loadAccounts();
+        setHistoryTick((n) => n + 1);
+      } else {
+        setBulkStatus({ type: "err", text: data.error || "Could not post those charges." });
+      }
+    } catch {
+      setBulkStatus({ type: "err", text: "Network error posting bulk charges." });
+    } finally {
+      setBulkSending(false);
+    }
   };
 
   return (
@@ -137,7 +184,7 @@ export default function FinancialLedger({ onBack, user }) {
         </div>
       </header>
 
-      <div className={`${styles.workspace} ${mobileDetail && selected ? styles.workspaceDetail : ""}`}>
+      <div className={`${styles.workspace} ${mobileDetail && (bulkMode || selected) ? styles.workspaceDetail : ""}`}>
         <section className={styles.roll}>
           <div className={styles.tools}>
             <label className={styles.search}>
@@ -170,32 +217,108 @@ export default function FinancialLedger({ onBack, user }) {
           ) : (
             <div className={styles.list}>
               {visible.map((account) => (
-                <button
+                <div
                   key={account.id}
-                  type="button"
-                  className={`${styles.row} ${String(account.id) === String(selectedId) ? styles.rowOn : ""}`}
-                  onClick={() => openAccount(account)}
+                  className={`${styles.row} ${
+                    bulkMode
+                      ? selectedStreets.includes(account.street_address) ? styles.rowOn : ""
+                      : String(account.id) === String(selectedId) ? styles.rowOn : ""
+                  }`}
                 >
-                  <div className={styles.rowCopy}>
-                    <strong>{account.household || "Household"}</strong>
-                    <span>
-                      {account.street_address}
-                      {account.lot_number ? ` · Lot ${account.lot_number}` : ""}
-                    </span>
-                  </div>
-                  <div className={styles.rowMoney}>
-                    <b className={styles[statusTone(account)]}>{money(account.balance)}</b>
-                    <em>{statusLabel(account)}</em>
-                  </div>
-                </button>
+                  <label className={styles.check} onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={selectedStreets.includes(account.street_address)}
+                      onChange={() => toggleStreet(account.street_address)}
+                    />
+                  </label>
+                  <button type="button" className={styles.rowMain} onClick={() => openAccount(account)}>
+                    <div className={styles.rowCopy}>
+                      <strong>{account.household || "Household"}</strong>
+                      <span>
+                        {account.street_address}
+                        {account.lot_number ? ` · Lot ${account.lot_number}` : ""}
+                      </span>
+                    </div>
+                    <div className={styles.rowMoney}>
+                      <b className={styles[statusTone(account)]}>{money(account.balance)}</b>
+                      <em>{statusLabel(account)}</em>
+                    </div>
+                  </button>
+                </div>
               ))}
             </div>
           )}
         </section>
 
         <section className={styles.desk}>
-          {!selected ? (
-            <p className={styles.empty}>Choose a household to log a payment or charge.</p>
+          {bulkMode ? (
+            <>
+              <button type="button" className={styles.mobileBack} onClick={() => setMobileDetail(false)}>
+                <ArrowLeft size={16} />
+                All households
+              </button>
+              <div className={styles.accountHead}>
+                <div>
+                  <h3>Charge {selectedAccounts.length} household{selectedAccounts.length === 1 ? "" : "s"}</h3>
+                  <p>Review the list here, then post one amount to all of them.</p>
+                </div>
+                <button type="button" className={styles.clear} onClick={() => setSelectedStreets([])}>
+                  Clear selection
+                </button>
+              </div>
+
+              <ul className={styles.review}>
+                {selectedAccounts.map((account) => (
+                  <li key={account.id}>
+                    <div>
+                      <strong>{account.household || "Household"}</strong>
+                      <span>
+                        {account.street_address}
+                        {account.lot_number ? ` · Lot ${account.lot_number}` : ""}
+                        {" · "}
+                        {money(account.balance)}
+                      </span>
+                    </div>
+                    <button type="button" onClick={() => toggleStreet(account.street_address)}>
+                      Remove
+                    </button>
+                  </li>
+                ))}
+              </ul>
+
+              <form className={styles.bulk} onSubmit={postBulkCharge}>
+                <label>
+                  Amount
+                  <input
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={bulkAmount}
+                    onChange={(e) => setBulkAmount(e.target.value)}
+                    required
+                  />
+                </label>
+                <label>
+                  Memo
+                  <input
+                    type="text"
+                    placeholder="e.g. 2026 annual assessment"
+                    value={bulkNote}
+                    onChange={(e) => setBulkNote(e.target.value)}
+                  />
+                </label>
+                <button type="submit" disabled={bulkSending}>
+                  {bulkSending ? "Posting…" : `Post charge to ${selectedAccounts.length} household${selectedAccounts.length === 1 ? "" : "s"}`}
+                </button>
+                {bulkStatus.text && (
+                  <p className={bulkStatus.type === "ok" ? styles.paid : styles.due}>{bulkStatus.text}</p>
+                )}
+              </form>
+            </>
+          ) : !selected ? (
+            <p className={styles.empty}>Choose a household, or check several to post a bulk charge.</p>
           ) : (
             <>
               <button type="button" className={styles.mobileBack} onClick={() => setMobileDetail(false)}>

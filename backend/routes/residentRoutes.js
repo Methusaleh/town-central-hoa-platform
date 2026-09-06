@@ -6,6 +6,7 @@ const crypto = require("crypto");
 const {
   authRequired,
   boardRequired,
+  isBoard,
   signToken,
   publicUser,
 } = require("../middleware/auth");
@@ -15,6 +16,65 @@ const USER_COLUMNS = `
   id, first_name, last_name, email, address, role,
   agreed_to_guidelines, profile_photo, password_hash
 `;
+
+function newClaimCode() {
+  return Math.random().toString(36).substring(2, 8).toUpperCase();
+}
+
+async function findLotByStreet(street) {
+  const { rows } = await db.query(
+    `SELECT * FROM neighborhood_roster
+     WHERE lower(trim(street_address)) = lower(trim($1))
+     LIMIT 1`,
+    [street],
+  );
+  return rows[0] || null;
+}
+
+async function emailsForLotIds(ids) {
+  if (!ids.length) return [];
+  const { rows } = await db.query(
+    `
+    WITH lots AS (
+      SELECT id, street_address, email, is_claimed
+      FROM neighborhood_roster
+      WHERE id = ANY($1::int[])
+    )
+    SELECT DISTINCT lower(trim(u.email)) AS email
+    FROM users u
+    JOIN lots l ON lower(trim(u.address)) = lower(trim(l.street_address))
+    WHERE u.email IS NOT NULL AND trim(u.email) <> ''
+    UNION
+    SELECT DISTINCT lower(trim(l.email)) AS email
+    FROM lots l
+    WHERE l.email IS NOT NULL AND trim(l.email) <> ''
+    `,
+    [ids],
+  );
+  return rows.map((row) => row.email).filter(Boolean);
+}
+
+async function emailsForClaimFilter(claimed) {
+  const { rows } = await db.query(
+    `
+    WITH lots AS (
+      SELECT street_address, email
+      FROM neighborhood_roster
+      WHERE ($1::boolean IS NULL) OR (COALESCE(is_claimed, false) = $1)
+    )
+    SELECT DISTINCT lower(trim(u.email)) AS email
+    FROM users u
+    JOIN lots l ON lower(trim(u.address)) = lower(trim(l.street_address))
+    WHERE u.email IS NOT NULL AND trim(u.email) <> ''
+    UNION
+    SELECT DISTINCT lower(trim(l.email)) AS email
+    FROM lots l
+    WHERE l.email IS NOT NULL AND trim(l.email) <> ''
+    `,
+    [claimed],
+  );
+  return rows.map((row) => row.email).filter(Boolean);
+}
 
 function resolveRole(user) {
   if (user.role) return user.role;
@@ -108,7 +168,9 @@ router.post("/lookup", async (req, res) => {
     const match = rows[0];
 
     if (match.is_claimed) {
-      return res.status(400).json({ error: "This property profile has already been claimed and registered." });
+      return res.status(400).json({
+        error: "This household already has an account. Ask someone who lives there to invite you from Settings.",
+      });
     }
 
     res.json({
@@ -124,23 +186,60 @@ router.post("/lookup", async (req, res) => {
 });
 
 router.post("/claim", async (req, res) => {
-  const { first_name, last_name, email, password, street_address, residentId } = req.body;
+  const { first_name, last_name, email, password, street_address, residentId, onboarding_token } = req.body;
+
+  if (!residentId || !password || !email) {
+    return res.status(400).json({ error: "Account details are required." });
+  }
 
   try {
     await db.query("BEGIN");
 
+    const lotRes = await db.query(
+      `SELECT id, street_address, onboarding_token, is_claimed
+       FROM neighborhood_roster
+       WHERE id = $1
+       FOR UPDATE`,
+      [residentId],
+    );
+    const lot = lotRes.rows[0];
+    if (!lot) {
+      await db.query("ROLLBACK");
+      return res.status(404).json({ error: "That lot is not on the roster." });
+    }
+    if (lot.is_claimed) {
+      await db.query("ROLLBACK");
+      return res.status(400).json({ error: "This household has already been claimed." });
+    }
+    if (
+      onboarding_token &&
+      String(lot.onboarding_token || "").trim().toUpperCase() !==
+        String(onboarding_token).trim().toUpperCase()
+    ) {
+      await db.query("ROLLBACK");
+      return res.status(400).json({ error: "Claim code does not match this lot." });
+    }
+    if (
+      street_address &&
+      lot.street_address.trim().toLowerCase() !== street_address.trim().toLowerCase()
+    ) {
+      await db.query("ROLLBACK");
+      return res.status(400).json({ error: "Address does not match the claim code." });
+    }
+
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
+    const lotAddress = lot.street_address;
 
     const insertRes = await db.query(
       `INSERT INTO users (first_name, last_name, email, password_hash, address, role)
        VALUES ($1, $2, $3, $4, $5, 'resident')
        RETURNING ${USER_COLUMNS}`,
-      [first_name, last_name, email.trim().toLowerCase(), hashedPassword, street_address],
+      [first_name, last_name, email.trim().toLowerCase(), hashedPassword, lotAddress],
     );
 
     await db.query(
-      "UPDATE neighborhood_roster SET is_claimed = true, first_name = $1, last_name = $2, email = $3 WHERE id = $4 RETURNING id",
+      "UPDATE neighborhood_roster SET is_claimed = true, first_name = $1, last_name = $2, email = $3 WHERE id = $4",
       [first_name, last_name, email.trim().toLowerCase(), residentId],
     );
 
@@ -167,10 +266,10 @@ router.post("/verify", async (req, res) => {
 
   try {
     const query = `
-      SELECT id 
-      FROM neighborhood_roster 
-      WHERE street_address ILIKE $1 
-      AND onboarding_token = $2 
+      SELECT id
+      FROM neighborhood_roster
+      WHERE street_address ILIKE $1
+      AND upper(trim(onboarding_token)) = upper(trim($2))
       AND (is_claimed = false OR is_claimed IS NULL)
     `;
     const { rows } = await db.query(query, [street_address.trim(), onboarding_token.trim()]);
@@ -186,21 +285,39 @@ router.post("/verify", async (req, res) => {
 });
 
 async function onboardProperty({ first_name, last_name, email, street_address, onboarding_token, send_welcome }) {
-  const token = onboarding_token || Math.random().toString(36).substring(2, 8).toUpperCase();
+  const street = (street_address || "").trim();
+  const existing = await findLotByStreet(street);
+  if (existing) {
+    const error = new Error("LOT_EXISTS");
+    error.lot = existing;
+    throw error;
+  }
+
+  const token = onboarding_token || newClaimCode();
   const insertQuery = `
     INSERT INTO neighborhood_roster (first_name, last_name, email, street_address, onboarding_token, is_claimed)
     VALUES ($1, $2, $3, $4, $5, false)
     RETURNING id, first_name, last_name, email, street_address, onboarding_token, is_claimed;
   `;
-  const { rows } = await db.query(insertQuery, [
-    (first_name || "Pending").trim(),
-    (last_name || "Resident").trim(),
-    email ? email.trim().toLowerCase() : null,
-    street_address.trim(),
-    token,
-  ]);
+  let resident;
+  try {
+    const { rows } = await db.query(insertQuery, [
+      (first_name || "").trim() || "Pending",
+      (last_name || "").trim() || "Resident",
+      email ? email.trim().toLowerCase() : null,
+      street,
+      token,
+    ]);
+    resident = rows[0];
+  } catch (err) {
+    if (err.code === "23505") {
+      const collision = new Error("LOT_EXISTS");
+      collision.lot = await findLotByStreet(street);
+      throw collision;
+    }
+    throw err;
+  }
 
-  const resident = rows[0];
   if (send_welcome && resident.email) {
     await sendClaimCodeEmail({
       to: resident.email,
@@ -211,6 +328,13 @@ async function onboardProperty({ first_name, last_name, email, street_address, o
   }
 
   return resident;
+}
+
+function lotExistsPayload(lot) {
+  return {
+    error: "That street is already on the roster. Invite another household member onto the existing listing instead of adding a second one.",
+    lot,
+  };
 }
 
 router.post("/", boardRequired, async (req, res) => {
@@ -231,6 +355,9 @@ router.post("/", boardRequired, async (req, res) => {
     });
     res.status(201).json({ success: true, resident });
   } catch (err) {
+    if (err.message === "LOT_EXISTS") {
+      return res.status(409).json(lotExistsPayload(err.lot));
+    }
     console.error(err);
     res.status(500).json({ error: "Internal server error." });
   }
@@ -238,17 +365,40 @@ router.post("/", boardRequired, async (req, res) => {
 
 router.post("/invite", authRequired, async (req, res) => {
   const { email, primary_resident_id, address } = req.body;
-  const inviteToken = crypto.randomBytes(16).toString("hex");
+  if (!email) {
+    return res.status(400).json({ error: "Email is required." });
+  }
 
   try {
+    let targetAddress = req.user.address;
+    const requested = (address || "").trim();
+    if (requested && requested.toLowerCase() !== String(req.user.address || "").trim().toLowerCase()) {
+      if (!isBoard(req.user)) {
+        return res.status(403).json({ error: "You can only invite people to your own household." });
+      }
+      const lot = await findLotByStreet(requested);
+      if (!lot) {
+        return res.status(404).json({ error: "That street is not on the roster." });
+      }
+      targetAddress = lot.street_address;
+    } else if (targetAddress) {
+      const lot = await findLotByStreet(targetAddress);
+      if (lot) targetAddress = lot.street_address;
+    }
+
+    if (!targetAddress) {
+      return res.status(400).json({ error: "Household address is required." });
+    }
+
+    const inviteToken = crypto.randomBytes(16).toString("hex");
     await db.query(
       "INSERT INTO invitations (email, token, primary_resident_id, address) VALUES ($1, $2, $3, $4)",
-      [email, inviteToken, primary_resident_id || req.user.id, address || req.user.address],
+      [email.trim().toLowerCase(), inviteToken, primary_resident_id || req.user.id, targetAddress],
     );
 
     await sendHouseholdInvite({
-      to: email,
-      address: address || req.user.address,
+      to: email.trim().toLowerCase(),
+      address: targetAddress,
       token: inviteToken,
     });
 
@@ -317,6 +467,9 @@ router.post("/admin-add", boardRequired, async (req, res) => {
     });
     res.status(201).json({ success: true, resident });
   } catch (err) {
+    if (err.message === "LOT_EXISTS") {
+      return res.status(409).json(lotExistsPayload(err.lot));
+    }
     console.error(err);
     res.status(500).json({ error: "Internal server error." });
   }
@@ -355,6 +508,8 @@ router.post("/invite/accept", async (req, res) => {
     }
 
     const { email, address } = inviteRes.rows[0];
+    const lot = await findLotByStreet(address);
+    const lotAddress = lot?.street_address || address;
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
@@ -362,10 +517,16 @@ router.post("/invite/accept", async (req, res) => {
       `INSERT INTO users (first_name, last_name, email, password_hash, address, role)
        VALUES ($1, $2, $3, $4, $5, 'resident')
        RETURNING ${USER_COLUMNS}`,
-      [first_name, last_name, email, hashedPassword, address],
+      [first_name, last_name, email, hashedPassword, lotAddress],
     );
 
     await db.query("UPDATE invitations SET is_used = true WHERE token = $1", [token]);
+    if (lot && !lot.is_claimed) {
+      await db.query(
+        "UPDATE neighborhood_roster SET is_claimed = true WHERE id = $1",
+        [lot.id],
+      );
+    }
     await db.query("COMMIT");
 
     const record = insertRes.rows[0];
@@ -398,7 +559,7 @@ router.delete("/account/:id", boardRequired, async (req, res) => {
     await db.query("DELETE FROM users WHERE id = $1", [userId]);
 
     const countRes = await db.query(
-      "SELECT COUNT(*) FROM users WHERE address = $1",
+      "SELECT COUNT(*) FROM users WHERE lower(trim(address)) = lower(trim($1))",
       [userAddress],
     );
 
@@ -407,7 +568,7 @@ router.delete("/account/:id", boardRequired, async (req, res) => {
     let propertyUnclaimed = false;
     if (remainingResidents === 0) {
       await db.query(
-        "UPDATE neighborhood_roster SET is_claimed = false WHERE street_address = $1",
+        "UPDATE neighborhood_roster SET is_claimed = false WHERE lower(trim(street_address)) = lower(trim($1))",
         [userAddress],
       );
       propertyUnclaimed = true;
@@ -431,9 +592,28 @@ router.delete("/account/:id", boardRequired, async (req, res) => {
 router.get("/master-list-placeholder", boardRequired, async (_req, res) => {
   try {
     const query = `
-      SELECT id, first_name, last_name, email, street_address, lot_number, is_claimed 
-      FROM neighborhood_roster 
-      ORDER BY last_name ASC, first_name ASC;
+      SELECT
+        r.id,
+        r.first_name,
+        r.last_name,
+        r.email,
+        r.street_address,
+        r.lot_number,
+        r.is_claimed,
+        r.onboarding_token,
+        COALESCE((
+          SELECT json_agg(json_build_object(
+            'id', u.id,
+            'first_name', u.first_name,
+            'last_name', u.last_name,
+            'email', u.email,
+            'role', COALESCE(u.role, 'resident')
+          ) ORDER BY u.last_name, u.first_name)
+          FROM users u
+          WHERE lower(trim(u.address)) = lower(trim(r.street_address))
+        ), '[]'::json) AS household
+      FROM neighborhood_roster r
+      ORDER BY r.street_address ASC, r.last_name ASC, r.first_name ASC;
     `;
     const { rows } = await db.query(query);
     res.json(rows);
@@ -443,8 +623,142 @@ router.get("/master-list-placeholder", boardRequired, async (_req, res) => {
   }
 });
 
+router.post("/lots/bulk-claim-letters", boardRequired, async (req, res) => {
+  const ids = (req.body.ids || []).map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0);
+  if (!ids.length) {
+    return res.status(400).json({ error: "Select households first." });
+  }
+
+  try {
+    const { rows } = await db.query(
+      `SELECT id, first_name, last_name, email, street_address, onboarding_token, is_claimed
+       FROM neighborhood_roster
+       WHERE id = ANY($1::int[])`,
+      [ids],
+    );
+
+    const sent = [];
+    const skipped = [];
+    for (const lot of rows) {
+      if (lot.is_claimed) {
+        skipped.push({ street_address: lot.street_address, reason: "already_claimed" });
+        continue;
+      }
+      if (!lot.email || !lot.onboarding_token) {
+        skipped.push({ street_address: lot.street_address, reason: "no_email" });
+        continue;
+      }
+      await sendClaimCodeEmail({
+        to: lot.email,
+        firstName: lot.first_name,
+        streetAddress: lot.street_address,
+        claimCode: lot.onboarding_token,
+      });
+      sent.push(lot.street_address);
+    }
+
+    res.json({
+      success: true,
+      sent: sent.length,
+      skipped,
+      message: sent.length
+        ? `Claim letters sent to ${sent.length} household${sent.length === 1 ? "" : "s"}.`
+        : "No claim letters sent. Download the CSV for streets without email.",
+    });
+  } catch (err) {
+    console.error("Bulk claim letter error:", err.message);
+    res.status(500).json({ error: "Could not send those claim letters." });
+  }
+});
+
+router.post("/lots/:id/resend-claim", boardRequired, async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      `SELECT id, first_name, last_name, email, street_address, onboarding_token, is_claimed
+       FROM neighborhood_roster WHERE id = $1`,
+      [req.params.id],
+    );
+    const lot = rows[0];
+    if (!lot) return res.status(404).json({ error: "That lot is not on the roster." });
+    if (!lot.email) {
+      return res.status(400).json({ error: "Add an email on this lot before sending a claim letter." });
+    }
+
+    await sendClaimCodeEmail({
+      to: lot.email,
+      firstName: lot.first_name,
+      streetAddress: lot.street_address,
+      claimCode: lot.onboarding_token,
+    });
+    res.json({ success: true, message: "Claim letter sent." });
+  } catch (err) {
+    console.error("Resend claim error:", err.message);
+    res.status(500).json({ error: "Could not send the claim letter." });
+  }
+});
+
+router.post("/lots/:id/transfer", boardRequired, async (req, res) => {
+  const { first_name, last_name, email, send_welcome } = req.body;
+  if (!first_name || !last_name) {
+    return res.status(400).json({ error: "New occupant first and last name are required." });
+  }
+
+  try {
+    const { rows } = await db.query(
+      "SELECT * FROM neighborhood_roster WHERE id = $1",
+      [req.params.id],
+    );
+    const lot = rows[0];
+    if (!lot) return res.status(404).json({ error: "That lot is not on the roster." });
+
+    const token = newClaimCode();
+    const nextEmail = email ? email.trim().toLowerCase() : null;
+    const { rows: updated } = await db.query(
+      `UPDATE neighborhood_roster
+       SET first_name = $1,
+           last_name = $2,
+           email = $3,
+           onboarding_token = $4,
+           is_claimed = false
+       WHERE id = $5
+       RETURNING id, first_name, last_name, email, street_address, onboarding_token, is_claimed`,
+      [first_name.trim(), last_name.trim(), nextEmail, token, lot.id],
+    );
+
+    const resident = updated[0];
+    const { rows: household } = await db.query(
+      `SELECT id, first_name, last_name, email, role
+       FROM users
+       WHERE lower(trim(address)) = lower(trim($1))
+       ORDER BY last_name, first_name`,
+      [resident.street_address],
+    );
+
+    if (send_welcome && resident.email) {
+      await sendClaimCodeEmail({
+        to: resident.email,
+        firstName: resident.first_name,
+        streetAddress: resident.street_address,
+        claimCode: resident.onboarding_token,
+      });
+    }
+
+    res.json({
+      success: true,
+      resident,
+      household,
+      message: household.length
+        ? "Owner transferred. Existing logins at this address still have access until you remove them."
+        : "Owner transferred. A new claim code is ready.",
+    });
+  } catch (err) {
+    console.error("Transfer error:", err.message);
+    res.status(500).json({ error: "Could not transfer this lot." });
+  }
+});
+
 router.post("/broadcast", boardRequired, async (req, res) => {
-  const { targetType, selectedEmails, subject, message } = req.body;
+  const { targetType, selectedEmails, selectedIds, subject, message, kind } = req.body;
 
   if (!subject || !message || !targetType) {
     return res.status(400).json({ error: "Target type, subject, and message are required fields." });
@@ -454,26 +768,33 @@ router.post("/broadcast", boardRequired, async (req, res) => {
     let emailList = [];
 
     if (targetType === "selected") {
-      emailList = (selectedEmails || []).filter((e) => e && e.includes("@"));
+      let ids = (selectedIds || []).map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0);
+      if (!ids.length && Array.isArray(selectedEmails) && selectedEmails.length) {
+        const { rows } = await db.query(
+          `SELECT id FROM neighborhood_roster
+           WHERE email IS NOT NULL AND lower(trim(email)) = ANY($1::text[])`,
+          [selectedEmails.map((item) => String(item).trim().toLowerCase())],
+        );
+        ids = rows.map((row) => row.id);
+      }
+      emailList = await emailsForLotIds(ids);
     } else if (targetType === "all") {
-      const { rows } = await db.query("SELECT DISTINCT email FROM neighborhood_roster WHERE email IS NOT NULL AND email != ''");
-      emailList = rows.map((r) => r.email);
+      emailList = await emailsForClaimFilter(null);
     } else if (targetType === "unclaimed") {
-      const { rows } = await db.query("SELECT email FROM neighborhood_roster WHERE is_claimed = false AND email IS NOT NULL AND email != ''");
-      emailList = rows.map((r) => r.email);
+      emailList = await emailsForClaimFilter(false);
     } else if (targetType === "claimed") {
-      const { rows } = await db.query("SELECT email FROM neighborhood_roster WHERE is_claimed = true AND email IS NOT NULL AND email != ''");
-      emailList = rows.map((r) => r.email);
+      emailList = await emailsForClaimFilter(true);
     }
 
     if (emailList.length === 0) {
       return res.status(404).json({ error: "No valid recipient email addresses found for this selection." });
     }
 
+    const prefix = kind === "newsletter" ? "[Town Central Newsletter]" : "[Town Central Board Broadcast]";
     await sendMail({
       to: process.env.EMAIL_USER,
       bcc: emailList,
-      subject: `[Town Central Board Broadcast] ${subject}`,
+      subject: `${prefix} ${subject}`,
       html: `
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
           <h3 style="color: #2c3e50; margin-top: 0;">Official Neighborhood Communication</h3>

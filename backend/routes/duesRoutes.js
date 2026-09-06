@@ -3,6 +3,54 @@ const router = express.Router();
 const db = require("../db");
 const { authRequired, boardRequired, isBoard } = require("../middleware/auth");
 
+async function applyLedgerEntry({
+  street_address,
+  amount,
+  payment_method,
+  reference_note,
+  admin_name,
+  transaction_type,
+}) {
+  const street = street_address.trim();
+  const txType = transaction_type || "payment";
+  const isCharge = txType === "charge" || txType === "opening_balance";
+
+  await db.query(
+    `INSERT INTO ledger_transactions
+    (address, amount, transaction_type, payment_method, reference_note, created_by)
+    VALUES ($1, $2, $3, $4, $5, $6)`,
+    [
+      street,
+      amount,
+      isCharge ? "charge" : "payment",
+      payment_method || (isCharge ? "system" : "check"),
+      reference_note,
+      admin_name,
+    ],
+  );
+
+  let updateRes = await db.query(
+    `UPDATE resident_dues
+     SET balance = balance ${isCharge ? "+" : "-"} $1,
+         status = CASE WHEN (balance ${isCharge ? "+" : "-"} $1) <= 0 THEN 'Paid' ELSE 'Pending' END
+     WHERE street_address = $2
+     RETURNING balance, status`,
+    [amount, street],
+  );
+
+  if (updateRes.rows.length === 0) {
+    const initialBalance = isCharge ? amount : -amount;
+    updateRes = await db.query(
+      `INSERT INTO resident_dues (street_address, balance, status)
+       VALUES ($1, $2, $3)
+       RETURNING balance, status`,
+      [street, initialBalance, initialBalance > 0 ? "Pending" : "Paid"],
+    );
+  }
+
+  return updateRes.rows[0];
+}
+
 router.get("/admin/overview", boardRequired, async (_req, res) => {
   try {
     const { rows } = await db.query(`
@@ -118,60 +166,62 @@ router.post("/manual-payment", boardRequired, async (req, res) => {
     return res.status(400).json({ error: "Street address and amount are required fields." });
   }
 
-  const txType = transaction_type || "payment";
-
   try {
     await db.query("BEGIN");
-
-    // 1. Log the transaction in the ledger
-    await db.query(
-      `INSERT INTO ledger_transactions 
-      (address, amount, transaction_type, payment_method, reference_note, created_by) 
-      VALUES ($1, $2, $3, $4, $5, $6)`,
-      [
-        street_address.trim(), 
-        amount, 
-        txType === "charge" || txType === "opening_balance" ? "charge" : "payment", 
-        payment_method || (txType === "charge" ? "system" : "check"), 
-        reference_note, 
-        admin_name
-      ]
-    );
-
-    // 2. Update or Initialize the resident_dues record (Activates the property)
-    let updateRes = await db.query(
-      `UPDATE resident_dues 
-       SET balance = balance ${txType === "charge" || txType === "opening_balance" ? "+" : "-"} $1, 
-           status = CASE WHEN (balance ${txType === "charge" || txType === "opening_balance" ? "+" : "-"} $1) <= 0 THEN 'Paid' ELSE 'Pending' END
-       WHERE street_address = $2
-       RETURNING balance, status`,
-      [amount, street_address.trim()]
-    );
-
-    // If the property wasn't in resident_dues yet, this initialization creates it and activates it
-    if (updateRes.rows.length === 0) {
-      const initialBalance = txType === "charge" || txType === "opening_balance" ? amount : -amount;
-      updateRes = await db.query(
-        `INSERT INTO resident_dues (street_address, balance, status) 
-         VALUES ($1, $2, $3) 
-         RETURNING balance, status`,
-        [street_address.trim(), initialBalance, initialBalance > 0 ? "Pending" : "Paid"]
-      );
-    }
-
+    const result = await applyLedgerEntry({
+      street_address,
+      amount,
+      payment_method,
+      reference_note,
+      admin_name,
+      transaction_type,
+    });
     await db.query("COMMIT");
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       message: "Ledger transaction recorded and property activated successfully.",
-      new_balance: updateRes.rows[0].balance,
-      new_status: updateRes.rows[0].status
+      new_balance: result.balance,
+      new_status: result.status,
     });
-
   } catch (err) {
     await db.query("ROLLBACK");
     console.error("Ledger transaction error:", err);
     res.status(500).json({ error: err.message || "Failed to process ledger entry." });
+  }
+});
+
+router.post("/bulk-charge", boardRequired, async (req, res) => {
+  const { street_addresses, amount, reference_note, admin_name } = req.body;
+  const streets = [...new Set((street_addresses || []).map((item) => String(item || "").trim()).filter(Boolean))];
+  const chargeAmount = Number(amount);
+
+  if (!streets.length || !chargeAmount || Number.isNaN(chargeAmount) || chargeAmount <= 0) {
+    return res.status(400).json({ error: "Choose households and enter a charge amount." });
+  }
+
+  try {
+    await db.query("BEGIN");
+    for (const street of streets) {
+      await applyLedgerEntry({
+        street_address: street,
+        amount: chargeAmount,
+        payment_method: "system",
+        reference_note: reference_note || "Bulk household charge",
+        admin_name: admin_name || "Board Treasurer",
+        transaction_type: "charge",
+      });
+    }
+    await db.query("COMMIT");
+    res.json({
+      success: true,
+      count: streets.length,
+      message: `Charged ${streets.length} household${streets.length === 1 ? "" : "s"}.`,
+    });
+  } catch (err) {
+    await db.query("ROLLBACK");
+    console.error("Bulk charge error:", err);
+    res.status(500).json({ error: err.message || "Failed to post bulk charges." });
   }
 });
 
