@@ -77,3 +77,22 @@
 .error {
   color: var(--tc-danger);
 }
+
+.attrib {
+  margin: 0;
+  padding: 8px 12px 10px;
+  border-top: 1px solid var(--tc-line);
+  font-size: 0.68rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.attrib a {
+  color: var(--tc-muted);
+  text-decoration: none;
+}
+
+.attrib a:hover {
+  color: var(--tc-ink);
+}

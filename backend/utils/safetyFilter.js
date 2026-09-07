@@ -16,7 +16,7 @@ function isAllowedGifUrl(url) {
     const parsed = new URL(String(url || ""));
     if (parsed.protocol !== "https:") return false;
     const host = parsed.hostname.toLowerCase();
-    return host === "tenor.com" || host.endsWith(".tenor.com");
+    return host === "giphy.com" || host.endsWith(".giphy.com");
   } catch {
     return false;
   }

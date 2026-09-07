@@ -37,7 +37,7 @@ export default function GifPicker({ onPick, onClose }) {
         <input
           className={styles.search}
           type="search"
-          placeholder="Search GIFs"
+          placeholder="Search GIPHY"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           autoFocus
@@ -67,6 +67,11 @@ export default function GifPicker({ onPick, onClose }) {
           </div>
         )}
       </div>
+      <p className={styles.attrib}>
+        <a href="https://giphy.com/" target="_blank" rel="noopener noreferrer">
+          Powered by GIPHY
+        </a>
+      </p>
     </div>
   );
 }
