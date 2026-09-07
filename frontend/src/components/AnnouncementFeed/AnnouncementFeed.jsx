@@ -245,7 +245,7 @@ function CreateModal({ onClose, onCreated }) {
     <Modal
       wide
       title="Post an announcement"
-      description="This goes out as an official board notice — not a Porch post."
+      description="This goes out as an official board notice — not a post on The Porch."
       onClose={onClose}
     >
       <form className={styles.form} onSubmit={handleSubmit}>

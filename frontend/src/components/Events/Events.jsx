@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, CalendarPlus, ChevronDown, ChevronRight, MapPin } from "lucide-react";
+import { ArrowLeft, CalendarPlus, Check, ChevronDown, ChevronRight, MapPin } from "lucide-react";
 import Avatar from "../ui/Avatar";
 import Button from "../ui/Button";
 import { apiFetch } from "../../api";
 import { PATHS } from "../../layout/navConfig";
 import EventCreateModal from "./EventCreateModal";
+import EventWash from "./EventWash";
 import {
   coverFor,
   eventDateParts,
@@ -215,10 +216,10 @@ export default function Events({ user }) {
                 <img src={cover} alt="" />
               </div>
             ) : (
-              <div className={`${styles.heroWash} ${styles[`wash_${event.event_type}`]}`}>
+              <EventWash className={styles.heroWash} type={event.event_type} seed={event.id}>
                 <p>{meta.kicker}</p>
                 <span>{formatEventDate(event.event_date)}</span>
-              </div>
+              </EventWash>
             )}
 
             <div className={styles.detailBody}>
@@ -289,15 +290,17 @@ export default function Events({ user }) {
                   variant={event.going ? "secondary" : "primary"}
                   onClick={handleRsvp}
                   disabled={rsvping}
+                  aria-pressed={event.going}
                 >
+                  {event.going && <Check size={16} strokeWidth={2.5} aria-hidden />}
                   {event.going ? meta.rsvpDone : meta.rsvp}
                 </Button>
               </div>
 
               <div className={styles.detailLinks}>
                 <AddToCalendar event={event} />
-                {event.attachment_url && event.attachment_url !== cover && (
-                  <a href={event.attachment_url} target="_blank" rel="noreferrer">
+                {event.attachment_url && (
+                  <a href={event.attachment_url} target="_blank" rel="noopener noreferrer">
                     Flyer / handout
                   </a>
                 )}
@@ -364,9 +367,9 @@ export default function Events({ user }) {
                 {cover ? (
                   <img src={cover} alt="" className={styles.cardCover} />
                 ) : (
-                  <div className={`${styles.cardBand} ${styles[`wash_${event.event_type}`]}`}>
+                  <EventWash className={styles.cardBand} type={event.event_type} seed={event.id}>
                     {meta.kicker}
-                  </div>
+                  </EventWash>
                 )}
                 <div className={styles.cardBody}>
                   <div className={styles.dateBlock} aria-hidden="true">

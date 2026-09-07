@@ -19,7 +19,9 @@ export default function EventCreateModal({ onClose, onCreated }) {
   const [flyerFile, setFlyerFile] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [draggingCover, setDraggingCover] = useState(false);
   const coverRef = useRef(null);
+  const coverDragCount = useRef(0);
   const meta = typeMeta(type);
 
   useEffect(() => {
@@ -31,6 +33,18 @@ export default function EventCreateModal({ onClose, onCreated }) {
     setCoverPreview(url);
     return () => URL.revokeObjectURL(url);
   }, [coverFile]);
+
+  const attachCover = (file) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setError("Cover needs to be a photo.");
+      return;
+    }
+    setError("");
+    setCoverFile(file);
+    setDraggingCover(false);
+    coverDragCount.current = 0;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -88,8 +102,25 @@ export default function EventCreateModal({ onClose, onCreated }) {
 
         <label>
           Cover photo
+          <span className={styles.fieldHint}>This is what neighbors see first on Home and Events.</span>
           {coverPreview ? (
-            <div className={styles.coverPick}>
+            <div
+              className={styles.coverPick}
+              onDragEnter={(e) => {
+                e.preventDefault();
+                coverDragCount.current += 1;
+                setDraggingCover(true);
+              }}
+              onDragOver={(e) => e.preventDefault()}
+              onDragLeave={() => {
+                coverDragCount.current = Math.max(0, coverDragCount.current - 1);
+                if (coverDragCount.current === 0) setDraggingCover(false);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                attachCover(e.dataTransfer.files[0] || null);
+              }}
+            >
               <img src={coverPreview} alt="" />
               <button
                 type="button"
@@ -101,9 +132,27 @@ export default function EventCreateModal({ onClose, onCreated }) {
               </button>
             </div>
           ) : (
-            <button type="button" className={styles.coverBtn} onClick={() => coverRef.current?.click()}>
+            <button
+              type="button"
+              className={`${styles.coverBtn} ${draggingCover ? styles.coverBtnHot : ""}`}
+              onClick={() => coverRef.current?.click()}
+              onDragEnter={(e) => {
+                e.preventDefault();
+                coverDragCount.current += 1;
+                setDraggingCover(true);
+              }}
+              onDragOver={(e) => e.preventDefault()}
+              onDragLeave={() => {
+                coverDragCount.current = Math.max(0, coverDragCount.current - 1);
+                if (coverDragCount.current === 0) setDraggingCover(false);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                attachCover(e.dataTransfer.files[0] || null);
+              }}
+            >
               <ImagePlus size={16} />
-              Add a photo — this is what neighbors see first
+              {draggingCover ? "Drop the photo here" : "Add a photo, or drop one here"}
             </button>
           )}
           <input
@@ -111,7 +160,7 @@ export default function EventCreateModal({ onClose, onCreated }) {
             type="file"
             accept="image/*"
             hidden
-            onChange={(e) => setCoverFile(e.target.files[0] || null)}
+            onChange={(e) => attachCover(e.target.files[0] || null)}
           />
         </label>
 
@@ -185,9 +234,17 @@ export default function EventCreateModal({ onClose, onCreated }) {
           />
         </label>
 
-        <label>
-          Flyer or handout (optional)
-          <input type="file" onChange={(e) => setFlyerFile(e.target.files[0] || null)} />
+        <label className={styles.quietField}>
+          Optional file
+          <span className={styles.fieldHint}>
+            Agenda, map, or a printable flyer. This is a download — it is not the event photo.
+          </span>
+          <input
+            type="file"
+            accept=".pdf,image/*"
+            onChange={(e) => setFlyerFile(e.target.files[0] || null)}
+          />
+          {flyerFile && <em className={styles.fileName}>{flyerFile.name}</em>}
         </label>
 
         {error && <p className={styles.formError}>{error}</p>}

@@ -588,6 +588,36 @@
   cursor: pointer;
 }
 
+.coverBtn:hover,
+.coverBtnHot {
+  border-color: var(--tc-brand);
+  background: var(--tc-brand-soft);
+  color: var(--tc-brand-ink);
+}
+
+.fieldHint {
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--tc-muted);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.quietField input[type="file"] {
+  font-size: 0.82rem;
+  padding: 8px 10px;
+}
+
+.fileName {
+  font-style: normal;
+  font-weight: 550;
+  letter-spacing: 0;
+  text-transform: none;
+  font-size: 0.8rem;
+  color: var(--tc-ink-soft);
+}
+
 .coverPick {
   position: relative;
   width: fit-content;

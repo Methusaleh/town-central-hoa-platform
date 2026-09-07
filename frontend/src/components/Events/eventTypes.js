@@ -5,7 +5,7 @@ export const EVENT_TYPES = {
     kicker: "Neighborhood gathering",
     blurb: "A hangout on the block — no agenda, just neighbors.",
     rsvp: "I'm going",
-    rsvpDone: "You're going",
+    rsvpDone: "Going",
     fields: [
       { key: "host", label: "Host", placeholder: "Who's putting this on?" },
       { key: "bring", label: "What to bring", placeholder: "A chair, a side, nothing at all…" },
@@ -18,7 +18,7 @@ export const EVENT_TYPES = {
     kicker: "Cookout",
     blurb: "Grill, sides, and a table that keeps growing.",
     rsvp: "I'm going",
-    rsvpDone: "You're going",
+    rsvpDone: "Going",
     fields: [
       { key: "menu", label: "On the grill", placeholder: "Burgers, dogs, veggie options…" },
       { key: "bring", label: "What to bring", placeholder: "A side, drinks, a lawn chair…" },
@@ -31,7 +31,7 @@ export const EVENT_TYPES = {
     kicker: "For the kids",
     blurb: "Play, crafts, or a parade — built for little neighbors.",
     rsvp: "We're coming",
-    rsvpDone: "You're coming",
+    rsvpDone: "Coming",
     fields: [
       { key: "ages", label: "Ages", placeholder: "All ages, 5–10, toddlers…" },
       { key: "bring", label: "What to bring", placeholder: "Bikes, helmets, a snack…" },
@@ -44,7 +44,7 @@ export const EVENT_TYPES = {
     kicker: "Board meeting",
     blurb: "Official HOA business. Come if it affects your street.",
     rsvp: "I'll attend",
-    rsvpDone: "You're attending",
+    rsvpDone: "Attending",
     fields: [
       { key: "agenda", label: "Agenda", placeholder: "Budget, landscaping, open floor…" },
       { key: "who", label: "Who should come", placeholder: "All residents, board + guests…" },
@@ -56,7 +56,7 @@ export const EVENT_TYPES = {
     kicker: "Pool day",
     blurb: "Swim hours, splash party, or a quiet afternoon in the water.",
     rsvp: "I'll be there",
-    rsvpDone: "You're going",
+    rsvpDone: "Going",
     fields: [
       { key: "hours", label: "Hours", placeholder: "Noon–6, or until dusk…" },
       { key: "bring", label: "What to bring", placeholder: "Towel, sunscreen, float…" },
@@ -247,10 +247,7 @@ export function openEventIcs(event) {
 }
 
 export function coverFor(event) {
-  if (event?.cover_url) return event.cover_url;
-  const attachment = event?.attachment_url || "";
-  if (/\.(png|jpe?g|gif|webp)(\?|$)/i.test(attachment)) return attachment;
-  return "";
+  return event?.cover_url || "";
 }
 
 export function isUpcoming(event, todayYmd) {

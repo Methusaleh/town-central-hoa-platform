@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, ChevronRight, ImagePlus, MessageCircle, Smile, X } from "lucide-react";
 import EmojiPicker from "../ui/EmojiPicker";
 import GifPicker from "../ui/GifPicker";
@@ -91,6 +91,7 @@ function ReactionBar({ reactions, identity, onReact, compact }) {
 export default function Porch({ user }) {
   const { postId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [posts, setPosts] = useState([]);
   const [commentsMap, setCommentsMap] = useState({});
   const [loaded, setLoaded] = useState(false);
@@ -115,6 +116,7 @@ export default function Porch({ user }) {
   const [removalReason, setRemovalReason] = useState(STOCK_REASONS[0]);
   const [lightbox, setLightbox] = useState("");
   const fileRef = useRef(null);
+  const composerRef = useRef(null);
   const replyFileRef = useRef(null);
   const replyDragCount = useRef(0);
 
@@ -158,6 +160,12 @@ export default function Porch({ user }) {
     replyDragCount.current = 0;
     setError("");
   }, [postId]);
+
+  useEffect(() => {
+    if (!location.state?.compose || postId) return;
+    composerRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+    composerRef.current?.focus();
+  }, [location.state, postId]);
 
   useEffect(() => {
     if (!selectedFile) {
@@ -607,6 +615,7 @@ export default function Porch({ user }) {
         <Avatar name={user?.first_name} photo={user?.photo} />
         <div className={styles.composerBody}>
           <textarea
+            ref={composerRef}
             placeholder={`What's happening on the block, ${user?.first_name || "neighbor"}?`}
             value={newContent}
             onChange={(e) => setNewContent(e.target.value)}

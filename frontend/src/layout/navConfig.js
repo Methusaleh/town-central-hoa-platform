@@ -43,7 +43,7 @@ export const HOME_OPEN_PATHS = {
 
 export const desktopPrimary = [
   { to: PATHS.home, label: "Home", icon: Home, end: true },
-  { to: PATHS.porch, label: "Porch", icon: MessagesSquare },
+  { to: PATHS.porch, label: "The Porch", icon: MessagesSquare },
   { to: PATHS.events, label: "Events", icon: CalendarDays },
   { to: PATHS.documents, label: "Docs", icon: FolderOpen },
 ];
@@ -59,7 +59,7 @@ export const moreItems = [
 
 export const mobileTabs = [
   { to: PATHS.home, label: "Home", icon: Home, end: true },
-  { to: PATHS.porch, label: "Porch", icon: MessagesSquare },
+  { to: PATHS.porch, label: "The Porch", icon: MessagesSquare },
   { to: PATHS.events, label: "Events", icon: CalendarDays },
   { to: PATHS.documents, label: "Docs", icon: FolderOpen },
   { action: "more", label: "More", icon: MoreHorizontal },
