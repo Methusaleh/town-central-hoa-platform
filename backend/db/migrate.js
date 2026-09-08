@@ -105,6 +105,22 @@ END $$;`,
   `ALTER TABLE neighborhood_roster ADD COLUMN IF NOT EXISTS claim_letter_sent_at TIMESTAMPTZ`,
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS welcome_letter_sent_at TIMESTAMPTZ`,
   `ALTER TABLE porch_comments ADD COLUMN IF NOT EXISTS author_email VARCHAR`,
+  `ALTER TABLE community_alerts ADD COLUMN IF NOT EXISTS author_email VARCHAR`,
+  `ALTER TABLE community_alerts ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMPTZ`,
+  `ALTER TABLE community_alerts ADD COLUMN IF NOT EXISTS resolved_by VARCHAR`,
+  `ALTER TABLE community_alerts ADD COLUMN IF NOT EXISTS resolved_label VARCHAR`,
+  `UPDATE community_alerts a
+      SET author_email = u.email
+     FROM users u
+    WHERE a.author_email IS NULL
+      AND lower(trim(u.first_name || ' ' || u.last_name)) = lower(trim(a.author))`,
+  `UPDATE community_alerts
+      SET resolved_at = '2026-09-06 09:12',
+          resolved_by = COALESCE(resolved_by, author),
+          resolved_label = 'Street is open'
+    WHERE category = 'Traffic / Party'
+      AND content LIKE 'Extra cars parked along Redbud%'
+      AND resolved_at IS NULL`,
 ];
 
 async function migrate(query) {

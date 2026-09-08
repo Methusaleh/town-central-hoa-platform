@@ -318,14 +318,23 @@ async function seed() {
   );
 
   const alerts = await db.query(
-    `INSERT INTO community_alerts (category, author, content, created_at)
+    `INSERT INTO community_alerts (category, author, author_email, content, created_at)
      VALUES
-      ('Lost Pet', 'Riley Ortiz', 'Orange tabby, answers to Juniper. Last seen near 1702 Redbud around 6:30pm. Shy but will come for treats.', '2026-09-05 19:10'),
-      ('Traffic / Party', 'Chris Nguyen', 'Extra cars parked along Redbud tonight for a birthday. Please leave the hydrant clear.', '2026-09-05 16:22'),
-      ('Safety Alert', 'Elena Ruiz', 'Storm blew a limb across the sidewalk on Whispering Creek by the mail kiosk. City ticket is in; walk around the grass until it is gone.', '2026-09-04 08:05')
+      ('Lost Pet', 'Riley Ortiz', 'riley.ortiz@example.com', 'Orange tabby, answers to Juniper. Last seen near 1702 Redbud around 6:30pm. Shy but will come for treats.', '2026-09-05 19:10'),
+      ('Traffic / Party', 'Chris Nguyen', 'chris.nguyen@example.com', 'Extra cars parked along Redbud tonight for a birthday. Please leave the hydrant clear.', '2026-09-05 16:22'),
+      ('Safety Alert', 'Elena Ruiz', 'elena.ruiz@example.com', 'Storm blew a limb across the sidewalk on Whispering Creek by the mail kiosk. City ticket is in; walk around the grass until it is gone.', '2026-09-04 08:05')
      RETURNING id, category`,
   );
   const lostPet = alerts.rows.find((row) => row.category === "Lost Pet");
+  const traffic = alerts.rows.find((row) => row.category === "Traffic / Party");
+  await db.query(
+    `UPDATE community_alerts
+     SET resolved_at = '2026-09-06 09:12',
+         resolved_by = 'Chris Nguyen',
+         resolved_label = 'Street is open'
+     WHERE id = $1`,
+    [traffic.id],
+  );
   await db.query(
     `INSERT INTO alert_comments (alert_id, author_name, content, created_at)
      VALUES

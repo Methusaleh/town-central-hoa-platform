@@ -123,7 +123,11 @@ export default function HomeOverview() {
     apiFetch("/api/alerts")
       .then((res) => res.json())
       .then((data) =>
-        setRecentAlerts((Array.isArray(data.alerts) ? data.alerts : []).filter((item) => !item.is_removed)),
+        setRecentAlerts(
+          (Array.isArray(data.alerts) ? data.alerts : []).filter(
+            (item) => !item.is_removed && !item.resolved_at,
+          ),
+        ),
       )
       .catch((err) => console.error("Alerts preview fetch error:", err));
 

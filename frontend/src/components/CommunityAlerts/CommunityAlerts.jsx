@@ -70,6 +70,25 @@ function isLostPet(category) {
   return category === "Lost Pet";
 }
 
+function closeCopy(category) {
+  if (category === "Lost Pet") return { action: "Mark as found", done: "Found" };
+  if (category === "Traffic / Party") return { action: "Mark street open", done: "Street is open" };
+  return { action: "Mark all clear", done: "All clear" };
+}
+
+function isResolved(alert) {
+  return Boolean(alert?.resolved_at);
+}
+
+function canResolve(user, alert) {
+  if (!user || !alert || alert.is_removed) return false;
+  if (user.role === "board_member" || user.role === "super_admin") return true;
+  const email = String(user.email || "").trim().toLowerCase();
+  if (email && String(alert.author_email || "").trim().toLowerCase() === email) return true;
+  const name = `${user.first_name || ""} ${user.last_name || ""}`.trim().toLowerCase();
+  return Boolean(name) && name === String(alert.author || "").trim().toLowerCase();
+}
+
 const PHOTO_PLACEHOLDER = "Shared a photo";
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 
@@ -93,6 +112,8 @@ export default function CommunityAlerts({ user }) {
   const [postingSighting, setPostingSighting] = useState(false);
   const [sightingError, setSightingError] = useState("");
   const [lightbox, setLightbox] = useState("");
+  const [resolving, setResolving] = useState(false);
+  const [resolveError, setResolveError] = useState("");
   const sightingFileRef = useRef(null);
   const dragCount = useRef(0);
 
@@ -137,6 +158,7 @@ export default function CommunityAlerts({ user }) {
     setSightingFile(null);
     setSightingError("");
     setDraggingSighting(false);
+    setResolveError("");
     dragCount.current = 0;
   }, [alertId]);
 
@@ -152,6 +174,8 @@ export default function CommunityAlerts({ user }) {
 
   const active = alerts.find((item) => String(item.id) === String(alertId));
   const sightings = active ? commentsMap[active.id] || [] : [];
+  const liveAlerts = alerts.filter((item) => !isResolved(item));
+  const resolvedAlerts = alerts.filter((item) => isResolved(item));
 
   const attachSightingPhoto = (file) => {
     if (!file) return;
@@ -216,6 +240,28 @@ export default function CommunityAlerts({ user }) {
     }
   };
 
+  const handleResolve = async (alert, reopen = false) => {
+    if (!alert || resolving) return;
+    setResolving(true);
+    setResolveError("");
+    try {
+      const res = await apiFetch(`/api/alerts/${alert.id}/${reopen ? "reopen" : "resolve"}`, {
+        method: "PATCH",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        load();
+      } else {
+        setResolveError(data.error || (reopen ? "Couldn't reopen that alert." : "Couldn't resolve that alert."));
+      }
+    } catch (err) {
+      console.error("Resolve failed:", err);
+      setResolveError(reopen ? "Couldn't reopen that alert." : "Couldn't resolve that alert.");
+    } finally {
+      setResolving(false);
+    }
+  };
+
   if (alertId) {
     const meta = categoryMeta(active?.category);
     return (
@@ -239,17 +285,42 @@ export default function CommunityAlerts({ user }) {
             <div className={styles.detailMeta}>
               <Avatar name={active.author} photo={active.author_photo} size="sm" />
               <span className={`${styles.flag} ${styles[toneClass(active.category)]}`}>{meta.kicker}</span>
+              {isResolved(active) && (
+                <span className={`${styles.flag} ${styles.resolvedFlag}`}>
+                  {active.resolved_label || closeCopy(active.category).done}
+                </span>
+              )}
               <span>{relativeTime(active.created_at)}</span>
               <span>Posted by {active.author || "Neighbor"}</span>
             </div>
             <div className={styles.detailHead}>
               <h2>{meta.label}</h2>
-              {isAdmin && !active.is_removed && (
-                <button type="button" className={styles.remove} onClick={() => setRemoveItem(active.id)}>
-                  Remove
-                </button>
-              )}
+              <div className={styles.detailActions}>
+                {canResolve(user, active) && !isResolved(active) && (
+                  <Button variant="secondary" disabled={resolving} onClick={() => handleResolve(active)}>
+                    {resolving ? "Saving…" : closeCopy(active.category).action}
+                  </Button>
+                )}
+                {canResolve(user, active) && isResolved(active) && (
+                  <Button variant="ghost" disabled={resolving} onClick={() => handleResolve(active, true)}>
+                    {resolving ? "Saving…" : "Reopen"}
+                  </Button>
+                )}
+                {isAdmin && !active.is_removed && (
+                  <button type="button" className={styles.remove} onClick={() => setRemoveItem(active.id)}>
+                    Remove
+                  </button>
+                )}
+              </div>
             </div>
+            {isResolved(active) && (
+              <p className={styles.resolvedNote}>
+                {active.resolved_label || closeCopy(active.category).done}
+                {active.resolved_by ? ` · ${active.resolved_by}` : ""}
+                {active.resolved_at ? ` · ${relativeTime(active.resolved_at)}` : ""}
+              </p>
+            )}
+            {resolveError && <p className={styles.formError}>{resolveError}</p>}
             <p className={`${styles.body} ${active.is_removed ? styles.removed : ""}`}>{active.content}</p>
             {active.image_url && !active.is_removed && (
               <img src={active.image_url} alt="" className={styles.figure} />
@@ -258,11 +329,14 @@ export default function CommunityAlerts({ user }) {
               <section
                 className={`${styles.sightings} ${draggingSighting ? styles.sightingsHot : ""}`}
                 onDragEnter={(e) => {
+                  if (isResolved(active)) return;
                   e.preventDefault();
                   dragCount.current += 1;
                   setDraggingSighting(true);
                 }}
-                onDragOver={(e) => e.preventDefault()}
+                onDragOver={(e) => {
+                  if (!isResolved(active)) e.preventDefault();
+                }}
                 onDragLeave={(e) => {
                   e.preventDefault();
                   dragCount.current = Math.max(0, dragCount.current - 1);
@@ -272,7 +346,7 @@ export default function CommunityAlerts({ user }) {
                   e.preventDefault();
                   dragCount.current = 0;
                   setDraggingSighting(false);
-                  attachSightingPhoto(pickImageFile(e.dataTransfer.files));
+                  if (!isResolved(active)) attachSightingPhoto(pickImageFile(e.dataTransfer.files));
                 }}
               >
                 <h3>
@@ -281,10 +355,16 @@ export default function CommunityAlerts({ user }) {
                     : "Sightings"}
                 </h3>
                 <p className={styles.sightingLead}>
-                  If you see this animal, say where and when — drop a photo if you got one.
+                  {isResolved(active)
+                    ? "This pet was marked found. Sightings are closed."
+                    : "If you see this animal, say where and when — drop a photo if you got one."}
                 </p>
                 {sightings.length === 0 ? (
-                  <p className={styles.noSightings}>No sightings yet. Be the first to report one.</p>
+                  <p className={styles.noSightings}>
+                    {isResolved(active)
+                      ? "No sightings were reported."
+                      : "No sightings yet. Be the first to report one."}
+                  </p>
                 ) : (
                   sightings.map((item) => {
                     const note = item.content && item.content !== PHOTO_PLACEHOLDER ? item.content : "";
@@ -311,67 +391,71 @@ export default function CommunityAlerts({ user }) {
                     );
                   })
                 )}
-                {sightingError && <p className={styles.formError}>{sightingError}</p>}
-                {sightingPreview && (
-                  <div className={styles.sightingPreview}>
-                    <img src={sightingPreview} alt="" />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSightingFile(null);
-                        if (sightingFileRef.current) sightingFileRef.current.value = "";
-                      }}
-                      aria-label="Remove photo"
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
+                {!isResolved(active) && (
+                  <>
+                    {sightingError && <p className={styles.formError}>{sightingError}</p>}
+                    {sightingPreview && (
+                      <div className={styles.sightingPreview}>
+                        <img src={sightingPreview} alt="" />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSightingFile(null);
+                            if (sightingFileRef.current) sightingFileRef.current.value = "";
+                          }}
+                          aria-label="Remove photo"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    )}
+                    <div className={styles.sightingForm}>
+                      <Avatar name={user?.first_name} photo={user?.photo} size="sm" />
+                      <input
+                        type="text"
+                        placeholder="I saw them on Oak heading toward the park…"
+                        value={sighting}
+                        onChange={(e) => setSighting(e.target.value)}
+                        onPaste={(e) => {
+                          const file = pickImageFile(e.clipboardData?.files);
+                          if (file) {
+                            e.preventDefault();
+                            attachSightingPhoto(file);
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleSighting();
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className={styles.attach}
+                        onClick={() => sightingFileRef.current?.click()}
+                        aria-label="Add a photo"
+                      >
+                        <ImagePlus size={16} />
+                      </button>
+                      <input
+                        ref={sightingFileRef}
+                        type="file"
+                        accept="image/*"
+                        hidden
+                        onChange={(e) => attachSightingPhoto(e.target.files[0] || null)}
+                      />
+                      <Button
+                        variant="secondary"
+                        onClick={handleSighting}
+                        disabled={postingSighting || (!sighting.trim() && !sightingFile)}
+                      >
+                        {postingSighting ? "Posting…" : "Share"}
+                      </Button>
+                    </div>
+                    {draggingSighting && <p className={styles.dropHint}>Drop the photo here</p>}
+                  </>
                 )}
-                <div className={styles.sightingForm}>
-                  <Avatar name={user?.first_name} photo={user?.photo} size="sm" />
-                  <input
-                    type="text"
-                    placeholder="I saw them on Oak heading toward the park…"
-                    value={sighting}
-                    onChange={(e) => setSighting(e.target.value)}
-                    onPaste={(e) => {
-                      const file = pickImageFile(e.clipboardData?.files);
-                      if (file) {
-                        e.preventDefault();
-                        attachSightingPhoto(file);
-                      }
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        handleSighting();
-                      }
-                    }}
-                  />
-                  <button
-                    type="button"
-                    className={styles.attach}
-                    onClick={() => sightingFileRef.current?.click()}
-                    aria-label="Add a photo"
-                  >
-                    <ImagePlus size={16} />
-                  </button>
-                  <input
-                    ref={sightingFileRef}
-                    type="file"
-                    accept="image/*"
-                    hidden
-                    onChange={(e) => attachSightingPhoto(e.target.files[0] || null)}
-                  />
-                  <Button
-                    variant="secondary"
-                    onClick={handleSighting}
-                    disabled={postingSighting || (!sighting.trim() && !sightingFile)}
-                  >
-                    {postingSighting ? "Posting…" : "Share"}
-                  </Button>
-                </div>
-                {draggingSighting && <p className={styles.dropHint}>Drop the photo here</p>}
               </section>
             )}
           </article>
@@ -408,42 +492,33 @@ export default function CommunityAlerts({ user }) {
 
       {!loaded ? (
         <div className={styles.empty}>Loading…</div>
-      ) : alerts.length === 0 ? (
+      ) : liveAlerts.length === 0 && resolvedAlerts.length === 0 ? (
         <div className={styles.empty}>All clear. No active alerts.</div>
       ) : (
-        <div className={styles.list}>
-          {alerts.map((alert) => {
-            const meta = categoryMeta(alert.category);
-            const petSightings = commentsMap[alert.id] || [];
-            return (
-              <Link
-                key={alert.id}
-                to={`${PATHS.alerts}/${alert.id}`}
-                className={`${styles.row} ${alert.is_removed ? styles.rowRemoved : ""}`}
-              >
-                {alert.image_url && !alert.is_removed && (
-                  <img src={alert.image_url} alt="" className={styles.thumb} />
-                )}
-                <div className={styles.rowCopy}>
-                  <div className={styles.meta}>
-                    <span className={`${styles.flag} ${styles[toneClass(alert.category)]}`}>{meta.kicker}</span>
-                    <span>{relativeTime(alert.created_at)}</span>
-                  </div>
-                  <p className={alert.is_removed ? styles.removed : ""}>{clip(alert.content, 160)}</p>
-                  <span className={styles.who}>
-                    <Avatar name={alert.author} photo={alert.author_photo} size="sm" />
-                    Posted by {alert.author || "Neighbor"}
-                    {isLostPet(alert.category) &&
-                      (petSightings.length
-                        ? ` · ${petSightings.length} ${petSightings.length === 1 ? "sighting" : "sightings"}`
-                        : " · Ask neighbors to watch")}
-                  </span>
-                </div>
-                <ChevronRight size={16} className={styles.chevron} />
-              </Link>
-            );
-          })}
-        </div>
+        <>
+          {liveAlerts.length === 0 ? (
+            <div className={styles.empty}>All clear. No active alerts.</div>
+          ) : (
+            <section>
+              <h3 className={styles.sectionLabel}>Active</h3>
+              <div className={styles.list}>
+                {liveAlerts.map((alert) => (
+                  <AlertRow key={alert.id} alert={alert} commentsMap={commentsMap} />
+                ))}
+              </div>
+            </section>
+          )}
+          {resolvedAlerts.length > 0 && (
+            <section>
+              <h3 className={styles.sectionLabel}>Resolved</h3>
+              <div className={styles.list}>
+                {resolvedAlerts.map((alert) => (
+                  <AlertRow key={alert.id} alert={alert} commentsMap={commentsMap} />
+                ))}
+              </div>
+            </section>
+          )}
+        </>
       )}
 
       {showCreate && (
@@ -467,6 +542,44 @@ export default function CommunityAlerts({ user }) {
         />
       )}
     </div>
+  );
+}
+
+function AlertRow({ alert, commentsMap }) {
+  const meta = categoryMeta(alert.category);
+  const petSightings = commentsMap[alert.id] || [];
+  const resolved = isResolved(alert);
+  return (
+    <Link
+      to={`${PATHS.alerts}/${alert.id}`}
+      className={`${styles.row} ${alert.is_removed ? styles.rowRemoved : ""} ${resolved ? styles.rowResolved : ""}`}
+    >
+      {alert.image_url && !alert.is_removed && (
+        <img src={alert.image_url} alt="" className={styles.thumb} />
+      )}
+      <div className={styles.rowCopy}>
+        <div className={styles.meta}>
+          <span className={`${styles.flag} ${styles[toneClass(alert.category)]}`}>{meta.kicker}</span>
+          {resolved && (
+            <span className={`${styles.flag} ${styles.resolvedFlag}`}>
+              {alert.resolved_label || closeCopy(alert.category).done}
+            </span>
+          )}
+          <span>{relativeTime(resolved ? alert.resolved_at : alert.created_at)}</span>
+        </div>
+        <p className={alert.is_removed ? styles.removed : ""}>{clip(alert.content, 160)}</p>
+        <span className={styles.who}>
+          <Avatar name={alert.author} photo={alert.author_photo} size="sm" />
+          Posted by {alert.author || "Neighbor"}
+          {isLostPet(alert.category) &&
+            !resolved &&
+            (petSightings.length
+              ? ` · ${petSightings.length} ${petSightings.length === 1 ? "sighting" : "sightings"}`
+              : " · Ask neighbors to watch")}
+        </span>
+      </div>
+      <ChevronRight size={16} className={styles.chevron} />
+    </Link>
   );
 }
 
