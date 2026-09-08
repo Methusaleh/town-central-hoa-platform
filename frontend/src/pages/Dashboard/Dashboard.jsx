@@ -15,6 +15,7 @@ import RequestForm from "../../components/RequestForm/RequestForm";
 import VendorDirectory from "../../components/VendorDirectory/VendorDirectory";
 import DocumentCenter from "../../components/DocumentCenter/DocumentCenter";
 import DocumentManager from "../../components/BoardPortal/subcomponents/DocumentManager";
+import Amenities from "../../components/Amenities/Amenities";
 import BoardMail from "../../components/BoardMail/BoardMail";
 import HomeOverview from "./HomeOverview";
 import { usePortal } from "../../layout/PortalContext";
@@ -163,6 +164,14 @@ export function DocumentsPage() {
   return (
     <Panel>
       <DocumentCenter user={user} />
+    </Panel>
+  );
+}
+
+export function AmenitiesPage() {
+  return (
+    <Panel>
+      <Amenities />
     </Panel>
   );
 }

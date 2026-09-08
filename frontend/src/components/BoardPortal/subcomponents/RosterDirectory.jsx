@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Copy, Download, Mail, Search } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeft, Copy, Download, FileText, FileUp, Mail, Search } from "lucide-react";
 import Button from "../../ui/Button";
-import { apiFetch } from "../../../api";
+import { downloadDoorDropPdf } from "../../../utils/doorDropPdf";
 import styles from "./RosterDirectory.module.css";
 
 const EMPTY_FORM = {
@@ -51,6 +51,94 @@ function csvEscape(value) {
   const text = String(value ?? "");
   if (/[",\n]/.test(text)) return `"${text.replace(/"/g, '""')}"`;
   return text;
+}
+
+function parseCsv(text) {
+  const raw = String(text || "").replace(/^\uFEFF/, "");
+  const rows = [];
+  let row = [];
+  let cell = "";
+  let inQuotes = false;
+  for (let i = 0; i < raw.length; i += 1) {
+    const ch = raw[i];
+    const next = raw[i + 1];
+    if (inQuotes) {
+      if (ch === '"' && next === '"') {
+        cell += '"';
+        i += 1;
+      } else if (ch === '"') {
+        inQuotes = false;
+      } else {
+        cell += ch;
+      }
+    } else if (ch === '"') {
+      inQuotes = true;
+    } else if (ch === ",") {
+      row.push(cell);
+      cell = "";
+    } else if (ch === "\n") {
+      row.push(cell);
+      rows.push(row);
+      row = [];
+      cell = "";
+    } else if (ch !== "\r") {
+      cell += ch;
+    }
+  }
+  if (cell.length || row.length) {
+    row.push(cell);
+    rows.push(row);
+  }
+  return rows.filter((cells) => cells.some((value) => String(value).trim()));
+}
+
+function headerIndex(header, names) {
+  return header.findIndex((value) => names.includes(value));
+}
+
+function lotsFromCsv(text) {
+  const rows = parseCsv(text);
+  if (!rows.length) return { error: "That file is empty.", lots: [] };
+  const header = rows[0].map((value) => String(value).trim().toLowerCase().replace(/\s+/g, "_"));
+  const streetI = headerIndex(header, ["street_address", "address", "street", "property"]);
+  if (streetI < 0) return { error: "Need a street_address column.", lots: [] };
+  const firstI = headerIndex(header, ["first_name", "first", "firstname"]);
+  const lastI = headerIndex(header, ["last_name", "last", "lastname"]);
+  const emailI = headerIndex(header, ["email", "email_address"]);
+  const seen = new Set();
+  const lots = [];
+  for (let i = 1; i < rows.length; i += 1) {
+    const cells = rows[i];
+    const street_address = String(cells[streetI] || "").trim();
+    if (!street_address) continue;
+    const key = street_address.toLowerCase();
+    const email = emailI >= 0 ? String(cells[emailI] || "").trim() : "";
+    lots.push({
+      street_address,
+      first_name: firstI >= 0 ? String(cells[firstI] || "").trim() : "",
+      last_name: lastI >= 0 ? String(cells[lastI] || "").trim() : "",
+      email,
+      duplicateInFile: seen.has(key),
+    });
+    seen.add(key);
+  }
+  if (!lots.length) return { error: "No street addresses in that file.", lots: [] };
+  return { error: "", lots };
+}
+
+function downloadImportTemplate() {
+  const csv = [
+    "street_address,first_name,last_name,email",
+    "1600 New Phase Lane,Jordan,Hale,jordan.hale@example.com",
+    "1612 New Phase Lane,,,",
+  ].join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "town-central-lot-import.csv";
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 function downloadClaimPacket(lots) {
@@ -109,6 +197,12 @@ export default function RosterDirectory({ onBack }) {
   const [mobileDetail, setMobileDetail] = useState(false);
   const [selectedPeople, setSelectedPeople] = useState([]);
   const [welcomeConfirm, setWelcomeConfirm] = useState(null);
+  const [showImport, setShowImport] = useState(false);
+  const [importLots, setImportLots] = useState([]);
+  const [importError, setImportError] = useState("");
+  const [importSending, setImportSending] = useState(false);
+  const [sendClaimOnImport, setSendClaimOnImport] = useState(false);
+  const importInputRef = useRef(null);
 
   const selected = lots.find((lot) => String(lot.id) === String(selectedId)) || null;
 
@@ -200,6 +294,18 @@ export default function RosterDirectory({ onBack }) {
     }
   };
 
+  const printDoorDrops = (targetLots) => {
+    try {
+      const count = downloadDoorDropPdf(targetLots);
+      setStatus({
+        type: "ok",
+        text: `Downloaded ${count} door-drop flyer${count === 1 ? "" : "s"} (one page per house). Print at home or take the PDF to a shop.`,
+      });
+    } catch (err) {
+      setStatus({ type: "err", text: err.message || "Could not build that PDF." });
+    }
+  };
+
   const saveLot = async (sendWelcome) => {
     if (!form.street_address.trim() || saving) return;
     setSaving(true);
@@ -240,6 +346,54 @@ export default function RosterDirectory({ onBack }) {
       setStatus({ type: "err", text: "Network error saving the lot." });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleImportFile = async (file) => {
+    if (!file) return;
+    const text = await file.text();
+    const parsed = lotsFromCsv(text);
+    setImportError(parsed.error);
+    setImportLots(parsed.lots);
+  };
+
+  const runImport = async () => {
+    const payload = importLots.filter((lot) => !lot.duplicateInFile);
+    if (!payload.length || importSending) return;
+    setImportSending(true);
+    setStatus({ type: "", text: "" });
+    try {
+      const res = await apiFetch("/api/residents/lots/bulk-import", {
+        method: "POST",
+        body: JSON.stringify({
+          send_claim: sendClaimOnImport,
+          lots: payload.map((lot) => ({
+            street_address: lot.street_address,
+            first_name: lot.first_name,
+            last_name: lot.last_name,
+            email: lot.email,
+          })),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setStatus({ type: "err", text: data.error || "Could not import that file." });
+        return;
+      }
+      const skipped = (data.skipped || []).length;
+      const failed = (data.failed || []).length;
+      const bits = [data.message || `Added ${data.created || 0} lots.`];
+      if (skipped) bits.push(`${skipped} already on the roster.`);
+      if (failed) bits.push(`${failed} could not be imported.`);
+      setStatus({ type: failed ? "err" : "ok", text: bits.join(" ") });
+      setShowImport(false);
+      setImportLots([]);
+      setImportError("");
+      await loadLots();
+    } catch {
+      setStatus({ type: "err", text: "Network error importing lots." });
+    } finally {
+      setImportSending(false);
     }
   };
 
@@ -437,6 +591,7 @@ export default function RosterDirectory({ onBack }) {
   const printLots = selectedLots.filter((lot) => !lotHasEmail(lot));
   const claimEmailLots = selectedLots.filter((lot) => !lot.is_claimed && lot.email && lot.onboarding_token);
   const claimPrintLots = selectedLots.filter((lot) => !lot.is_claimed && (!lot.email || !lot.onboarding_token));
+  const claimFlyerLots = selectedLots.filter((lot) => !lot.is_claimed && lot.onboarding_token);
   const welcomeTargets = [
     ...selectedPeople.filter((person) => person.email),
     ...selectedLots.flatMap((lot) => householdOf(lot).filter((person) => person.email)),
@@ -483,10 +638,97 @@ export default function RosterDirectory({ onBack }) {
       </header>
 
       <div className={styles.actions}>
-        <Button variant="secondary" onClick={() => setShowForm((open) => !open)}>
+        <Button variant="secondary" onClick={() => { setShowForm((open) => !open); setShowImport(false); }}>
           {showForm ? "Close add-lot form" : "Add a lot"}
         </Button>
+        <Button
+          variant="secondary"
+          onClick={() => {
+            setShowImport((open) => !open);
+            setShowForm(false);
+          }}
+        >
+          {showImport ? "Close import" : "Import CSV"}
+        </Button>
       </div>
+
+      {showImport && (
+        <section className={styles.formCard}>
+          <h3>Import lots</h3>
+          <p>
+            Use this for the occupied streets and the new phase that is still being built.
+            A row with only an address is saved as a vacant lot (Pending Resident) until someone closes.
+            Streets already on the roster are skipped.
+          </p>
+          <div className={styles.formActions}>
+            <Button type="button" variant="secondary" onClick={downloadImportTemplate}>
+              <Download size={14} />
+              Download template
+            </Button>
+            <Button type="button" onClick={() => importInputRef.current?.click()}>
+              <FileUp size={14} />
+              Choose CSV
+            </Button>
+            <input
+              ref={importInputRef}
+              className={styles.hiddenInput}
+              type="file"
+              accept=".csv,text/csv"
+              onChange={(e) => {
+                handleImportFile(e.target.files?.[0]);
+                e.target.value = "";
+              }}
+            />
+          </div>
+          {importError && <p className={styles.err}>{importError}</p>}
+          {importLots.length > 0 && (
+            <>
+              <p>
+                {importLots.length} row{importLots.length === 1 ? "" : "s"}
+                {" · "}
+                {importLots.filter((lot) => lot.email).length} with email
+                {" · "}
+                {importLots.filter((lot) => !lot.email).length} vacant / door-drop
+                {importLots.some((lot) => lot.duplicateInFile) ? " · duplicates in the file will be skipped" : ""}
+              </p>
+              <div className={styles.importTableWrap}>
+                <table className={styles.importTable}>
+                  <thead>
+                    <tr>
+                      <th>Street</th>
+                      <th>Name</th>
+                      <th>Email</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {importLots.slice(0, 40).map((lot, index) => (
+                      <tr key={`${lot.street_address}-${index}`} className={lot.duplicateInFile ? styles.importSkip : ""}>
+                        <td>{lot.street_address}</td>
+                        <td>{`${lot.first_name} ${lot.last_name}`.trim() || "Pending Resident"}</td>
+                        <td>{lot.email || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {importLots.length > 40 && <p>Showing the first 40 rows.</p>}
+              </div>
+              <label className={styles.checkLabel}>
+                <input
+                  type="checkbox"
+                  checked={sendClaimOnImport}
+                  onChange={(e) => setSendClaimOnImport(e.target.checked)}
+                />
+                Email claim letters now to rows that have an email
+              </label>
+              <div className={styles.formActions}>
+                <Button type="button" onClick={runImport} disabled={importSending}>
+                  {importSending ? "Importing…" : `Import ${importLots.filter((lot) => !lot.duplicateInFile).length} lots`}
+                </Button>
+              </div>
+            </>
+          )}
+        </section>
+      )}
 
       {showForm && (
         <section className={styles.formCard}>
@@ -776,11 +1018,22 @@ export default function RosterDirectory({ onBack }) {
                       <Download size={16} />
                       Download CSV
                     </Button>
+                    <Button
+                      variant="secondary"
+                      disabled={claimFlyerLots.length === 0}
+                      onClick={() => printDoorDrops(claimFlyerLots)}
+                    >
+                      <FileText size={16} />
+                      Door-drop PDF
+                    </Button>
                   </div>
-                  {claimPrintLots.length > 0 && (
+                  {claimFlyerLots.length > 0 && (
                     <p className={styles.emptyInline}>
-                      {claimPrintLots.length} unclaimed street{claimPrintLots.length === 1 ? "" : "s"} have no email.
-                      Use the CSV to print claim codes for door-drop.
+                      {claimFlyerLots.length} unclaimed street{claimFlyerLots.length === 1 ? "" : "s"} can print as a door-drop flyer
+                      {claimPrintLots.length
+                        ? ` · ${claimPrintLots.length} of those have no email`
+                        : ""}
+                      . One letter-size page per house.
                     </p>
                   )}
                 </>
@@ -874,6 +1127,12 @@ export default function RosterDirectory({ onBack }) {
                   >
                     <Copy size={16} />
                     {copied === "selected" ? "Copied" : "Copy"}
+                  </Button>
+                )}
+                {selected.onboarding_token && !selected.is_claimed && (
+                  <Button variant="secondary" onClick={() => printDoorDrops([selected])}>
+                    <FileText size={16} />
+                    Door-drop flyer
                   </Button>
                 )}
                 {selected.email && (

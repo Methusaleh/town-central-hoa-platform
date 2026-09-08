@@ -1,28 +1,36 @@
 import { useState } from "react";
 import styles from "./Claim.module.css";
-import { apiFetch } from "../../api";
+import { apiFetch, persistSession } from "../../api";
 
 export default function Claim({ onBack, onClaimSuccess }) {
   const [step, setStep] = useState(1);
   const [residentId, setResidentId] = useState(null);
-  const [formData, setFormData] = useState({ 
-    street_address: "", 
-    onboarding_token: "", 
-    email: "", 
-    password: "", 
-    first_name: "", 
-    last_name: "" 
+  const [claimPayload, setClaimPayload] = useState(null);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteStatus, setInviteStatus] = useState("");
+  const [inviting, setInviting] = useState(false);
+  const [formData, setFormData] = useState({
+    street_address: "",
+    onboarding_token: "",
+    email: "",
+    password: "",
+    first_name: "",
+    last_name: "",
   });
+
+  const goToHome = (payload = claimPayload) => {
+    if (payload) onClaimSuccess(payload);
+  };
 
   const handleVerify = async (e) => {
     e.preventDefault();
     try {
       const res = await apiFetch("/api/residents/verify", {
         method: "POST",
-        body: JSON.stringify({ 
-          street_address: formData.street_address, 
-          onboarding_token: formData.onboarding_token 
-        })
+        body: JSON.stringify({
+          street_address: formData.street_address,
+          onboarding_token: formData.onboarding_token,
+        }),
       });
 
       const data = await res.json();
@@ -46,14 +54,16 @@ export default function Claim({ onBack, onClaimSuccess }) {
         method: "POST",
         body: JSON.stringify({
           ...formData,
-          residentId
-        })
+          residentId,
+        }),
       });
 
       const data = await res.json();
 
       if (res.ok) {
-        onClaimSuccess(data);
+        persistSession({ token: data.token, user: data.user });
+        setClaimPayload(data);
+        setStep(3);
       } else {
         alert(data.error || "There was an issue creating your account. Please try again.");
       }
@@ -63,27 +73,126 @@ export default function Claim({ onBack, onClaimSuccess }) {
     }
   };
 
+  const handleInvite = async (e) => {
+    e.preventDefault();
+    const email = inviteEmail.trim().toLowerCase();
+    if (!email || inviting) return;
+    if (email === String(formData.email || "").trim().toLowerCase()) {
+      setInviteStatus("Use a different email than the one you just signed up with.");
+      return;
+    }
+
+    setInviting(true);
+    setInviteStatus("");
+    try {
+      const res = await apiFetch("/api/residents/invite", {
+        method: "POST",
+        body: JSON.stringify({
+          email,
+          primary_resident_id: claimPayload?.user?.id,
+          address: claimPayload?.user?.address || formData.street_address,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setInviteStatus(`Invite sent to ${email}. They’ll get their own login for this house.`);
+        setInviteEmail("");
+      } else {
+        setInviteStatus(data.error || "Could not send that invite.");
+      }
+    } catch (err) {
+      console.error("Invite error:", err);
+      setInviteStatus("Network error sending the invite.");
+    } finally {
+      setInviting(false);
+    }
+  };
+
+  const title =
+    step === 1 ? "Verify your property" : step === 2 ? "Complete your profile" : "Anyone else at this address?";
+
   return (
     <div className={styles.claimContainer}>
-      <button className={styles.backBtn} onClick={onBack}>← Back</button>
-      
+      {step < 3 && (
+        <button className={styles.backBtn} onClick={onBack}>← Back</button>
+      )}
+
       <div className={styles.formCard}>
-        <h2>{step === 1 ? "Verify Your Property" : "Complete Your Profile"}</h2>
-        
-        {step === 1 ? (
+        <h2>{title}</h2>
+
+        {step === 1 && (
           <form onSubmit={handleVerify}>
-            <input type="text" placeholder="Street Address" onChange={(e) => setFormData({...formData, street_address: e.target.value})} required />
-            <input type="text" placeholder="6-Digit Claim Code" onChange={(e) => setFormData({...formData, onboarding_token: e.target.value})} required />
+            <input
+              type="text"
+              placeholder="Street Address"
+              onChange={(e) => setFormData({ ...formData, street_address: e.target.value })}
+              required
+            />
+            <input
+              type="text"
+              placeholder="6-Digit Claim Code"
+              onChange={(e) => setFormData({ ...formData, onboarding_token: e.target.value })}
+              required
+            />
             <button type="submit" className={styles.submitBtn}>Verify Address</button>
           </form>
-        ) : (
+        )}
+
+        {step === 2 && (
           <form onSubmit={handleFinalize}>
-            <input type="text" placeholder="First Name" onChange={(e) => setFormData({...formData, first_name: e.target.value})} required />
-            <input type="text" placeholder="Last Name" onChange={(e) => setFormData({...formData, last_name: e.target.value})} required />
-            <input type="email" placeholder="Email Address" onChange={(e) => setFormData({...formData, email: e.target.value})} required />
-            <input type="password" placeholder="Create Secure Password" onChange={(e) => setFormData({...formData, password: e.target.value})} required />
+            <input
+              type="text"
+              placeholder="First Name"
+              onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+              required
+            />
+            <input
+              type="text"
+              placeholder="Last Name"
+              onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+              required
+            />
+            <input
+              type="email"
+              placeholder="Email Address"
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              required
+            />
+            <input
+              type="password"
+              placeholder="Create Secure Password"
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              required
+            />
             <button type="submit" className={styles.submitBtn}>Activate Account</button>
           </form>
+        )}
+
+        {step === 3 && (
+          <>
+            <p className={styles.lead}>
+              Your house is claimed. If a spouse, partner, or anyone else lives at{" "}
+              <strong>{claimPayload?.user?.address || formData.street_address}</strong>,
+              invite them now. They get their own login — they should not reuse yours.
+            </p>
+            <form onSubmit={handleInvite}>
+              <input
+                type="email"
+                placeholder="Their email"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                required
+              />
+              <button type="submit" className={styles.submitBtn} disabled={inviting}>
+                {inviting ? "Sending…" : "Send invite"}
+              </button>
+            </form>
+            {inviteStatus && <p className={styles.status}>{inviteStatus}</p>}
+            <p className={styles.hint}>You can also invite people later from your profile.</p>
+            <button type="button" className={styles.skipBtn} onClick={() => goToHome()}>
+              {inviteStatus.startsWith("Invite sent") ? "Continue to Town Central" : "Skip for now"}
+            </button>
+          </>
         )}
       </div>
     </div>

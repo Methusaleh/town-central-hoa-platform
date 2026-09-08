@@ -32,9 +32,55 @@
 }
 
 .formCard h2 {
-  margin: 0 0 25px 0;
+  margin: 0 0 12px 0;
   color: var(--tc-ink);
   text-align: center;
+}
+
+.lead {
+  margin: 0 0 18px;
+  color: var(--tc-muted);
+  font-size: 0.92rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.lead strong {
+  color: var(--tc-ink);
+  font-weight: 650;
+}
+
+.status {
+  margin: 12px 0 0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--tc-ink);
+  text-align: center;
+}
+
+.hint {
+  margin: 14px 0 0;
+  font-size: 0.8rem;
+  color: var(--tc-muted);
+  text-align: center;
+}
+
+.skipBtn {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: none;
+  background: none;
+  color: var(--tc-muted);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.skipBtn:hover {
+  color: var(--tc-ink);
 }
 
 .formCard form {

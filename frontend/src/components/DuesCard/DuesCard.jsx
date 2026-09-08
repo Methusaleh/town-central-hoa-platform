@@ -79,11 +79,12 @@ export default function DuesCard({ user }) {
         <div style={{ background: "#f8fafc", padding: "18px", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
           <h4 style={{ margin: "0 0 8px 0", color: "#0f172a" }}>Fee-Free Bank Bill-Pay</h4>
           <p style={{ fontSize: "0.85rem", color: "#475569", lineHeight: "1.4", margin: "0 0 10px 0" }}>
-            Set up Town Central HOA as a payee inside your personal banking app to push payments with zero fees:
+            Use your bank’s bill-pay to send dues to Town Central HOA. Put your street in the memo.
+            The board will post the routing and account numbers here before the first assessment is collected through the portal.
           </p>
           <ul style={{ fontSize: "0.85rem", color: "#334155", paddingLeft: "16px", margin: "0 0 15px 0", lineHeight: "1.5" }}>
             <li><strong>Payee:</strong> Town Central HOA</li>
-            <li><strong>Routing / Account:</strong> [HOA Business Bank Routing & Account]</li>
+            <li><strong>Routing / Account:</strong> Posted by the treasurer before go-live</li>
             <li><strong>Memo / Reference:</strong> <em>{duesInfo?.street_address || user?.address}</em></li>
           </ul>
           <button onClick={() => setPaymentMode("overview")} className={styles.backLinkBtn}>← Back to Payment Options</button>
@@ -94,11 +95,12 @@ export default function DuesCard({ user }) {
         <div style={{ background: "#f8fafc", padding: "18px", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
           <h4 style={{ margin: "0 0 8px 0", color: "#0f172a" }}>Physical Check Instructions</h4>
           <p style={{ fontSize: "0.85rem", color: "#475569", lineHeight: "1.4", margin: "0 0 10px 0" }}>
-            Make checks payable to <strong>Town Central HOA</strong> and mail or drop them off at the management lockbox:
+            Make checks payable to <strong>Town Central HOA</strong> and put your street in the memo.
+            The lockbox address will be posted here before the board starts collecting through the portal.
           </p>
           <p style={{ fontSize: "0.85rem", fontWeight: "600", color: "#0f172a", background: "white", padding: "12px", borderRadius: "8px", border: "1px solid #e2e8f0", margin: "0 0 15px 0", lineHeight: "1.5" }}>
-            Town Central HOA Lockbox<br />
-            123 Community Way, Piedmont, OK 73078<br />
+            Town Central HOA<br />
+            Lockbox address coming from the treasurer<br />
             <em>Memo: {duesInfo?.street_address || user?.address}</em>
           </p>
           <button onClick={() => setPaymentMode("overview")} className={styles.backLinkBtn}>← Back to Payment Options</button>

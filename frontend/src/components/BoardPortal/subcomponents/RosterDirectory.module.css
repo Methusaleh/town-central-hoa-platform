@@ -187,7 +187,48 @@
   gap: 8px;
 }
 
+.hiddenInput {
+  display: none;
+}
+
+.importTableWrap {
+  overflow: auto;
+  max-height: 280px;
+  border: 1px solid var(--tc-line);
+  border-radius: 8px;
+}
+
+.importTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.importTable th,
+.importTable td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--tc-line);
+  white-space: nowrap;
+}
+
+.importTable th {
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--tc-muted);
+  background: var(--tc-bg);
+  position: sticky;
+  top: 0;
+}
+
+.importSkip td {
+  color: var(--tc-muted);
+  text-decoration: line-through;
+}
+
 .checkLabel {
+  display: flex;
   flex-direction: row !important;
   align-items: center;
   gap: 8px !important;

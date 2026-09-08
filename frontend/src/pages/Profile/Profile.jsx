@@ -23,55 +23,42 @@ export default function Profile({ user, onBack, onUserUpdate }) {
     setNotifications((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  // Convert selected image file to base64 string and ship it to PostgreSQL
   const handleAvatarChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Safety validation check: Limit size to 2MB to keep DB payloads fast
     if (file.size > 2 * 1024 * 1024) {
       alert("Image is too large. Please select a profile image under 2MB.");
       return;
     }
 
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onloadstart = () => setUploading(true);
-    
-    reader.onloadend = async () => {
-      const base64String = reader.result;
+    setUploading(true);
+    try {
+      const body = new FormData();
+      body.append("photo", file);
+      const response = await apiFetch("/api/residents/avatar", {
+        method: "PUT",
+        body,
+      });
+      const data = await response.json();
 
-      try {
-        const response = await apiFetch("/api/residents/avatar", {
-          method: "PUT",
-          body: JSON.stringify({
-            photoData: base64String
-          })
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-          alert("Profile avatar updated successfully!");
-          
-          // Trigger the state updater passed down from App.jsx so the 
-          // new avatar instantly renders across the entire app workspace shell!
-          if (onUserUpdate) {
-            onUserUpdate({
-              ...user,
-              photo: data.user?.photo || base64String
-            });
-          }
-        } else {
-          alert(data.error || "Failed to update profile photo.");
+      if (response.ok) {
+        if (onUserUpdate) {
+          onUserUpdate({
+            ...user,
+            photo: data.user?.photo,
+          });
         }
-      } catch (err) {
-        console.error("Avatar upload network fault:", err);
-        alert("Network error updating avatar image profile.");
-      } finally {
-        setUploading(false);
+      } else {
+        alert(data.error || "Failed to update profile photo.");
       }
-    };
+    } catch (err) {
+      console.error("Avatar upload network fault:", err);
+      alert("Network error updating avatar image profile.");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
   };
 
   const handlePasswordChange = async (e) => {

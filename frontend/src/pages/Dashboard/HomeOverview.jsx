@@ -8,6 +8,7 @@ import {
   Mail,
   MapPin,
   Wallet,
+  Waves,
 } from "lucide-react";
 import Button from "../../components/ui/Button";
 import { countUnseen, readFeedCursors } from "../../utils/feedCursors";
@@ -105,6 +106,7 @@ const GO_TO = [
   { to: PATHS.dues, label: "My dues", hint: "Balance and how to pay", icon: Wallet },
   { to: PATHS.contact, label: "Contact the board", hint: "Write the board", icon: Mail },
   { to: PATHS.maintenance, label: "ARC & maintenance", hint: "Submit a request", icon: ClipboardList },
+  { to: PATHS.amenities, label: "Pool & clubhouse", hint: "Coming soon — not open yet", icon: Waves },
 ];
 
 export default function HomeOverview() {

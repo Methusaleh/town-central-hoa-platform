@@ -13,6 +13,7 @@ import DashboardLayout, {
   ContactBoardPage,
   DocumentsPage,
   DuesPage,
+  AmenitiesPage,
   EventsPage,
   FeedPage,
   HomePage,
@@ -183,6 +184,7 @@ function AppRoutes() {
             <Route path="dues" element={<DuesPage />} />
             <Route path="vendors" element={<VendorsPage />} />
             <Route path="documents" element={<DocumentsPage />} />
+            <Route path="amenities" element={<AmenitiesPage />} />
             <Route path="admin" element={<AdminHomePage />} />
             <Route path="admin/requests" element={<AdminRequestsPage />} />
             <Route path="admin/roster" element={<AdminRosterPage />} />

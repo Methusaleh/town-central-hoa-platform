@@ -11,6 +11,7 @@ import {
   Building2,
   Megaphone,
   Mail,
+  Waves,
 } from "lucide-react";
 
 export const PATHS = {
@@ -24,6 +25,7 @@ export const PATHS = {
   dues: "/dashboard/dues",
   vendors: "/dashboard/vendors",
   contact: "/dashboard/contact",
+  amenities: "/dashboard/amenities",
   admin: "/dashboard/admin",
   profile: "/profile",
 };
@@ -54,6 +56,7 @@ export const moreItems = [
   { to: PATHS.maintenance, label: "Maintenance & ARC", icon: ClipboardList },
   { to: PATHS.dues, label: "My Dues", icon: Wallet },
   { to: PATHS.vendors, label: "Trusted Companies", icon: Building2 },
+  { to: PATHS.amenities, label: "Pool & clubhouse", icon: Waves },
   { to: PATHS.contact, label: "Contact the Board", icon: Mail },
 ];
 

@@ -1,5 +1,6 @@
 const bcrypt = require("bcrypt");
 const express = require("express");
+const multer = require("multer");
 const router = express.Router();
 const db = require("../db");
 const crypto = require("crypto");
@@ -11,12 +12,28 @@ const {
   publicUser,
 } = require("../middleware/auth");
 const { sendWelcomePacket, sendClaimCodeEmail, sendHouseholdInvite, sendMail, sendPasswordReset } = require("../utils/mailer");
-const { checkImageDataUrl } = require("../utils/safetyFilter");
+const { checkImageBuffer, checkImageDataUrl } = require("../utils/safetyFilter");
+const { uploadToR2, deleteFromR2 } = require("../utils/s3Storage");
 
 const USER_COLUMNS = `
   id, first_name, last_name, email, address, role,
   agreed_to_guidelines, profile_photo, password_hash
 `;
+
+const avatarUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 2 * 1024 * 1024 },
+});
+
+function runAvatarUpload(req, res, next) {
+  avatarUpload.single("photo")(req, res, (err) => {
+    if (!err) return next();
+    if (err.code === "LIMIT_FILE_SIZE") {
+      return res.status(413).json({ error: "Profile photos must be under 2MB." });
+    }
+    return res.status(400).json({ error: err.message || "Could not read that photo." });
+  });
+}
 
 function newClaimCode() {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -543,34 +560,59 @@ router.post("/invite", authRequired, async (req, res) => {
   }
 });
 
-router.put("/avatar", authRequired, async (req, res) => {
-  const { photoData } = req.body;
-  const email = req.body.email || req.user.email;
+router.put("/avatar", authRequired, runAvatarUpload, async (req, res) => {
+  const email = (req.body.email || req.user.email || "").trim().toLowerCase();
 
-  if (!photoData) {
-    return res.status(400).json({ error: "Photo data is required." });
-  }
-
-  if (email.trim().toLowerCase() !== req.user.email && req.user.role !== "super_admin") {
+  if (email !== req.user.email && req.user.role !== "super_admin") {
     return res.status(403).json({ error: "You can only update your own avatar." });
   }
 
   try {
-    const photoCheck = await checkImageDataUrl(photoData);
+    let buffer;
+    let mimeType = "image/jpeg";
+    let filename = "avatar.jpg";
+
+    if (req.file?.buffer) {
+      buffer = req.file.buffer;
+      mimeType = req.file.mimetype || mimeType;
+      filename = req.file.originalname || filename;
+    } else if (req.body.photoData) {
+      const match = String(req.body.photoData).match(/^data:(image\/[a-zA-Z0-9+.-]+);base64,(.+)$/);
+      if (!match) {
+        return res.status(400).json({ error: "Photo data is required." });
+      }
+      mimeType = match[1];
+      buffer = Buffer.from(match[2], "base64");
+    } else {
+      return res.status(400).json({ error: "Photo data is required." });
+    }
+
+    const photoCheck = await checkImageBuffer(buffer, mimeType, filename);
     if (!photoCheck.safe) {
       return res.status(400).json({ error: photoCheck.reason });
     }
 
+    const previous = await db.query(
+      "SELECT profile_photo FROM users WHERE lower(email) = $1",
+      [email],
+    );
+    if (previous.rows.length === 0) {
+      return res.status(404).json({ error: "Resident account not found." });
+    }
+
+    const publicUrl = await uploadToR2(buffer, filename, mimeType);
     const { rows } = await db.query(
       `UPDATE users
        SET profile_photo = $1
-       WHERE email = $2
+       WHERE lower(email) = $2
        RETURNING ${USER_COLUMNS}`,
-      [photoData, email.trim().toLowerCase()],
+      [publicUrl, email],
     );
 
-    if (rows.length === 0) {
-      return res.status(404).json({ error: "Resident account not found." });
+    try {
+      await deleteFromR2(previous.rows[0].profile_photo);
+    } catch (err) {
+      console.error("Old avatar cleanup warning:", err.message);
     }
 
     const record = rows[0];
@@ -761,6 +803,81 @@ router.get("/master-list-placeholder", boardRequired, async (_req, res) => {
     console.error("Roster autocomplete query error:", err.message);
     res.status(500).json({ error: "Server error retrieving master directory index parameters." });
   }
+});
+
+function truthyFlag(value) {
+  return ["true", "1", "yes", "y"].includes(String(value || "").trim().toLowerCase());
+}
+
+router.post("/lots/bulk-import", boardRequired, async (req, res) => {
+  const rows = Array.isArray(req.body.lots) ? req.body.lots : [];
+  const sendClaimDefault = Boolean(req.body.send_claim);
+  if (!rows.length) {
+    return res.status(400).json({ error: "No lots to import." });
+  }
+  if (rows.length > 400) {
+    return res.status(400).json({ error: "Import up to 400 lots at a time." });
+  }
+
+  const created = [];
+  const skipped = [];
+  const failed = [];
+  const seen = new Set();
+
+  for (const row of rows) {
+    const street = String(row?.street_address || "").trim();
+    if (!street) {
+      failed.push({ street_address: "", reason: "missing_street" });
+      continue;
+    }
+
+    const key = street.toLowerCase();
+    if (seen.has(key)) {
+      skipped.push({ street_address: street, reason: "duplicate_in_file" });
+      continue;
+    }
+    seen.add(key);
+
+    const email = row.email ? String(row.email).trim().toLowerCase() : "";
+    if (email && !email.includes("@")) {
+      failed.push({ street_address: street, reason: "bad_email" });
+      continue;
+    }
+
+    try {
+      const send_welcome = Boolean(email) && (sendClaimDefault || truthyFlag(row.send_claim));
+      const resident = await onboardProperty({
+        street_address: street,
+        first_name: row.first_name,
+        last_name: row.last_name,
+        email: email || null,
+        send_welcome,
+      });
+      created.push({
+        street_address: resident.street_address,
+        claim_code: resident.onboarding_token,
+        emailed: send_welcome,
+      });
+    } catch (err) {
+      if (err.message === "LOT_EXISTS") {
+        skipped.push({ street_address: street, reason: "already_on_roster" });
+      } else {
+        console.error("Bulk import row error:", err.message);
+        failed.push({ street_address: street, reason: "failed" });
+      }
+    }
+  }
+
+  res.json({
+    success: true,
+    created: created.length,
+    skipped,
+    failed,
+    lots: created,
+    message: created.length
+      ? `Added ${created.length} lot${created.length === 1 ? "" : "s"}.`
+      : "No new lots were added.",
+  });
 });
 
 router.post("/lots/bulk-claim-letters", boardRequired, async (req, res) => {
