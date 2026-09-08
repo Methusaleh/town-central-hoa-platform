@@ -26,6 +26,19 @@
   background: #e2e8f0;
 }
 
+.intro {
+  margin: 0;
+  max-width: 46rem;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: #52525b;
+}
+
+.intro strong {
+  color: #3f3f46;
+  font-weight: 650;
+}
+
 .window {
   flex: 1;
   min-height: 0;
@@ -52,6 +65,22 @@
   font-size: 0.85rem;
   font-weight: 650;
   color: #3f3f46;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.boardPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #334155;
+  color: #f8fafc;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 .viewToggle {
@@ -144,9 +173,9 @@
   background: #f4f4f5;
 }
 
-.crumbCurrent {
-  background: #eef2ff;
-  color: #1d4ed8;
+.crumbBoard.crumbCurrent {
+  background: #e2e8f0;
+  color: #334155;
 }
 
 .sep {
@@ -184,6 +213,9 @@
   font-weight: 600;
   color: #3f3f46;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .actionBtn:hover {
@@ -238,6 +270,11 @@
   color: #1e3a8a;
 }
 
+.treeBoard.treeRowActive {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
 .treeTwist {
   width: 16px;
   height: 16px;
@@ -268,6 +305,10 @@
 
 .pane.dropTarget {
   background: #f0f9ff;
+}
+
+.paneBoard.dropTarget {
+  background: #f1f5f9;
 }
 
 .uploadOverlay {
@@ -334,6 +375,21 @@
   height: 48px;
   display: grid;
   place-items: center;
+  position: relative;
+}
+
+.lockBadge {
+  position: absolute;
+  right: 2px;
+  bottom: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #334155;
+  color: #f8fafc;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 0 0 2px #ffffff;
 }
 
 .iconName {

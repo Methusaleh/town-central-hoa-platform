@@ -6,11 +6,17 @@ const { DeleteObjectCommand } = require("@aws-sdk/client-s3");
 const { s3, uploadToR2 } = require("../utils/s3Storage");
 const { authRequired, boardRequired, isBoard } = require("../middleware/auth");
 
+const MAX_FILE_BYTES = 25 * 1024 * 1024;
+
 const storage = multer.memoryStorage();
 const upload = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: MAX_FILE_BYTES },
 });
+
+function asAudience(value) {
+  return value === "board" ? "board" : "residents";
+}
 
 function fileNameFromUrl(fileUrl) {
   try {
@@ -53,11 +59,62 @@ async function deleteCategoryRecursive(id) {
   await db.query("DELETE FROM document_categories WHERE id = $1", [id]);
 }
 
-router.get("/categories", authRequired, async (_req, res) => {
+async function getFolder(id) {
+  if (!id) return null;
+  const { rows } = await db.query("SELECT * FROM document_categories WHERE id = $1", [id]);
+  return rows[0] || null;
+}
+
+async function descendantFolderIds(id) {
+  const { rows } = await db.query(
+    `WITH RECURSIVE tree AS (
+       SELECT id FROM document_categories WHERE id = $1
+       UNION ALL
+       SELECT child.id
+         FROM document_categories child
+         JOIN tree ON child.parent_id = tree.id
+     )
+     SELECT id FROM tree`,
+    [id],
+  );
+  return rows.map((row) => row.id);
+}
+
+async function applyAudience(folderId, audience) {
+  const ids = await descendantFolderIds(folderId);
+  if (ids.length === 0) return;
+  const boardOnly = audience === "board";
+  await db.query(`UPDATE document_categories SET audience = $1 WHERE id = ANY($2::int[])`, [
+    audience,
+    ids,
+  ]);
+  await db.query(
+    `UPDATE documents
+        SET is_private = $1, requires_board_key = $1
+      WHERE category_id = ANY($2::int[])`,
+    [boardOnly, ids],
+  );
+}
+
+function runUpload(req, res, next) {
+  upload.any()(req, res, (err) => {
+    if (!err) return next();
+    if (err.code === "LIMIT_FILE_SIZE") {
+      return res.status(413).json({ error: "Each file needs to be 25 MB or smaller." });
+    }
+    return res.status(400).json({ error: err.message || "Upload failed." });
+  });
+}
+
+router.get("/categories", authRequired, async (req, res) => {
   try {
-    const { rows } = await db.query(
-      "SELECT * FROM document_categories ORDER BY name ASC",
-    );
+    const publicOnly = !isBoard(req.user) || req.query.audience === "residents";
+    const sql = publicOnly
+      ? `SELECT * FROM document_categories
+         WHERE COALESCE(audience, 'residents') <> 'board'
+         ORDER BY name ASC`
+      : "SELECT * FROM document_categories ORDER BY name ASC";
+    const { rows } = await db.query(sql);
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -71,9 +128,16 @@ router.post("/categories", boardRequired, async (req, res) => {
   }
 
   try {
+    let audience = asAudience(req.body.audience);
+    if (parent_id) {
+      const parent = await getFolder(parent_id);
+      if (!parent) return res.status(404).json({ error: "Parent folder not found." });
+      audience = asAudience(parent.audience);
+    }
+
     const { rows } = await db.query(
-      "INSERT INTO document_categories (name, parent_id) VALUES ($1, $2) RETURNING *",
-      [name.trim(), parent_id || null],
+      "INSERT INTO document_categories (name, parent_id, audience) VALUES ($1, $2, $3) RETURNING *",
+      [name.trim(), parent_id || null, audience],
     );
     res.status(201).json(rows[0]);
   } catch (err) {
@@ -82,7 +146,7 @@ router.post("/categories", boardRequired, async (req, res) => {
 });
 
 router.patch("/categories/:id", boardRequired, async (req, res) => {
-  const { name, parent_id } = req.body;
+  const { name, parent_id, audience } = req.body;
   const id = req.params.id;
 
   if (name !== undefined && (!name || !name.trim())) {
@@ -90,6 +154,9 @@ router.patch("/categories/:id", boardRequired, async (req, res) => {
   }
 
   try {
+    const current = await getFolder(id);
+    if (!current) return res.status(404).json({ error: "Folder not found." });
+
     if (parent_id !== undefined && parent_id !== null && String(parent_id) === String(id)) {
       return res.status(400).json({ error: "A folder cannot be moved into itself." });
     }
@@ -118,6 +185,20 @@ router.patch("/categories/:id", boardRequired, async (req, res) => {
       sets.push(`parent_id = $${i++}`);
       vals.push(parent_id || null);
     }
+
+    let nextAudience = current.audience || "residents";
+    if (audience !== undefined) {
+      nextAudience = asAudience(audience);
+    } else if (parent_id) {
+      const parent = await getFolder(parent_id);
+      nextAudience = asAudience(parent?.audience);
+    }
+
+    if (nextAudience !== (current.audience || "residents")) {
+      sets.push(`audience = $${i++}`);
+      vals.push(nextAudience);
+    }
+
     if (sets.length === 0) {
       return res.status(400).json({ error: "No folder updates provided." });
     }
@@ -126,7 +207,9 @@ router.patch("/categories/:id", boardRequired, async (req, res) => {
       `UPDATE document_categories SET ${sets.join(", ")} WHERE id = $${i} RETURNING *`,
       vals,
     );
-    if (rows.length === 0) return res.status(404).json({ error: "Folder not found." });
+    if (nextAudience !== (current.audience || "residents")) {
+      await applyAudience(id, nextAudience);
+    }
     res.json(rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -150,7 +233,8 @@ router.delete("/categories/:id", boardRequired, async (req, res) => {
 router.get("/", authRequired, async (req, res) => {
   try {
     let sql = "SELECT * FROM documents ORDER BY created_at DESC";
-    if (!isBoard(req.user)) {
+    const publicOnly = !isBoard(req.user) || req.query.audience === "residents";
+    if (publicOnly) {
       sql = `SELECT * FROM documents
              WHERE (requires_board_key = false OR requires_board_key IS NULL)
                AND (is_private = false OR is_private IS NULL)
@@ -163,14 +247,24 @@ router.get("/", authRequired, async (req, res) => {
   }
 });
 
-router.post("/", boardRequired, upload.any(), async (req, res) => {
+router.post("/", boardRequired, runUpload, async (req, res) => {
   try {
     const files = req.files || [];
     if (files.length === 0) {
       return res.status(400).json({ error: "No file was attached to the request." });
     }
 
-    const { category_id, is_private, requires_board_key } = req.body;
+    const { category_id } = req.body;
+    let privateFlag = req.body.is_private === "true" || req.body.is_private === true;
+    if (req.body.is_private === undefined) {
+      if (category_id) {
+        const folder = await getFolder(category_id);
+        privateFlag = asAudience(folder?.audience) === "board";
+      } else {
+        privateFlag = asAudience(req.body.audience) === "board";
+      }
+    }
+
     const uploaded = [];
 
     for (const file of files) {
@@ -185,8 +279,8 @@ router.post("/", boardRequired, upload.any(), async (req, res) => {
         title,
         publicFileUrl,
         category_id || null,
-        is_private === "true" || is_private === true,
-        requires_board_key === "true" || requires_board_key === true,
+        privateFlag,
+        privateFlag,
         req.user?.id || null,
       ]);
       uploaded.push(rows[0]);
@@ -200,7 +294,7 @@ router.post("/", boardRequired, upload.any(), async (req, res) => {
 });
 
 router.patch("/:id", boardRequired, async (req, res) => {
-  const { title, category_id } = req.body;
+  const { title, category_id, is_private, audience } = req.body;
   const sets = [];
   const vals = [];
   let i = 1;
@@ -216,6 +310,24 @@ router.patch("/:id", boardRequired, async (req, res) => {
     sets.push(`category_id = $${i++}`);
     vals.push(category_id || null);
   }
+
+  let privateFlag;
+  if (is_private !== undefined) {
+    privateFlag = is_private === true || is_private === "true";
+  } else if (audience !== undefined) {
+    privateFlag = asAudience(audience) === "board";
+  } else if (category_id) {
+    const folder = await getFolder(category_id);
+    privateFlag = asAudience(folder?.audience) === "board";
+  }
+
+  if (privateFlag !== undefined) {
+    sets.push(`is_private = $${i++}`);
+    vals.push(privateFlag);
+    sets.push(`requires_board_key = $${i++}`);
+    vals.push(privateFlag);
+  }
+
   if (sets.length === 0) {
     return res.status(400).json({ error: "No file updates provided." });
   }

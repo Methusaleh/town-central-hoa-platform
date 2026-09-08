@@ -77,18 +77,16 @@ function FolderBlock({ category, categories, documents, depth, forceOpen }) {
   );
 }
 
-export default function DocumentCenter({ user }) {
+export default function DocumentCenter() {
   const [documents, setDocuments] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
 
-  const isBoard = user?.role === "board_member" || user?.role === "super_admin";
-
   useEffect(() => {
     Promise.all([
-      apiFetch("/api/documents/categories").then((res) => res.json()),
-      apiFetch("/api/documents").then((res) => res.json()),
+      apiFetch("/api/documents/categories?audience=residents").then((res) => res.json()),
+      apiFetch("/api/documents?audience=residents").then((res) => res.json()),
     ])
       .then(([catsData, docsData]) => {
         setCategories(Array.isArray(catsData) ? catsData : []);
@@ -99,15 +97,18 @@ export default function DocumentCenter({ user }) {
   }, []);
 
   const visibleDocuments = useMemo(() => {
-    const allowed = documents.filter(
-      (doc) => !doc.requires_board_key || isBoard,
-    );
+    const allowed = documents.filter((doc) => !doc.is_private && !doc.requires_board_key);
     const needle = query.trim().toLowerCase();
     if (!needle) return allowed;
     return allowed.filter((doc) => String(doc.title || "").toLowerCase().includes(needle));
-  }, [documents, isBoard, query]);
+  }, [documents, query]);
 
-  const roots = childrenOf(categories, null);
+  const residentCategories = useMemo(
+    () => categories.filter((category) => category.audience !== "board"),
+    [categories],
+  );
+
+  const roots = childrenOf(residentCategories, null);
   const unfiled = visibleDocuments.filter((doc) => !doc.category_id);
   const hasAnything = visibleDocuments.length > 0;
 
@@ -119,7 +120,7 @@ export default function DocumentCenter({ user }) {
         <div>
           <p className={styles.kicker}>Library</p>
           <h2>Documents</h2>
-          <p>Covenants, meeting packets, and neighborhood files, kept in the folders the board maintains.</p>
+          <p>Covenants, meeting packets, and neighborhood files the board posts for households.</p>
         </div>
         <label className={styles.search}>
           <input
@@ -139,7 +140,7 @@ export default function DocumentCenter({ user }) {
             <FolderBlock
               key={category.id}
               category={category}
-              categories={categories}
+              categories={residentCategories}
               documents={visibleDocuments}
               depth={0}
               forceOpen={Boolean(query.trim())}

@@ -381,13 +381,19 @@ async function seed() {
   );
 
   const folders = await db.query(
-    `INSERT INTO document_categories (name, parent_id)
-     VALUES ('Covenants', NULL), ('Meeting Minutes', NULL), ('Pool', NULL)
+    `INSERT INTO document_categories (name, parent_id, audience)
+     VALUES
+      ('Covenants', NULL, 'residents'),
+      ('Meeting Minutes', NULL, 'residents'),
+      ('Pool', NULL, 'residents'),
+      ('Legal', NULL, 'board'),
+      ('Insurance', NULL, 'board'),
+      ('Vendors', NULL, 'board')
      RETURNING id, name`,
   );
   const minutes = folders.rows.find((row) => row.name === "Meeting Minutes");
   await db.query(
-    "INSERT INTO document_categories (name, parent_id) VALUES ($1, $2)",
+    "INSERT INTO document_categories (name, parent_id, audience) VALUES ($1, $2, 'residents')",
     ["2026", minutes.id],
   );
 

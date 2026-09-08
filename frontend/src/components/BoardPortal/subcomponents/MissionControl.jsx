@@ -35,7 +35,7 @@ const TOOLS = [
   {
     id: "admin-documents",
     label: "Document manager",
-    hint: "Board files and folders.",
+    hint: "Neighbor files and board-only files.",
     icon: FolderOpen,
     tone: "leaf",
   },

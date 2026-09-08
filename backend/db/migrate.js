@@ -5,6 +5,14 @@ const statements = [
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_photo TEXT`,
   `ALTER TABLE document_categories ADD COLUMN IF NOT EXISTS parent_id INTEGER REFERENCES document_categories(id) ON DELETE CASCADE`,
   `ALTER TABLE document_categories ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP`,
+  `ALTER TABLE document_categories ADD COLUMN IF NOT EXISTS audience VARCHAR DEFAULT 'residents'`,
+  `UPDATE document_categories SET audience = 'residents' WHERE audience IS NULL OR audience = ''`,
+  `INSERT INTO document_categories (name, parent_id, audience)
+     SELECT v.name, NULL, 'board'
+       FROM (VALUES ('Legal'), ('Insurance'), ('Vendors')) AS v(name)
+      WHERE NOT EXISTS (
+        SELECT 1 FROM document_categories WHERE COALESCE(audience, 'residents') = 'board'
+      )`,
   `DO $$
 BEGIN
   IF to_regclass('public.watercooler_posts') IS NOT NULL AND to_regclass('public.porch_posts') IS NULL THEN
