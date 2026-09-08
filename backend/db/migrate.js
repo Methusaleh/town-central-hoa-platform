@@ -121,6 +121,14 @@ END $$;`,
     WHERE category = 'Traffic / Party'
       AND content LIKE 'Extra cars parked along Redbud%'
       AND resolved_at IS NULL`,
+  `CREATE TABLE IF NOT EXISTS print_templates (
+    kind VARCHAR PRIMARY KEY,
+    file_url TEXT NOT NULL,
+    file_name VARCHAR,
+    stamp JSONB DEFAULT '{"placement":"lower","cover":false}'::jsonb,
+    updated_by VARCHAR,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+  )`,
 ];
 
 async function migrate(query) {

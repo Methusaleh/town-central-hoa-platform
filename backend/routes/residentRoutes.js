@@ -14,6 +14,14 @@ const {
 const { sendWelcomePacket, sendClaimCodeEmail, sendHouseholdInvite, sendMail, sendPasswordReset } = require("../utils/mailer");
 const { checkImageBuffer, checkImageDataUrl } = require("../utils/safetyFilter");
 const { uploadToR2, deleteFromR2 } = require("../utils/s3Storage");
+const {
+  saveTemplate,
+  updateStamp,
+  removeTemplate,
+  listTemplates,
+  buildDoorDropPdf,
+  buildWelcomeAttachment,
+} = require("../utils/printTemplates");
 
 const USER_COLUMNS = `
   id, first_name, last_name, email, address, role,
@@ -24,6 +32,31 @@ const avatarUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 2 * 1024 * 1024 },
 });
+
+const pdfUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 12 * 1024 * 1024 },
+});
+
+function runPdfUpload(req, res, next) {
+  pdfUpload.single("file")(req, res, (err) => {
+    if (!err) return next();
+    if (err.code === "LIMIT_FILE_SIZE") {
+      return res.status(400).json({ error: "That PDF needs to be under 12MB." });
+    }
+    return res.status(400).json({ error: err.message || "Could not read that PDF." });
+  });
+}
+
+async function welcomeAttachments({ firstName, streetAddress }) {
+  try {
+    const file = await buildWelcomeAttachment({ firstName, streetAddress });
+    return file ? [file] : undefined;
+  } catch (err) {
+    console.error("Welcome packet attach skipped:", err.message);
+    return undefined;
+  }
+}
 
 function runAvatarUpload(req, res, next) {
   avatarUpload.single("photo")(req, res, (err) => {
@@ -400,14 +433,18 @@ router.post("/claim", async (req, res) => {
     delete record.password_hash;
     const user = publicUser(record);
 
-    sendWelcomePacket({ to: email, firstName: first_name }).then(async () => {
-      await db.query(
-        "UPDATE users SET welcome_letter_sent_at = CURRENT_TIMESTAMP WHERE email = $1",
-        [email.trim().toLowerCase()],
-      );
-    }).catch((err) => {
-      console.error("Welcome Packet Error:", err.message);
-    });
+    const lotStreet = lot.street_address;
+    welcomeAttachments({ firstName: first_name, streetAddress: lotStreet })
+      .then((attachments) => sendWelcomePacket({ to: email, firstName: first_name, attachments }))
+      .then(async () => {
+        await db.query(
+          "UPDATE users SET welcome_letter_sent_at = CURRENT_TIMESTAMP WHERE email = $1",
+          [email.trim().toLowerCase()],
+        );
+      })
+      .catch((err) => {
+        console.error("Welcome Packet Error:", err.message);
+      });
 
     res.status(201).json({ success: true, token: signToken(user), user });
   } catch (err) {
@@ -978,7 +1015,14 @@ router.post("/lots/bulk-welcome", boardRequired, async (req, res) => {
 
     const sent = [];
     for (const user of rows) {
-      await sendWelcomePacket({ to: user.email, firstName: user.first_name });
+      await sendWelcomePacket({
+        to: user.email,
+        firstName: user.first_name,
+        attachments: await welcomeAttachments({
+          firstName: user.first_name,
+          streetAddress: user.address,
+        }),
+      });
       await db.query(
         "UPDATE users SET welcome_letter_sent_at = CURRENT_TIMESTAMP WHERE id = $1",
         [user.id],
@@ -1153,6 +1197,97 @@ router.post("/agree-guidelines", authRequired, async (req, res) => {
   } catch (err) {
     console.error("Guidelines agreement error:", err.message);
     res.status(500).json({ error: "Server error while saving guidelines status." });
+  }
+});
+
+router.get("/print-templates", boardRequired, async (_req, res) => {
+  try {
+    const templates = await listTemplates();
+    res.json({ templates });
+  } catch (err) {
+    console.error("Print templates list error:", err.message);
+    res.status(500).json({ error: "Could not load print templates." });
+  }
+});
+
+router.post("/print-templates/:kind", boardRequired, runPdfUpload, async (req, res) => {
+  if (!req.file?.buffer) {
+    return res.status(400).json({ error: "Choose a PDF." });
+  }
+  const mime = req.file.mimetype || "";
+  if (mime && mime !== "application/pdf" && mime !== "application/x-pdf") {
+    return res.status(400).json({ error: "Upload a PDF." });
+  }
+  try {
+    const template = await saveTemplate({
+      kind: req.params.kind,
+      buffer: req.file.buffer,
+      originalName: req.file.originalname,
+      mimeType: "application/pdf",
+      user: req.user,
+    });
+    res.json(template);
+  } catch (err) {
+    console.error("Print template upload error:", err.message);
+    res.status(400).json({ error: err.message || "Could not save that PDF." });
+  }
+});
+
+router.patch("/print-templates/:kind", boardRequired, async (req, res) => {
+  try {
+    const template = await updateStamp(req.params.kind, req.body.stamp || req.body, req.user);
+    res.json(template);
+  } catch (err) {
+    console.error("Print template stamp error:", err.message);
+    res.status(400).json({ error: err.message || "Could not update that template." });
+  }
+});
+
+router.delete("/print-templates/:kind", boardRequired, async (req, res) => {
+  try {
+    await removeTemplate(req.params.kind);
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Print template delete error:", err.message);
+    res.status(500).json({ error: "Could not remove that PDF." });
+  }
+});
+
+router.post("/lots/door-drop-pdf", boardRequired, async (req, res) => {
+  const ids = (req.body.ids || []).map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0);
+  if (!ids.length) {
+    return res.status(400).json({ error: "Select unclaimed lots first." });
+  }
+  if (ids.length > 200) {
+    return res.status(400).json({ error: "Print up to 200 flyers at a time." });
+  }
+  try {
+    const { rows } = await db.query(
+      `SELECT id, street_address, first_name, last_name, onboarding_token, is_claimed
+       FROM neighborhood_roster
+       WHERE id = ANY($1::int[])
+       ORDER BY street_address`,
+      [ids],
+    );
+    const lots = rows.filter((lot) => !lot.is_claimed && lot.onboarding_token);
+    if (!lots.length) {
+      return res.status(400).json({ error: "Select unclaimed lots that have a claim code." });
+    }
+    const pdf = await buildDoorDropPdf(lots);
+    if (!pdf) {
+      return res.status(204).end();
+    }
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      lots.length === 1
+        ? `attachment; filename="town-central-door-drop.pdf"`
+        : `attachment; filename="town-central-door-drop-${lots.length}-lots.pdf"`,
+    );
+    res.send(pdf);
+  } catch (err) {
+    console.error("Door-drop PDF error:", err.message);
+    res.status(500).json({ error: "Could not build those flyers." });
   }
 });
 

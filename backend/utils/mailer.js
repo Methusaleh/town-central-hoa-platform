@@ -40,7 +40,7 @@ async function sendMail(options) {
   });
 }
 
-function sendWelcomePacket({ to, firstName }) {
+function sendWelcomePacket({ to, firstName, attachments }) {
   const loginUrl = `${FRONTEND_URL}/login`;
   return sendMail({
     to,
@@ -50,9 +50,11 @@ function sendWelcomePacket({ to, firstName }) {
       `
         <p>Your resident portal account is active. You can now sign in to view announcements, pay attention to community alerts, submit maintenance or ARC requests, and access neighborhood documents.</p>
         <p><a href="${loginUrl}" style="display: inline-block; background: #2ecc71; color: #ffffff; text-decoration: none; font-weight: 700; padding: 12px 18px; border-radius: 8px;">Open Resident Login</a></p>
+        ${attachments?.length ? "<p>Your welcome packet is attached.</p>" : ""}
         <p>If you did not claim this profile, please contact the board at board@towncentralhoa.org.</p>
       `,
     ),
+    attachments,
   });
 }
 

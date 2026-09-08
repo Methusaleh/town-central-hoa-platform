@@ -204,6 +204,11 @@ export default function RosterDirectory({ onBack }) {
   const [importSending, setImportSending] = useState(false);
   const [sendClaimOnImport, setSendClaimOnImport] = useState(false);
   const importInputRef = useRef(null);
+  const [showPrint, setShowPrint] = useState(false);
+  const [printFiles, setPrintFiles] = useState({ door_drop: null, welcome_packet: null });
+  const [printBusy, setPrintBusy] = useState("");
+  const doorDropFileRef = useRef(null);
+  const welcomeFileRef = useRef(null);
 
   const selected = lots.find((lot) => String(lot.id) === String(selectedId)) || null;
 
@@ -236,7 +241,23 @@ export default function RosterDirectory({ onBack }) {
 
   useEffect(() => {
     loadLots();
+    loadPrintFiles();
   }, []);
+
+  const loadPrintFiles = async () => {
+    try {
+      const res = await apiFetch("/api/residents/print-templates");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return;
+      const next = { door_drop: null, welcome_packet: null };
+      (data.templates || []).forEach((item) => {
+        next[item.kind] = item;
+      });
+      setPrintFiles(next);
+    } catch (err) {
+      console.error("Print templates fetch error:", err);
+    }
+  };
 
   const visible = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -303,15 +324,118 @@ export default function RosterDirectory({ onBack }) {
     }
   };
 
-  const printDoorDrops = (targetLots) => {
+  const printDoorDrops = async (targetLots) => {
+    const flyers = (targetLots || []).filter((lot) => !lot.is_claimed && lot.onboarding_token);
+    if (!flyers.length) {
+      setStatus({ type: "err", text: "Select unclaimed lots that have a claim code." });
+      return;
+    }
     try {
-      const count = downloadDoorDropPdf(targetLots);
+      if (printFiles.door_drop) {
+        const res = await apiFetch("/api/residents/lots/door-drop-pdf", {
+          method: "POST",
+          body: JSON.stringify({ ids: flyers.map((lot) => lot.id) }),
+        });
+        if (res.status !== 204) {
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            setStatus({ type: "err", text: data.error || "Could not build those flyers." });
+            return;
+          }
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download =
+            flyers.length === 1
+              ? `town-central-door-drop-${String(flyers[0].street_address || "lot").replace(/\s+/g, "-").toLowerCase()}.pdf`
+              : `town-central-door-drop-${flyers.length}-lots.pdf`;
+          link.click();
+          URL.revokeObjectURL(url);
+          setStatus({
+            type: "ok",
+            text: `Downloaded ${flyers.length} flyer${flyers.length === 1 ? "" : "s"} using the board template (one page per house).`,
+          });
+          return;
+        }
+      }
+      const count = downloadDoorDropPdf(flyers);
       setStatus({
         type: "ok",
         text: `Downloaded ${count} door-drop flyer${count === 1 ? "" : "s"} (one page per house). Print at home or take the PDF to a shop.`,
       });
     } catch (err) {
       setStatus({ type: "err", text: err.message || "Could not build that PDF." });
+    }
+  };
+
+  const uploadPrintFile = async (kind, file) => {
+    if (!file || printBusy) return;
+    setPrintBusy(kind);
+    setStatus({ type: "", text: "" });
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      const res = await apiFetch(`/api/residents/print-templates/${kind}`, { method: "POST", body });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setStatus({ type: "err", text: data.error || "Could not upload that PDF." });
+        return;
+      }
+      setPrintFiles((current) => ({ ...current, [kind]: data }));
+      setStatus({
+        type: "ok",
+        text: kind === "door_drop"
+          ? "Door-drop template saved. Door-drop PDF will stamp each claim code onto it."
+          : "Welcome packet saved. Welcome letter emails will attach it.",
+      });
+    } catch {
+      setStatus({ type: "err", text: "Network error uploading that PDF." });
+    } finally {
+      setPrintBusy("");
+    }
+  };
+
+  const saveDoorDropStamp = async (patch) => {
+    const current = printFiles.door_drop?.stamp || { placement: "lower", cover: false };
+    const stamp = { ...current, ...patch };
+    try {
+      const res = await apiFetch("/api/residents/print-templates/door_drop", {
+        method: "PATCH",
+        body: JSON.stringify({ stamp }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setStatus({ type: "err", text: data.error || "Could not save stamp position." });
+        return;
+      }
+      setPrintFiles((files) => ({ ...files, door_drop: data }));
+    } catch {
+      setStatus({ type: "err", text: "Network error saving stamp position." });
+    }
+  };
+
+  const removePrintFile = async (kind) => {
+    if (printBusy) return;
+    setPrintBusy(`remove-${kind}`);
+    try {
+      const res = await apiFetch(`/api/residents/print-templates/${kind}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setStatus({ type: "err", text: data.error || "Could not remove that PDF." });
+        return;
+      }
+      setPrintFiles((current) => ({ ...current, [kind]: null }));
+      setStatus({
+        type: "ok",
+        text: kind === "door_drop"
+          ? "Door-drop is back to the built-in flyer."
+          : "Welcome emails will send without a packet attached.",
+      });
+    } catch {
+      setStatus({ type: "err", text: "Network error removing that PDF." });
+    } finally {
+      setPrintBusy("");
     }
   };
 
@@ -647,7 +771,7 @@ export default function RosterDirectory({ onBack }) {
       </header>
 
       <div className={styles.actions}>
-        <Button variant="secondary" onClick={() => { setShowForm((open) => !open); setShowImport(false); }}>
+        <Button variant="secondary" onClick={() => { setShowForm((open) => !open); setShowImport(false); setShowPrint(false); }}>
           {showForm ? "Close add-lot form" : "Add a lot"}
         </Button>
         <Button
@@ -655,11 +779,117 @@ export default function RosterDirectory({ onBack }) {
           onClick={() => {
             setShowImport((open) => !open);
             setShowForm(false);
+            setShowPrint(false);
           }}
         >
           {showImport ? "Close import" : "Import CSV"}
         </Button>
+        <Button
+          variant="secondary"
+          onClick={() => {
+            setShowPrint((open) => !open);
+            setShowForm(false);
+            setShowImport(false);
+          }}
+        >
+          {showPrint ? "Close print files" : "Print files"}
+        </Button>
       </div>
+
+      {showPrint && (
+        <section className={styles.formCard}>
+          <h3>Print files for go-live</h3>
+          <p>
+            Upload the board&apos;s designed PDFs. Door-drop uses one letter-size page per house and
+            stamps that household&apos;s claim code. Welcome packet attaches to the existing welcome
+            letter emails. Leave a blank box on the flyer, or add Acrobat fields named
+            {" "}<code>claim_code</code>, <code>street_address</code>, and <code>occupant_name</code>.
+          </p>
+
+          <h4 className={styles.sectionLabel}>Door-drop flyer</h4>
+          <p>
+            {printFiles.door_drop
+              ? `Using ${printFiles.door_drop.file_name}. Door-drop PDF will fill this file instead of the built-in flyer.`
+              : "No custom flyer yet. Door-drop PDF uses the built-in Town Central layout."}
+          </p>
+          <div className={styles.formActions}>
+            <Button type="button" onClick={() => doorDropFileRef.current?.click()} disabled={Boolean(printBusy)}>
+              {printBusy === "door_drop" ? "Uploading…" : printFiles.door_drop ? "Replace flyer PDF" : "Upload flyer PDF"}
+            </Button>
+            {printFiles.door_drop && (
+              <Button type="button" variant="ghost" onClick={() => removePrintFile("door_drop")} disabled={Boolean(printBusy)}>
+                Use built-in flyer
+              </Button>
+            )}
+            <input
+              ref={doorDropFileRef}
+              className={styles.hiddenInput}
+              type="file"
+              accept="application/pdf,.pdf"
+              onChange={(e) => {
+                uploadPrintFile("door_drop", e.target.files?.[0]);
+                e.target.value = "";
+              }}
+            />
+          </div>
+          {printFiles.door_drop && (
+            <>
+              <p>Where should the claim code sit if the PDF has no form field?</p>
+              <div className={styles.placementRow}>
+                {["upper", "center", "lower"].map((placement) => (
+                  <button
+                    key={placement}
+                    type="button"
+                    className={
+                      (printFiles.door_drop.stamp?.placement || "lower") === placement
+                        ? styles.placementOn
+                        : styles.placement
+                    }
+                    onClick={() => saveDoorDropStamp({ placement })}
+                  >
+                    {placement === "upper" ? "Upper" : placement === "center" ? "Center" : "Lower"}
+                  </button>
+                ))}
+              </div>
+              <label className={styles.checkLabel}>
+                <input
+                  type="checkbox"
+                  checked={Boolean(printFiles.door_drop.stamp?.cover)}
+                  onChange={(e) => saveDoorDropStamp({ cover: e.target.checked })}
+                />
+                Put a white plate behind the code (use this if the flyer background is busy)
+              </label>
+            </>
+          )}
+
+          <h4 className={styles.sectionLabel}>Welcome packet</h4>
+          <p>
+            {printFiles.welcome_packet
+              ? `Using ${printFiles.welcome_packet.file_name}. Welcome letter emails will attach this PDF.`
+              : "No packet yet. Welcome emails send the short letter only."}
+          </p>
+          <div className={styles.formActions}>
+            <Button type="button" onClick={() => welcomeFileRef.current?.click()} disabled={Boolean(printBusy)}>
+              {printBusy === "welcome_packet" ? "Uploading…" : printFiles.welcome_packet ? "Replace packet PDF" : "Upload packet PDF"}
+            </Button>
+            {printFiles.welcome_packet && (
+              <Button type="button" variant="ghost" onClick={() => removePrintFile("welcome_packet")} disabled={Boolean(printBusy)}>
+                Remove packet
+              </Button>
+            )}
+            <input
+              ref={welcomeFileRef}
+              className={styles.hiddenInput}
+              type="file"
+              accept="application/pdf,.pdf"
+              onChange={(e) => {
+                uploadPrintFile("welcome_packet", e.target.files?.[0]);
+                e.target.value = "";
+              }}
+            />
+          </div>
+        </section>
+      )}
 
       {showImport && (
         <section className={styles.formCard}>

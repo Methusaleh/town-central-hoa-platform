@@ -187,6 +187,35 @@
   gap: 8px;
 }
 
+.placementRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.placement,
+.placementOn {
+  border: 1px solid var(--tc-line);
+  background: var(--tc-bg);
+  color: var(--tc-ink);
+  border-radius: 999px;
+  padding: 8px 12px;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.placementOn {
+  background: var(--tc-brand-soft);
+  border-color: #c5d9cc;
+  color: var(--tc-brand-ink);
+}
+
+.formCard code {
+  font-size: 0.85em;
+}
+
 .hiddenInput {
   display: none;
 }
