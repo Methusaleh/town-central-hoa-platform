@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Copy, Download, FileText, FileUp, Mail, Search } from "lucide-react";
+import { ArrowLeft, Copy, Download, FileText, FileUp, Info, Mail, Search } from "lucide-react";
 import Button from "../../ui/Button";
 import { apiFetch } from "../../../api";
+import { usePortal } from "../../../layout/PortalContext";
+import {
+  readBoardSelection,
+  restoreRosterSelection,
+  rosterSelectionPayload,
+  writeBoardSelection,
+} from "../../../utils/boardSelection";
 import { downloadDoorDropPdf } from "../../../utils/doorDropPdf";
 import styles from "./RosterDirectory.module.css";
 
@@ -25,6 +32,29 @@ function householdOf(lot) {
 
 function displayName(person) {
   return `${person?.first_name || ""} ${person?.last_name || ""}`.trim() || "Household";
+}
+
+function livePeople(savedPeople, list) {
+  if (!Array.isArray(savedPeople) || !savedPeople.length) return [];
+  const byId = new Map();
+  list.forEach((lot) => {
+    householdOf(lot).forEach((person) => {
+      byId.set(String(person.id), { person, street: lot.street_address });
+    });
+  });
+  return savedPeople
+    .map((item) => {
+      const hit = byId.get(String(item.id));
+      if (!hit) return null;
+      return {
+        id: hit.person.id,
+        email: hit.person.email,
+        name: displayName(hit.person),
+        street: hit.street,
+        welcome_letter_sent_at: hit.person.welcome_letter_sent_at,
+      };
+    })
+    .filter(Boolean);
 }
 
 async function copyText(value) {
@@ -175,11 +205,13 @@ function downloadClaimPacket(lots) {
 }
 
 export default function RosterDirectory({ onBack }) {
+  const { user } = usePortal();
+  const savedSelection = readBoardSelection(user?.id, "roster") || {};
   const [lots, setLots] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [query, setQuery] = useState("");
-  const [selectedIds, setSelectedIds] = useState([]);
-  const [selectedId, setSelectedId] = useState(null);
+  const [selectedIds, setSelectedIds] = useState(() => savedSelection.selectedIds || []);
+  const [selectedId, setSelectedId] = useState(() => savedSelection.selectedId ?? null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
@@ -196,7 +228,7 @@ export default function RosterDirectory({ onBack }) {
   const [sending, setSending] = useState(false);
   const [emailStatus, setEmailStatus] = useState("");
   const [mobileDetail, setMobileDetail] = useState(false);
-  const [selectedPeople, setSelectedPeople] = useState([]);
+  const [selectedPeople, setSelectedPeople] = useState(() => savedSelection.selectedPeople || []);
   const [welcomeConfirm, setWelcomeConfirm] = useState(null);
   const [showImport, setShowImport] = useState(false);
   const [importLots, setImportLots] = useState([]);
@@ -211,6 +243,14 @@ export default function RosterDirectory({ onBack }) {
   const welcomeFileRef = useRef(null);
 
   const selected = lots.find((lot) => String(lot.id) === String(selectedId)) || null;
+  const selectionRef = useRef({ selectedId, selectedIds, selectedPeople, lots });
+  selectionRef.current = { selectedId, selectedIds, selectedPeople, lots };
+
+  const persistNow = (patch = {}) => {
+    const next = { ...selectionRef.current, ...patch };
+    selectionRef.current = next;
+    writeBoardSelection(user?.id, "roster", rosterSelectionPayload(next));
+  };
 
   const loadLots = async () => {
     try {
@@ -225,11 +265,17 @@ export default function RosterDirectory({ onBack }) {
         return;
       }
       const list = Array.isArray(data) ? data : [];
+      const saved = readBoardSelection(user?.id, "roster") || {};
       setLots(list);
-      setSelectedId((current) => {
-        if (current && list.some((lot) => String(lot.id) === String(current))) return current;
-        return list[0]?.id || null;
-      });
+      setSelectedIds((current) => restoreRosterSelection({
+        selectedIds: current,
+        selectedStreets: saved.selectedStreets,
+      }, list).selectedIds);
+      setSelectedId((current) => restoreRosterSelection({
+        selectedId: current,
+        selectedStreet: saved.selectedStreet,
+      }, list).selectedId);
+      setSelectedPeople((current) => livePeople(current.length ? current : saved.selectedPeople, list));
     } catch (err) {
       console.error("Roster fetch error:", err);
       setLots([]);
@@ -243,6 +289,14 @@ export default function RosterDirectory({ onBack }) {
     loadLots();
     loadPrintFiles();
   }, []);
+
+  useEffect(() => {
+    writeBoardSelection(
+      user?.id,
+      "roster",
+      rosterSelectionPayload({ selectedId, selectedIds, selectedPeople, lots }),
+    );
+  }, [user?.id, selectedId, selectedIds, selectedPeople, lots]);
 
   const loadPrintFiles = async () => {
     try {
@@ -273,15 +327,19 @@ export default function RosterDirectory({ onBack }) {
   }, [lots, query]);
 
   const toggleOne = (id) => {
-    setSelectedIds((current) =>
-      current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
-    );
+    setSelectedIds((current) => {
+      const selectedIds = current.includes(id)
+        ? current.filter((item) => item !== id)
+        : [...current, id];
+      persistNow({ selectedIds });
+      return selectedIds;
+    });
     setMobileDetail(true);
   };
 
   const togglePerson = (person, street) => {
-    setSelectedPeople((current) =>
-      current.some((item) => item.id === person.id)
+    setSelectedPeople((current) => {
+      const selectedPeople = current.some((item) => item.id === person.id)
         ? current.filter((item) => item.id !== person.id)
         : [...current, {
           id: person.id,
@@ -289,18 +347,30 @@ export default function RosterDirectory({ onBack }) {
           name: displayName(person),
           street,
           welcome_letter_sent_at: person.welcome_letter_sent_at,
-        }],
-    );
+        }];
+      persistNow({ selectedPeople });
+      return selectedPeople;
+    });
     setMobileDetail(true);
   };
 
   const selectByStatus = (statusType) => {
-    if (statusType === "all") setSelectedIds(lots.map((lot) => lot.id));
-    else if (statusType === "claimed") setSelectedIds(lots.filter((lot) => lot.is_claimed).map((lot) => lot.id));
-    else if (statusType === "unclaimed") setSelectedIds(lots.filter((lot) => !lot.is_claimed).map((lot) => lot.id));
-    else {
+    if (statusType === "all") {
+      const selectedIds = lots.map((lot) => lot.id);
+      setSelectedIds(selectedIds);
+      persistNow({ selectedIds });
+    } else if (statusType === "claimed") {
+      const selectedIds = lots.filter((lot) => lot.is_claimed).map((lot) => lot.id);
+      setSelectedIds(selectedIds);
+      persistNow({ selectedIds });
+    } else if (statusType === "unclaimed") {
+      const selectedIds = lots.filter((lot) => !lot.is_claimed).map((lot) => lot.id);
+      setSelectedIds(selectedIds);
+      persistNow({ selectedIds });
+    } else {
       setSelectedIds([]);
       setSelectedPeople([]);
+      persistNow({ selectedIds: [], selectedPeople: [] });
     }
     setCompose("");
     setEmailStatus("");
@@ -311,6 +381,7 @@ export default function RosterDirectory({ onBack }) {
   const openLot = (lot) => {
     if (selectedIds.length > 0 || selectedPeople.length > 0) return;
     setSelectedId(lot.id);
+    persistNow({ selectedId: lot.id });
     setMobileDetail(true);
     setShowTransfer(false);
     setInviteEmail("");
@@ -718,8 +789,8 @@ export default function RosterDirectory({ onBack }) {
 
   const claimedCount = lots.filter((lot) => lot.is_claimed).length;
   const loginCount = lots.reduce((sum, lot) => sum + householdOf(lot).length, 0);
-  const batchMode = selectedIds.length > 0 || selectedPeople.length > 0;
-  const selectedLots = lots.filter((lot) => selectedIds.includes(lot.id));
+  const batchMode = loaded && (selectedIds.length > 0 || selectedPeople.length > 0);
+  const selectedLots = lots.filter((lot) => selectedIds.some((id) => String(id) === String(lot.id)));
   const reachableLots = selectedLots.filter(lotHasEmail);
   const printLots = selectedLots.filter((lot) => !lotHasEmail(lot));
   const claimEmailLots = selectedLots.filter((lot) => !lot.is_claimed && lot.email && lot.onboarding_token);
@@ -1086,7 +1157,7 @@ export default function RosterDirectory({ onBack }) {
             <div className={styles.list}>
               {visible.map((lot) => {
                 const members = householdOf(lot);
-                const checked = selectedIds.includes(lot.id);
+                const checked = selectedIds.some((id) => String(id) === String(lot.id));
                 const peopleOn = members.some((person) => selectedPeople.some((item) => item.id === person.id));
                 return (
                   <div
@@ -1340,7 +1411,18 @@ export default function RosterDirectory({ onBack }) {
               {emailStatus && <p className={emailStatus.toLowerCase().includes("could not") || emailStatus.toLowerCase().includes("error") || emailStatus.toLowerCase().includes("no claim") || emailStatus.toLowerCase().includes("already received") ? styles.err : styles.ok}>{emailStatus}</p>}
             </>
           ) : !selected ? (
-            <p className={styles.empty}>Choose a street, or use the filters to work a batch.</p>
+            <div className={styles.idle}>
+              <div className={styles.idleCard}>
+                <span className={styles.idleIcon} aria-hidden="true">
+                  <Info size={18} />
+                </span>
+                <p className={styles.kicker}>Household</p>
+                <h3>Select a street</h3>
+                <p>
+                  Click a row for the claim code, household, and mail tools. Check several streets to send letters or print flyers in a batch.
+                </p>
+              </div>
+            </div>
           ) : (
             <>
               <div className={styles.accountHead}>

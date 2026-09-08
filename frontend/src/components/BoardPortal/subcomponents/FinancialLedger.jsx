@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Download, Search } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeft, Download, Info, Search } from "lucide-react";
 import AdminPaymentForm from "./AdminPaymentForm";
 import { apiFetch } from "../../../api";
+import { readBoardSelection, writeBoardSelection } from "../../../utils/boardSelection";
 import styles from "./FinancialLedger.module.css";
 
 const FILTERS = [
@@ -91,12 +92,13 @@ function memberNames(account) {
 }
 
 export default function FinancialLedger({ onBack, user }) {
+  const savedSelection = readBoardSelection(user?.id, "ledger") || {};
   const [accounts, setAccounts] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
-  const [selectedId, setSelectedId] = useState(null);
-  const [selectedStreets, setSelectedStreets] = useState([]);
+  const [selectedId, setSelectedId] = useState(() => savedSelection.selectedId ?? null);
+  const [selectedStreets, setSelectedStreets] = useState(() => savedSelection.selectedStreets || []);
   const [history, setHistory] = useState([]);
   const [historyTick, setHistoryTick] = useState(0);
   const [mobileDetail, setMobileDetail] = useState(false);
@@ -108,8 +110,21 @@ export default function FinancialLedger({ onBack, user }) {
   const [bulkSending, setBulkSending] = useState(false);
 
   const selected = accounts.find((item) => String(item.id) === String(selectedId)) || null;
-  const bulkMode = selectedStreets.length > 0;
+  const bulkMode = loaded && selectedStreets.length > 0;
   const selectedAccounts = accounts.filter((item) => selectedStreets.includes(item.street_address));
+  const selectionRef = useRef({ selectedId, selectedStreets, accounts });
+  selectionRef.current = { selectedId, selectedStreets, accounts };
+
+  const persistNow = (patch = {}) => {
+    const next = { ...selectionRef.current, ...patch };
+    selectionRef.current = next;
+    const byId = new Map((next.accounts || []).map((item) => [String(item.id), item]));
+    writeBoardSelection(user?.id, "ledger", {
+      selectedId: next.selectedId ?? null,
+      selectedStreet: byId.get(String(next.selectedId))?.street_address || null,
+      selectedStreets: next.selectedStreets || [],
+    });
+  };
 
   const loadAccounts = async () => {
     try {
@@ -117,11 +132,15 @@ export default function FinancialLedger({ onBack, user }) {
       const data = await res.json();
       if (res.ok) {
         const list = Array.isArray(data.accounts) ? data.accounts : [];
+        const saved = readBoardSelection(user?.id, "ledger") || {};
+        const streets = new Set(list.map((item) => item.street_address));
+        const ids = new Set(list.map((item) => String(item.id)));
         setAccounts(list);
+        setSelectedStreets((current) => current.filter((street) => streets.has(street)));
         setSelectedId((current) => {
-          if (current && list.some((item) => String(item.id) === String(current))) return current;
-          const firstDue = list.find((item) => Number(item.balance) > 0);
-          return (firstDue || list[0])?.id || null;
+          if (current && ids.has(String(current))) return current;
+          const byStreet = list.find((item) => item.street_address === saved.selectedStreet);
+          return byStreet?.id ?? null;
         });
       }
     } catch (err) {
@@ -134,6 +153,10 @@ export default function FinancialLedger({ onBack, user }) {
   useEffect(() => {
     loadAccounts();
   }, []);
+
+  useEffect(() => {
+    persistNow();
+  }, [user?.id, selectedId, selectedStreets, accounts]);
 
   useEffect(() => {
     if (bulkMode || !selected?.street_address) {
@@ -180,13 +203,18 @@ export default function FinancialLedger({ onBack, user }) {
   const openAccount = (account) => {
     if (selectedStreets.length > 0) return;
     setSelectedId(account.id);
+    persistNow({ selectedId: account.id });
     setMobileDetail(true);
   };
 
   const toggleStreet = (street) => {
-    setSelectedStreets((current) =>
-      current.includes(street) ? current.filter((item) => item !== street) : [...current, street],
-    );
+    setSelectedStreets((current) => {
+      const selectedStreets = current.includes(street)
+        ? current.filter((item) => item !== street)
+        : [...current, street];
+      persistNow({ selectedStreets });
+      return selectedStreets;
+    });
     setMobileDetail(true);
   };
 
@@ -282,11 +310,23 @@ export default function FinancialLedger({ onBack, user }) {
               <button
                 type="button"
                 className={selectedStreets.length === visible.length && visible.length ? styles.filterOn : ""}
-                onClick={() => setSelectedStreets(visible.map((item) => item.street_address))}
+                onClick={() => {
+                  const next = visible.map((item) => item.street_address);
+                  setSelectedStreets(next);
+                  persistNow({ selectedStreets: next });
+                }}
               >
                 Select all
               </button>
-              <button type="button" onClick={() => setSelectedStreets([])}>Clear</button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedStreets([]);
+                  persistNow({ selectedStreets: [] });
+                }}
+              >
+                Clear
+              </button>
               <button
                 type="button"
                 onClick={() => downloadLedgerCsv(
@@ -371,7 +411,14 @@ export default function FinancialLedger({ onBack, user }) {
                   </h3>
                   <p>Review the list here, then post one amount to all of them as a charge or a payment.</p>
                 </div>
-                <button type="button" className={styles.clear} onClick={() => setSelectedStreets([])}>
+                <button
+                  type="button"
+                  className={styles.clear}
+                  onClick={() => {
+                    setSelectedStreets([]);
+                    persistNow({ selectedStreets: [] });
+                  }}
+                >
                   Clear selection
                 </button>
               </div>
@@ -459,7 +506,18 @@ export default function FinancialLedger({ onBack, user }) {
               </form>
             </>
           ) : !selected ? (
-            <p className={styles.empty}>Choose a household, or check several to post a bulk charge or payment.</p>
+            <div className={styles.idle}>
+              <div className={styles.idleCard}>
+                <span className={styles.idleIcon} aria-hidden="true">
+                  <Info size={18} />
+                </span>
+                <p className={styles.kicker}>Account</p>
+                <h3>Select a household</h3>
+                <p>
+                  Click a street to review the balance and post a payment or charge. Check several households to apply one amount to all of them.
+                </p>
+              </div>
+            </div>
           ) : (
             <>
               <button type="button" className={styles.mobileBack} onClick={() => setMobileDetail(false)}>
