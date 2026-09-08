@@ -119,6 +119,14 @@ export default function Porch({ user }) {
   const composerRef = useRef(null);
   const replyFileRef = useRef(null);
   const replyDragCount = useRef(0);
+  const composerGifBtnRef = useRef(null);
+  const composerGifPanelRef = useRef(null);
+  const composerEmojiBtnRef = useRef(null);
+  const composerEmojiPanelRef = useRef(null);
+  const replyGifBtnRef = useRef(null);
+  const replyGifPanelRef = useRef(null);
+  const replyEmojiBtnRef = useRef(null);
+  const replyEmojiPanelRef = useRef(null);
 
   const isAdmin = user?.role === "board_member" || user?.role === "super_admin";
   const identity = user?.email || String(user?.id || "");
@@ -186,6 +194,45 @@ export default function Porch({ user }) {
     setReplyPreview(url);
     return () => URL.revokeObjectURL(url);
   }, [replyFile]);
+
+  useEffect(() => {
+    const gifOpen = showGifPicker || showReplyGif;
+    const emojiOpen = showComposerEmoji || showReplyEmoji;
+    if (!gifOpen && !emojiOpen) return undefined;
+
+    const inside = (refs, target) => refs.some((ref) => ref.current?.contains(target));
+
+    const onPointer = (e) => {
+      const target = e.target;
+      if (showGifPicker && !inside([composerGifBtnRef, composerGifPanelRef], target)) {
+        setShowGifPicker(false);
+      }
+      if (showComposerEmoji && !inside([composerEmojiBtnRef, composerEmojiPanelRef], target)) {
+        setShowComposerEmoji(false);
+      }
+      if (showReplyGif && !inside([replyGifBtnRef, replyGifPanelRef], target)) {
+        setShowReplyGif(false);
+      }
+      if (showReplyEmoji && !inside([replyEmojiBtnRef, replyEmojiPanelRef], target)) {
+        setShowReplyEmoji(false);
+      }
+    };
+
+    const onKey = (e) => {
+      if (e.key !== "Escape") return;
+      setShowGifPicker(false);
+      setShowComposerEmoji(false);
+      setShowReplyGif(false);
+      setShowReplyEmoji(false);
+    };
+
+    document.addEventListener("mousedown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [showGifPicker, showComposerEmoji, showReplyGif, showReplyEmoji]);
 
   const handleCreatePost = async (e) => {
     e.preventDefault();
@@ -534,6 +581,7 @@ export default function Porch({ user }) {
                     <button
                       type="button"
                       className={styles.tool}
+                      ref={replyEmojiBtnRef}
                       onClick={() => {
                         setShowReplyGif(false);
                         setShowReplyEmoji((v) => !v);
@@ -560,6 +608,7 @@ export default function Porch({ user }) {
                     <button
                       type="button"
                       className={styles.tool}
+                      ref={replyGifBtnRef}
                       onClick={() => {
                         setShowReplyEmoji(false);
                         setShowReplyGif((v) => !v);
@@ -570,12 +619,12 @@ export default function Porch({ user }) {
                   </div>
                   {draggingReply && <p className={styles.dropHint}>Drop the photo here</p>}
                   {showReplyEmoji && (
-                    <div className={styles.pickerWrap}>
+                    <div className={styles.pickerWrap} ref={replyEmojiPanelRef}>
                       <EmojiPicker onPick={insertReplyEmoji} onClose={() => setShowReplyEmoji(false)} />
                     </div>
                   )}
                   {showReplyGif && (
-                    <div className={styles.pickerWrap}>
+                    <div className={styles.pickerWrap} ref={replyGifPanelRef}>
                       <GifPicker
                         onPick={(url) => {
                           setReplyGifUrl(url);
@@ -638,7 +687,7 @@ export default function Porch({ user }) {
             </div>
           )}
           {showGifPicker && (
-            <div className={styles.pickerWrap}>
+            <div className={styles.pickerWrap} ref={composerGifPanelRef}>
               <GifPicker
                 onPick={(url) => {
                   setSelectedFile(null);
@@ -670,6 +719,7 @@ export default function Porch({ user }) {
               <button
                 type="button"
                 className={styles.tool}
+                ref={composerGifBtnRef}
                 onClick={() => {
                   setShowComposerEmoji(false);
                   setShowGifPicker((v) => !v);
@@ -680,7 +730,11 @@ export default function Porch({ user }) {
               <button
                 type="button"
                 className={styles.tool}
-                onClick={() => setShowComposerEmoji((v) => !v)}
+                ref={composerEmojiBtnRef}
+                onClick={() => {
+                  setShowGifPicker(false);
+                  setShowComposerEmoji((v) => !v);
+                }}
               >
                 <Smile size={16} />
                 Emoji
@@ -691,7 +745,7 @@ export default function Porch({ user }) {
             </Button>
           </div>
           {showComposerEmoji && (
-            <div className={styles.pickerWrap}>
+            <div className={styles.pickerWrap} ref={composerEmojiPanelRef}>
               <EmojiPicker onPick={insertComposerEmoji} onClose={() => setShowComposerEmoji(false)} />
             </div>
           )}

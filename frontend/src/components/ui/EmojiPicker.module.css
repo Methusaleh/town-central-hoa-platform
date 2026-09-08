@@ -9,20 +9,8 @@
 
 .top {
   display: flex;
-  gap: 8px;
-  padding: 10px;
-  border-bottom: 1px solid var(--tc-line);
-}
-
-.search {
-  flex: 1;
-  padding: 8px 10px;
-  border: 1px solid var(--tc-line);
-  border-radius: 6px;
-  background: var(--tc-bg);
-  color: var(--tc-ink);
-  font: inherit;
-  font-size: 0.85rem;
+  justify-content: flex-end;
+  padding: 8px 10px 0;
 }
 
 .close {
