@@ -1,6 +1,9 @@
-import { useEffect, useState } from "react";
-import styles from "../BoardPortal.module.css";
+import { useEffect, useRef, useState } from "react";
+import { ArrowLeft } from "lucide-react";
+import Button from "../../ui/Button";
+import VendorCard from "../../VendorDirectory/VendorCard";
 import { apiFetch } from "../../../api";
+import styles from "./VendorControls.module.css";
 
 const EMPTY_FORM = {
   company_name: "",
@@ -12,50 +15,55 @@ const EMPTY_FORM = {
 };
 
 export default function VendorControls({ onBack }) {
-  const [vendorsList, setVendorsList] = useState([]);
-  const [showVendorForm, setShowVendorForm] = useState(false);
-  const [editingVendorId, setEditingVendorId] = useState(null);
-  const [vendorForm, setVendorForm] = useState(EMPTY_FORM);
+  const [vendors, setVendors] = useState([]);
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState("");
+  const [status, setStatus] = useState({ type: "", text: "" });
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [saving, setSaving] = useState(false);
+  const formRef = useRef(null);
 
-  const fetchVendors = async () => {
+  const loadVendors = async () => {
     try {
       const res = await apiFetch("/api/vendors");
-      const data = await res.json();
-      setVendorsList(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error("Vendor fetch error:", err);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setVendors([]);
+        setError(data.error || "Could not load companies.");
+        return;
+      }
+      setVendors(Array.isArray(data) ? data : []);
+      setError("");
+    } catch {
+      setVendors([]);
+      setError("Network error loading companies.");
+    } finally {
+      setLoaded(true);
     }
   };
 
   useEffect(() => {
-    fetchVendors();
+    loadVendors();
   }, []);
 
-  const handleVendorSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const path = editingVendorId ? `/api/vendors/${editingVendorId}` : "/api/vendors";
-      const res = await apiFetch(path, {
-        method: editingVendorId ? "PUT" : "POST",
-        body: JSON.stringify(vendorForm),
-      });
-      if (res.ok) {
-        setShowVendorForm(false);
-        setEditingVendorId(null);
-        setVendorForm(EMPTY_FORM);
-        fetchVendors();
-      } else {
-        const data = await res.json();
-        alert(data.error || "Failed to save vendor.");
-      }
-    } catch (err) {
-      console.error("Vendor save error:", err);
-    }
+  const closeForm = () => {
+    setShowForm(false);
+    setEditingId(null);
+    setForm(EMPTY_FORM);
   };
 
-  const startEditVendor = (vendor) => {
-    setEditingVendorId(vendor.id);
-    setVendorForm({
+  const startAdd = () => {
+    setEditingId(null);
+    setForm(EMPTY_FORM);
+    setShowForm(true);
+    setStatus({ type: "", text: "" });
+  };
+
+  const startEdit = (vendor) => {
+    setEditingId(vendor.id);
+    setForm({
       company_name: vendor.company_name || "",
       service_type: vendor.service_type || "",
       contact_phone: vendor.contact_phone || "",
@@ -63,95 +71,185 @@ export default function VendorControls({ onBack }) {
       website_url: vendor.website_url || "",
       notes: vendor.notes || "",
     });
-    setShowVendorForm(true);
+    setShowForm(true);
+    setStatus({ type: "", text: "" });
+    requestAnimationFrame(() => {
+      formRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+    });
   };
 
-  const handleDeleteVendor = async (id) => {
-    if (!confirm("Remove this vendor from the directory?")) return;
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (saving) return;
+    setSaving(true);
+    setStatus({ type: "", text: "" });
     try {
-      const res = await apiFetch(`/api/vendors/${id}`, { method: "DELETE" });
-      if (res.ok) fetchVendors();
-    } catch (err) {
-      console.error("Vendor delete error:", err);
+      const path = editingId ? `/api/vendors/${editingId}` : "/api/vendors";
+      const res = await apiFetch(path, {
+        method: editingId ? "PUT" : "POST",
+        body: JSON.stringify(form),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setStatus({ type: "err", text: data.error || "Could not save that company." });
+        return;
+      }
+      closeForm();
+      setStatus({
+        type: "ok",
+        text: editingId ? "Updated. Neighbors will see the new details." : "Added to Trusted Companies.",
+      });
+      await loadVendors();
+    } catch {
+      setStatus({ type: "err", text: "Network error saving that company." });
+    } finally {
+      setSaving(false);
     }
   };
 
-  return (
-    <div className={styles.tableCard} style={{ marginTop: "10px" }}>
-      <div style={{ marginBottom: "20px" }}>
-        <button className={styles.cancelBtn} onClick={onBack}>
-          ← Admin tools
-        </button>
-      </div>
+  const handleDelete = async (vendor) => {
+    if (!window.confirm(`Remove ${vendor.company_name} from Trusted Companies?`)) return;
+    try {
+      const res = await apiFetch(`/api/vendors/${vendor.id}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setStatus({ type: "err", text: data.error || "Could not remove that company." });
+        return;
+      }
+      if (editingId === vendor.id) closeForm();
+      setStatus({ type: "ok", text: `${vendor.company_name} is no longer listed.` });
+      await loadVendors();
+    } catch {
+      setStatus({ type: "err", text: "Network error removing that company." });
+    }
+  };
 
-      <div className={styles.tableHeader}>
+  const updateField = (key) => (e) => setForm((current) => ({ ...current, [key]: e.target.value }));
+
+  return (
+    <div className={styles.page}>
+      <button type="button" className={styles.back} onClick={onBack}>
+        <ArrowLeft size={16} />
+        Admin tools
+      </button>
+
+      <header className={styles.intro}>
         <div>
-          <h3 style={{ margin: 0 }}>Trusted Companies Directory Control</h3>
-          <p style={{ margin: "5px 0 0 0", fontSize: "0.85rem", color: "#64748b" }}>
-            Add, modify, or remove contractor and business recommendation rows visible to homeowners.
+          <p className={styles.kicker}>Board</p>
+          <h2>Vendor controls</h2>
+          <p>
+            These companies show under Trusted Companies for every household. Add a name and
+            trade, then phone, email, or a website if you have them.
           </p>
         </div>
-        <button
-          className={showVendorForm ? styles.cancelBtn : styles.postBtn}
-          onClick={() => {
-            setShowVendorForm(!showVendorForm);
-            if (showVendorForm) {
-              setEditingVendorId(null);
-              setVendorForm(EMPTY_FORM);
-            }
-          }}
-        >
-          {showVendorForm ? "Cancel" : "Add New Vendor"}
-        </button>
-      </div>
+        {!showForm && (
+          <Button onClick={startAdd}>Add a company</Button>
+        )}
+      </header>
 
-      {showVendorForm && (
-        <div className={styles.formCard} style={{ marginBottom: "30px", border: "1px solid #e2e8f0" }}>
-          <h4>{editingVendorId !== null ? "Edit Vetted Contractor Records" : "Onboard Recommended Business Card"}</h4>
-          <form onSubmit={handleVendorSubmit} className={styles.announcementForm}>
-            <div className={styles.inlineGroup}>
-              <div><label>Company Name *</label><input type="text" placeholder="e.g. Piedmont Roofing LLC" value={vendorForm?.company_name || ""} onChange={(e) => setVendorForm({...vendorForm, company_name: e.target.value})} required /></div>
-              <div><label>Service Type Category *</label><input type="text" placeholder="e.g. Plumbing, Landscaping" value={vendorForm?.service_type || ""} onChange={(e) => setVendorForm({...vendorForm, service_type: e.target.value})} required /></div>
-            </div>
-            <div className={styles.inlineGroup}>
-              <div><label>Contact Phone</label><input type="tel" placeholder="e.g. (405) 555-0199" value={vendorForm?.contact_phone || ""} onChange={(e) => setVendorForm({...vendorForm, contact_phone: e.target.value})} /></div>
-              <div><label>Contact Email</label><input type="email" placeholder="e.g. bids@contractor.com" value={vendorForm?.contact_email || ""} onChange={(e) => setVendorForm({...vendorForm, contact_email: e.target.value})} /></div>
-            </div>
-            <div><label>Official Website URL</label><input type="url" placeholder="https://www.example.com" value={vendorForm?.website_url || ""} onChange={(e) => setVendorForm({...vendorForm, website_url: e.target.value})} /></div>
-            <div><label>Board Recommendation Note</label><textarea placeholder="Board notes..." value={vendorForm?.notes || ""} onChange={(e) => setVendorForm({...vendorForm, notes: e.target.value})} style={{ minHeight: "80px" }} /></div>
-            <button type="submit" className={styles.submitBtn}>{editingVendorId !== null ? "Save Contractor Adjustments" : "Publish to Resident Directory"}</button>
-          </form>
-        </div>
+      {status.text && (
+        <p className={status.type === "err" ? styles.err : styles.ok}>{status.text}</p>
       )}
 
-      <table className={styles.table}>
-        <thead>
-          <tr>
-            <th>Company Profile Name</th>
-            <th>Classification Tag</th>
-            <th>Contact Access Channels</th>
-            <th style={{ textAlign: "right" }}>Administrative Operations</th>
-          </tr>
-        </thead>
-        <tbody>
-          {vendorsList.map((vendor) => (
-            <tr key={vendor.id}>
-              <td style={{ fontWeight: "700", color: "#0f172a" }}>{vendor.company_name}</td>
-              <td><span className={styles.typeTag} style={{ backgroundColor: "rgba(46, 204, 113, 0.1)", color: "#2ecc71" }}>{vendor.service_type}</span></td>
-              <td style={{ fontSize: "0.85rem", color: "#475569" }}>
-                {vendor.contact_phone && <div>{vendor.contact_phone}</div>}
-                {vendor.contact_email && <div>{vendor.contact_email}</div>}
-              </td>
-              <td style={{ textAlign: "right" }}>
-                <div style={{ display: "inline-flex", gap: "8px" }}>
-                  <button onClick={() => startEditVendor(vendor)} className={styles.viewBtn} style={{ color: "#3498db" }}>Edit</button>
-                  <button onClick={() => handleDeleteVendor(vendor.id)} className={styles.viewBtn} style={{ color: "#ef4444", borderColor: "#fee2e2" }}>Delete</button>
-                </div>
-              </td>
-            </tr>
+      {showForm && (
+        <form ref={formRef} className={styles.formCard} onSubmit={handleSubmit}>
+          <h3>{editingId ? "Edit company" : "Add a company"}</h3>
+          <div className={styles.formRow}>
+            <label>
+              Company
+              <input
+                value={form.company_name}
+                onChange={updateField("company_name")}
+                placeholder="e.g. Piedmont Fence Co."
+                required
+              />
+            </label>
+            <label>
+              Trade
+              <input
+                value={form.service_type}
+                onChange={updateField("service_type")}
+                placeholder="e.g. Fencing"
+                required
+              />
+            </label>
+          </div>
+          <div className={styles.formRow}>
+            <label>
+              Phone
+              <input
+                type="tel"
+                value={form.contact_phone}
+                onChange={updateField("contact_phone")}
+                placeholder="405-555-0198"
+              />
+            </label>
+            <label>
+              Email
+              <input
+                type="email"
+                value={form.contact_email}
+                onChange={updateField("contact_email")}
+                placeholder="jobs@example.com"
+              />
+            </label>
+          </div>
+          <label>
+            Website
+            <input
+              type="text"
+              inputMode="url"
+              value={form.website_url}
+              onChange={updateField("website_url")}
+              placeholder="piedmontfence.example"
+            />
+          </label>
+          <label>
+            Note for neighbors
+            <textarea
+              value={form.notes}
+              onChange={updateField("notes")}
+              placeholder="e.g. Knows the HOA stain spec."
+            />
+          </label>
+          <div className={styles.formActions}>
+            <Button type="submit" disabled={saving}>
+              {saving ? "Saving…" : editingId ? "Save changes" : "Add to directory"}
+            </Button>
+            <Button type="button" variant="ghost" onClick={closeForm}>
+              Cancel
+            </Button>
+          </div>
+        </form>
+      )}
+
+      {!loaded ? (
+        <p className={styles.empty}>Loading companies…</p>
+      ) : error ? (
+        <p className={styles.empty}>{error}</p>
+      ) : vendors.length === 0 ? (
+        <p className={styles.empty}>No companies listed. Add one to show it under Trusted Companies.</p>
+      ) : (
+        <div className={styles.grid}>
+          {vendors.map((vendor) => (
+            <VendorCard
+              key={vendor.id}
+              vendor={vendor}
+              active={editingId === vendor.id}
+              actions={
+                <>
+                  <Button variant="secondary" onClick={() => startEdit(vendor)}>
+                    Edit
+                  </Button>
+                  <Button variant="ghost" onClick={() => handleDelete(vendor)}>
+                    Remove
+                  </Button>
+                </>
+              }
+            />
           ))}
-        </tbody>
-      </table>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,57 +1,121 @@
-import { useState, useEffect } from "react";
-import styles from "./VendorDirectory.module.css";
+import { useEffect, useMemo, useState } from "react";
+import { Search } from "lucide-react";
+import VendorCard from "./VendorCard";
 import { apiFetch } from "../../api";
+import styles from "./VendorDirectory.module.css";
 
 export default function VendorDirectory() {
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState("all");
 
   useEffect(() => {
     apiFetch("/api/vendors")
-      .then((res) => res.json())
-      .then((data) => {
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setVendors([]);
+          setError(data.error || "Could not load trusted companies.");
+          return;
+        }
         setVendors(Array.isArray(data) ? data : []);
-        setLoading(false);
+        setError("");
       })
-      .catch((err) => {
-        console.error("Error pulling vendors:", err);
-        setLoading(false);
-      });
+      .catch(() => {
+        setVendors([]);
+        setError("Network error loading trusted companies.");
+      })
+      .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <p>Loading trusted vendor listings...</p>;
+  const types = useMemo(() => {
+    const unique = [...new Set(vendors.map((item) => item.service_type).filter(Boolean))];
+    return unique.sort((a, b) => a.localeCompare(b));
+  }, [vendors]);
+
+  const visible = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return vendors.filter((item) => {
+      if (filter !== "all" && item.service_type !== filter) return false;
+      if (!needle) return true;
+      const haystack = [
+        item.company_name,
+        item.service_type,
+        item.contact_phone,
+        item.contact_email,
+        item.notes,
+      ]
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(needle);
+    });
+  }, [vendors, filter, query]);
 
   return (
-    <div className={styles.container}>
-      <header className={styles.header}>
-        <h3>Verified Vendor Directory</h3>
-        <p>A compilation of board-vetted local businesses and contractor services recommended by Town Central residents.</p>
+    <div className={styles.page}>
+      <header className={styles.intro}>
+        <div>
+          <p className={styles.kicker}>Neighbors</p>
+          <h2>Trusted companies</h2>
+          <p>
+            Companies the board has used or would call. This is a starting point, not a promise
+            about every job — still get your own bid.
+          </p>
+        </div>
       </header>
 
-      <div className={styles.grid}>
-        {vendors.map((vendor) => (
-          <div key={vendor.id} className={styles.vendorCard}>
-            <div className={styles.cardHeader}>
-              <h4>{vendor.company_name}</h4>
-              <span className={styles.tag}>{vendor.service_type}</span>
+      {loading ? (
+        <p className={styles.empty}>Loading companies…</p>
+      ) : error ? (
+        <p className={styles.empty}>{error}</p>
+      ) : vendors.length === 0 ? (
+        <p className={styles.empty}>The board has not listed any companies yet.</p>
+      ) : (
+        <>
+          <div className={styles.tools}>
+            <label className={styles.search}>
+              <Search size={16} />
+              <input
+                type="search"
+                placeholder="Name, trade, or phone…"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </label>
+            <div className={styles.filters}>
+              <button
+                type="button"
+                className={filter === "all" ? styles.filterOn : ""}
+                onClick={() => setFilter("all")}
+              >
+                All
+              </button>
+              {types.map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  className={filter === type ? styles.filterOn : ""}
+                  onClick={() => setFilter(type)}
+                >
+                  {type}
+                </button>
+              ))}
             </div>
-            
-            <div className={styles.contactDetails}>
-              {vendor.contact_phone && <p>📞 {vendor.contact_phone}</p>}
-              {vendor.contact_email && <p>✉️ <a href={`mailto:${vendor.contact_email}`}>{vendor.contact_email}</a></p>}
-              {vendor.website_url && (
-                <p>🌐 <a href={vendor.website_url} target="_blank" rel="noreferrer">Visit Website</a></p>
-              )}
-            </div>
-
-            {vendor.notes && (
-              <div className={styles.notesBox}>
-                <strong>Board Note:</strong> {vendor.notes}
-              </div>
-            )}
           </div>
-        ))}
-      </div>
+
+          {visible.length === 0 ? (
+            <p className={styles.empty}>No companies match that.</p>
+          ) : (
+            <div className={styles.grid}>
+              {visible.map((vendor) => (
+                <VendorCard key={vendor.id} vendor={vendor} />
+              ))}
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
