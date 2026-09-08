@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Copy, Download, FileText, FileUp, Mail, Search } from "lucide-react";
 import Button from "../../ui/Button";
+import { apiFetch } from "../../../api";
 import { downloadDoorDropPdf } from "../../../utils/doorDropPdf";
 import styles from "./RosterDirectory.module.css";
 
@@ -209,17 +210,25 @@ export default function RosterDirectory({ onBack }) {
   const loadLots = async () => {
     try {
       const res = await apiFetch("/api/residents/master-list-placeholder");
-      const data = await res.json();
-      if (res.ok) {
-        const list = Array.isArray(data) ? data : [];
-        setLots(list);
-        setSelectedId((current) => {
-          if (current && list.some((lot) => String(lot.id) === String(current))) return current;
-          return list[0]?.id || null;
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setLots([]);
+        setStatus({
+          type: "err",
+          text: data.error || (res.status === 403 ? "Board access is required to view the roster." : "Could not load the roster."),
         });
+        return;
       }
+      const list = Array.isArray(data) ? data : [];
+      setLots(list);
+      setSelectedId((current) => {
+        if (current && list.some((lot) => String(lot.id) === String(current))) return current;
+        return list[0]?.id || null;
+      });
     } catch (err) {
       console.error("Roster fetch error:", err);
+      setLots([]);
+      setStatus({ type: "err", text: "Network error loading the roster." });
     } finally {
       setLoaded(true);
     }
@@ -840,7 +849,9 @@ export default function RosterDirectory({ onBack }) {
           {!loaded ? (
             <p className={styles.empty}>Loading households…</p>
           ) : visible.length === 0 ? (
-            <p className={styles.empty}>No households match that.</p>
+            <p className={styles.empty}>
+              {lots.length === 0 ? "No households on the roster yet." : "No households match that."}
+            </p>
           ) : (
             <div className={styles.list}>
               {visible.map((lot) => {
