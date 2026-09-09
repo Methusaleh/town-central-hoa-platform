@@ -105,6 +105,25 @@ router.post("/:announcementId/comments", authRequired, async (req, res) => {
   }
 });
 
+router.patch("/:id/pin", boardRequired, async (req, res) => {
+  const { id } = req.params;
+  const sticky = req.body?.is_sticky === true || req.body?.is_sticky === "true";
+
+  try {
+    const { rows } = await db.query(
+      `UPDATE announcements
+          SET is_sticky = $1
+        WHERE id = $2 AND COALESCE(is_removed, false) = false
+        RETURNING *`,
+      [sticky, id],
+    );
+    if (rows.length === 0) return res.status(404).json({ error: "Announcement not found." });
+    res.json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // PATCH: Admin removal with stock reason
 router.patch("/:id/moderate", boardRequired, async (req, res) => {
   const { id } = req.params;

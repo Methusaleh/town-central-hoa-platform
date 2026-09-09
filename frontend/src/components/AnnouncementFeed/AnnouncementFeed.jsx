@@ -57,6 +57,19 @@ export default function AnnouncementFeed({ user }) {
 
   const active = items.find((item) => String(item.id) === String(announcementId));
 
+  const handlePin = async (item) => {
+    if (!item?.id) return;
+    try {
+      const res = await apiFetch(`/api/announcements/${item.id}/pin`, {
+        method: "PATCH",
+        body: JSON.stringify({ is_sticky: !item.is_sticky }),
+      });
+      if (res.ok) load();
+    } catch (err) {
+      console.error("Pin failed:", err);
+    }
+  };
+
   const handleUnpublish = async () => {
     if (!unpublishId) return;
     try {
@@ -95,6 +108,7 @@ export default function AnnouncementFeed({ user }) {
           <Notice
             item={active}
             isAdmin={isAdmin}
+            onPin={() => handlePin(active)}
             onUnpublish={() => setUnpublishId(active.id)}
           />
         )}
@@ -126,27 +140,37 @@ export default function AnnouncementFeed({ user }) {
           {items.map((item) => {
             const priority = priorityMeta(item.priority);
             return (
-              <Link
+              <div
                 key={item.id}
-                to={`${PATHS.announcements}/${item.id}`}
                 className={`${styles.row} ${item.is_sticky ? styles.rowPinned : ""} ${item.is_removed ? styles.rowRemoved : ""}`}
               >
-                <div className={styles.rowCopy}>
-                  <div className={styles.meta}>
-                    {item.is_sticky && <span className={styles.pin}>Pinned</span>}
-                    {priority && (
-                      <span className={`${styles.flag} ${styles[priority.className]}`}>{priority.label}</span>
-                    )}
-                    <span>{formatDate(item.created_at)}</span>
+                <Link to={`${PATHS.announcements}/${item.id}`} className={styles.rowMain}>
+                  <div className={styles.rowCopy}>
+                    <div className={styles.meta}>
+                      {item.is_sticky && <span className={styles.pin}>Pinned</span>}
+                      {priority && (
+                        <span className={`${styles.flag} ${styles[priority.className]}`}>{priority.label}</span>
+                      )}
+                      <span>{formatDate(item.created_at)}</span>
+                    </div>
+                    <h3>{item.title}</h3>
+                    <p className={item.is_removed ? styles.removed : ""}>{clip(item.content, 150)}</p>
                   </div>
-                  <h3>{item.title}</h3>
-                  <p className={item.is_removed ? styles.removed : ""}>{clip(item.content, 150)}</p>
-                </div>
-                {item.image_url && !item.is_removed && (
-                  <img src={item.image_url} alt="" className={styles.thumb} />
+                  {item.image_url && !item.is_removed && (
+                    <img src={item.image_url} alt="" className={styles.thumb} />
+                  )}
+                </Link>
+                {isAdmin && !item.is_removed && (
+                  <button
+                    type="button"
+                    className={styles.pinBtn}
+                    onClick={() => handlePin(item)}
+                  >
+                    {item.is_sticky ? "Unpin" : "Pin"}
+                  </button>
                 )}
                 <ChevronRight size={16} className={styles.chevron} />
-              </Link>
+              </div>
             );
           })}
         </div>
@@ -170,7 +194,7 @@ export default function AnnouncementFeed({ user }) {
   );
 }
 
-function Notice({ item, isAdmin, onUnpublish }) {
+function Notice({ item, isAdmin, onPin, onUnpublish }) {
   const priority = priorityMeta(item.priority);
   return (
     <article className={`${styles.notice} ${item.is_sticky ? styles.noticePinned : ""}`}>
@@ -182,9 +206,14 @@ function Notice({ item, isAdmin, onUnpublish }) {
       <div className={styles.noticeHead}>
         <h2>{item.title}</h2>
         {isAdmin && !item.is_removed && (
-          <button type="button" className={styles.unpublish} onClick={onUnpublish}>
-            Unpublish
-          </button>
+          <div className={styles.noticeActions}>
+            <button type="button" className={styles.pinBtn} onClick={onPin}>
+              {item.is_sticky ? "Unpin" : "Pin to top"}
+            </button>
+            <button type="button" className={styles.unpublish} onClick={onUnpublish}>
+              Unpublish
+            </button>
+          </div>
         )}
       </div>
       <p className={`${styles.body} ${item.is_removed ? styles.removed : ""}`}>{item.content}</p>
@@ -274,7 +303,7 @@ function CreateModal({ onClose, onCreated }) {
           </label>
           <label className={styles.check}>
             <input type="checkbox" checked={isSticky} onChange={(e) => setIsSticky(e.target.checked)} />
-            Pin to the top
+            Pin to the top of the list
           </label>
         </div>
         <label>

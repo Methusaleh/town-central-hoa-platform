@@ -103,11 +103,21 @@
 }
 
 .rowPinned {
-  background: #f7f4ec;
+  background: var(--tc-accent-soft);
 }
 
 .rowPinned:hover {
-  background: #f1eee4;
+  background: var(--tc-accent-soft);
+}
+
+.rowMain {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  text-decoration: none;
+  color: inherit;
 }
 
 .rowRemoved {
@@ -196,7 +206,8 @@
 }
 
 .noticePinned {
-  border-color: #d9cdb4;
+  border-color: var(--tc-accent);
+  background: var(--tc-accent-soft);
 }
 
 .noticeHead {
@@ -250,6 +261,30 @@
 
 .unpublish:hover {
   color: var(--tc-danger);
+}
+
+.noticeActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  flex-shrink: 0;
+}
+
+.pinBtn {
+  border: none;
+  background: none;
+  color: var(--tc-accent);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 650;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 4px 0;
+  margin-top: 4px;
+}
+
+.pinBtn:hover {
+  color: var(--tc-ink);
 }
 
 .form {
