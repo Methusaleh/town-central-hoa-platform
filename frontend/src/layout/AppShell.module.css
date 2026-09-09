@@ -16,8 +16,8 @@
   padding: 0 28px;
   padding-left: max(28px, env(safe-area-inset-left));
   padding-right: max(28px, env(safe-area-inset-right));
-  background: var(--tc-chrome);
-  border-bottom: 1px solid #4a5851;
+  background: var(--tc-bg-elevated);
+  border-bottom: 1px solid var(--tc-line);
   z-index: 30;
   flex-shrink: 0;
 }
@@ -27,19 +27,17 @@
   align-items: center;
   gap: 10px;
   text-decoration: none;
-  color: var(--tc-chrome-ink);
+  color: var(--tc-brand-ink);
   font-weight: 650;
-  letter-spacing: 0.02em;
-  font-size: 0.92rem;
+  letter-spacing: 0.04em;
+  font-size: 0.88rem;
   text-transform: uppercase;
   flex-shrink: 0;
 }
 
-.mark {
-  width: 8px;
-  height: 8px;
-  border-radius: 1px;
-  background: var(--tc-brand);
+.brand svg {
+  display: block;
+  flex-shrink: 0;
 }
 
 .desktopNav {
@@ -58,7 +56,7 @@
   border-radius: 6px;
   border: none;
   background: transparent;
-  color: var(--tc-chrome-muted);
+  color: var(--tc-muted);
   text-decoration: none;
   font-size: 0.84rem;
   font-weight: 550;
@@ -67,13 +65,13 @@
 }
 
 .link:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--tc-chrome-ink);
+  background: var(--tc-bg-hover);
+  color: var(--tc-ink);
 }
 
 .linkActive {
-  background: rgba(255, 255, 255, 0.08);
-  color: #dce8de;
+  background: var(--tc-brand-soft);
+  color: var(--tc-brand-ink);
 }
 
 .menuWrap,
@@ -98,6 +96,8 @@
   display: flex;
   flex-direction: column;
   z-index: 40;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .accountMenu {
@@ -110,6 +110,7 @@
   align-items: center;
   gap: 10px;
   width: 100%;
+  box-sizing: border-box;
   padding: 10px 12px;
   border: none;
   border-radius: 8px;
@@ -140,8 +141,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--tc-line);
+  background: var(--tc-bg);
   border-radius: 999px;
   padding: 3px 10px 3px 3px;
   cursor: pointer;
@@ -151,11 +152,11 @@
 .accountName {
   font-size: 0.84rem;
   font-weight: 600;
-  color: var(--tc-chrome-ink);
+  color: var(--tc-ink);
 }
 
 .chevron {
-  color: var(--tc-chrome-muted);
+  color: var(--tc-muted);
 }
 
 .main {
@@ -173,6 +174,52 @@
 
 .tabbar {
   display: none;
+}
+
+/* Dark chrome header — set HEADER_PAPER to false in headerTheme.js */
+.topbarDark {
+  background: var(--tc-chrome);
+  border-bottom-color: #4a5851;
+}
+
+.topbarDark .brand {
+  color: var(--tc-chrome-ink);
+}
+
+.topbarDark .link {
+  color: var(--tc-chrome-muted);
+}
+
+.topbarDark .link:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--tc-chrome-ink);
+}
+
+.topbarDark .linkActive {
+  background: rgba(255, 255, 255, 0.08);
+  color: #dce8de;
+}
+
+.topbarDark .accountBtn {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.topbarDark .accountName {
+  color: var(--tc-chrome-ink);
+}
+
+.topbarDark .chevron {
+  color: var(--tc-chrome-muted);
+}
+
+.tabbarDark {
+  background: var(--tc-chrome);
+  border-top-color: #4a5851;
+}
+
+.tabbarDark .tab {
+  color: var(--tc-chrome-muted);
 }
 
 .sheetBackdrop {
@@ -224,8 +271,8 @@
     bottom: 0;
     height: var(--tc-bottom-h);
     padding-bottom: env(safe-area-inset-bottom);
-    background: var(--tc-chrome);
-    border-top: 1px solid #4a5851;
+    background: var(--tc-bg-elevated);
+    border-top: 1px solid var(--tc-line);
     z-index: 30;
   }
 
@@ -237,7 +284,7 @@
     gap: 3px;
     border: none;
     background: none;
-    color: var(--tc-chrome-muted);
+    color: var(--tc-muted);
     text-decoration: none;
     font-size: 0.65rem;
     font-weight: 650;
@@ -301,5 +348,14 @@
     font-weight: 550;
     text-align: left;
     cursor: pointer;
+  }
+
+  .tabbarDark {
+    background: var(--tc-chrome);
+    border-top: 1px solid #4a5851;
+  }
+
+  .tabbarDark .tab {
+    color: var(--tc-chrome-muted);
   }
 }

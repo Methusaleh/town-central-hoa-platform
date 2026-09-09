@@ -123,7 +123,6 @@ export default function AdminPaymentForm({ user, street_address, currentBalance 
             onChange={(e) => setFormData((current) => ({ ...current, payment_method: e.target.value }))}
           >
             <option value="check">Paper check</option>
-            <option value="zelle">Zelle</option>
             <option value="ach">ACH / bill pay</option>
           </select>
         </label>

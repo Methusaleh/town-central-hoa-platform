@@ -201,6 +201,33 @@ async function seed() {
       charges: [],
       members: [],
     },
+    {
+      street: "1101 Town Central Cir",
+      occupant: ["Danelle", "Delp", "danelle.delp@example.com"],
+      claimed: true,
+      token: "DEL1",
+      dues: { balance: 0, status: "Paid" },
+      charges: [{ amount: 450, note: "2026 annual assessment", type: "charge" }, { amount: 450, note: "Check 310", type: "payment" }],
+      members: [["Danelle", "Delp", "danelle.delp@example.com", "board_member"]],
+    },
+    {
+      street: "1108 Town Central Cir",
+      occupant: ["Christopher", "Cunningham", "chris.cunningham@example.com"],
+      claimed: true,
+      token: "CUN1",
+      dues: { balance: 0, status: "Paid" },
+      charges: [{ amount: 450, note: "2026 annual assessment", type: "charge" }, { amount: 450, note: "Check 311", type: "payment" }],
+      members: [["Christopher", "Cunningham", "chris.cunningham@example.com", "board_member"]],
+    },
+    {
+      street: "1114 Town Central Cir",
+      occupant: ["Cole", "Schaffitzel", "cole.schaffitzel@example.com"],
+      claimed: true,
+      token: "SCH1",
+      dues: { balance: 0, status: "Paid" },
+      charges: [{ amount: 450, note: "2026 annual assessment", type: "charge" }, { amount: 450, note: "Check 312", type: "payment" }],
+      members: [["Cole", "Schaffitzel", "cole.schaffitzel@example.com", "board_member"]],
+    },
   ];
 
   const lotIds = {};
@@ -375,7 +402,7 @@ async function seed() {
       (resident_id, first_name, last_name, request_type, subject, description, status, created_at, resolved_at, resolved_by)
      VALUES
       ($1, 'Jordan', 'Hale', 'maintenance', 'Streetlight out on Maple Hollow', 'The light at the corner of Maple Hollow and Hickory has been dark for two nights.', 'Open', '2026-09-03', NULL, NULL),
-      ($2, 'Maya', 'Chen', 'arc', 'Fence stain color', 'We would like to restain the backyard fence in Sherwin Weathered Teak. Sample is on the gate.', 'Open', '2026-09-01', NULL, NULL),
+      ($2, 'Maya', 'Chen', 'home_change', 'Fence stain color', 'We would like to restain the backyard fence in Sherwin Weathered Teak. Sample is on the gate.', 'Open', '2026-09-01', NULL, NULL),
       ($3, 'Chris', 'Nguyen', 'maintenance', 'Irrigation head flooding sidewalk', 'Head by the mailbox sprays the sidewalk every morning around 6.', 'Resolved', '2026-08-12', '2026-08-18', 'HOA Administration')`,
     [uid("jordan.hale@example.com"), uid("maya.chen@example.com"), uid("chris.nguyen@example.com")],
   );
@@ -414,7 +441,7 @@ async function seed() {
 
   console.log(`Seed complete. Kept ${ADMIN_EMAIL}.`);
   console.log("Demo resident password: Neighborhood1");
-  console.log("Useful logins: priya.shah@example.com, anika.shah@example.com, elena.ruiz@example.com, jordan.hale@example.com");
+  console.log("Board review logins: danelle.delp@example.com, chris.cunningham@example.com, cole.schaffitzel@example.com");
   console.log("Unclaimed with email: 1601 Post Oak (POST1), 1808 Whispering Creek (WHIS2)");
   console.log("Unclaimed, door-drop only: 1624 Post Oak (POST2), 1918 Sycamore Court (SYCA2)");
 }

@@ -1,72 +1,105 @@
-import styles from "../BoardPortal.module.css";
+import { useState } from "react";
+import { ArrowLeft } from "lucide-react";
+import Button from "../../ui/Button";
+import { requestTypeLabel, ticketStatusLabel } from "../../../utils/requestTypes";
+import styles from "./OperationsDashboard.module.css";
 
-export default function OperationsDashboard({ 
-  requests, 
-  loading, 
-  viewMode, 
-  onToggleView,
+const TABS = [
+  { id: "open", label: "Open", match: (s) => s === "Open" },
+  { id: "review", label: "In review", match: (s) => s === "In review" },
+  { id: "resolved", label: "Resolved", match: (s) => s === "Resolved" },
+];
+
+export default function OperationsDashboard({
+  requests,
+  loading,
+  viewMode,
+  setViewMode,
   handleResolve,
-  onBack 
+  handleReview,
+  onBack,
 }) {
-  const filteredRequests = requests.filter((req) =>
-    viewMode === "active" ? req.status === "Open" : req.status === "Resolved"
-  );
+  const [notes, setNotes] = useState({});
+  const tab = TABS.find((item) => item.id === viewMode) || TABS[0];
+  const filteredRequests = requests.filter((req) => tab.match(req.status));
 
   return (
-    <>
-      <div style={{ marginBottom: "20px" }}>
-        <button className={styles.cancelBtn} onClick={onBack}>
-          ← Admin tools
-        </button>
-      </div>
+    <div className={styles.page}>
+      <button type="button" className={styles.back} onClick={onBack}>
+        <ArrowLeft size={16} />
+        Admin tools
+      </button>
 
-      <header className={styles.header} style={{ marginTop: "10px" }}>
-        <h2>Executive Operations & Tickets Dashboard</h2>
-      </header>
-
-      <div className={styles.tableCard}>
-        <div className={styles.tableHeader}>
-          <h3>{viewMode === "active" ? "Active Resident Requests" : "Resolved Archive"}</h3>
-          <button className={styles.toggleBtn} onClick={onToggleView}>
-            {viewMode === "active" ? "View Archive" : "Back to Active"}
-          </button>
+      <div className={styles.intro}>
+        <div>
+          <p className={styles.kicker}>Board</p>
+          <h2>Operations & tickets</h2>
+          <p>
+            Neighbors submit these from Requests. Open means it just arrived. In review means someone on the board is looking. Resolve when the work or the decision is done.
+          </p>
         </div>
-        {loading ? <p>Loading requests...</p> : (
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Date Submitted</th>
-                <th>Resident</th>
-                <th>Subject / Description</th>
-                <th>Type</th>
-                <th>Status</th>
-                {viewMode === "active" && <th>Action</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {filteredRequests.map((req) => (
-                <tr key={req.id}>
-                  <td className={styles.dateCol}>{new Date(req.created_at).toLocaleDateString()}</td>
-                  <td style={{ fontWeight: "600" }}>{req.first_name} {req.last_name}</td>
-                  <td>
-                    <div style={{ fontWeight: "700", color: "#0f172a" }}>{req.subject}</div>
-                    <div style={{ fontSize: "0.85rem", color: "#64748b", marginTop: "4px", background: "#f8fafc", padding: "8px", borderRadius: "6px", borderLeft: "3px solid #cbd5e1" }}>
-                      {req.description || "No text description details provided."}
-                    </div>
-                  </td>
-                  <td><span className={styles.typeTag}>{req.request_type}</span></td>
-                  <td><span className={`${styles.statusBadge} ${styles.statusOpen}`}>{req.status}</span></td>
-                  {viewMode === "active" ? (
-                    <td><button className={styles.viewBtn} onClick={() => handleResolve(req.id)}>Resolve & Archive</button></td>
-                  ) : (
-                    <td className={styles.resolvedInfo}>By {req.resolved_by || "Admin"} on {req.resolved_at ? new Date(req.resolved_at).toLocaleDateString() : "N/A"}</td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
       </div>
-    </>
+
+      <div className={styles.tabs}>
+        {TABS.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            className={`${styles.tab} ${viewMode === item.id ? styles.tabOn : ""}`}
+            onClick={() => setViewMode(item.id)}
+          >
+            {item.label}
+            <em>{requests.filter((req) => item.match(req.status)).length}</em>
+          </button>
+        ))}
+      </div>
+
+      {loading ? (
+        <p className={styles.empty}>Loading requests…</p>
+      ) : filteredRequests.length === 0 ? (
+        <p className={styles.empty}>Nothing in {tab.label.toLowerCase()}.</p>
+      ) : (
+        <ul className={styles.list}>
+          {filteredRequests.map((req) => (
+            <li key={req.id} className={styles.card}>
+              <div className={styles.cardTop}>
+                <p className={styles.meta}>
+                  {new Date(req.created_at).toLocaleDateString()} · {req.first_name} {req.last_name}
+                </p>
+                <span className={styles.type}>{requestTypeLabel(req.request_type)}</span>
+              </div>
+              <h3>{req.subject}</h3>
+              <p className={styles.desc}>{req.description || "No description provided."}</p>
+              {req.board_note && <p className={styles.note}>Board note: {req.board_note}</p>}
+              <p className={styles.statusLine}>{ticketStatusLabel(req.status)}</p>
+
+              {req.status !== "Resolved" ? (
+                <div className={styles.actions}>
+                  <textarea
+                    className={styles.noteField}
+                    placeholder="Optional note the neighbor can see"
+                    value={notes[req.id] || ""}
+                    onChange={(e) => setNotes((current) => ({ ...current, [req.id]: e.target.value }))}
+                  />
+                  <div className={styles.actionRow}>
+                    {req.status === "Open" && (
+                      <Button variant="secondary" onClick={() => handleReview(req.id, notes[req.id])}>
+                        Start review
+                      </Button>
+                    )}
+                    <Button onClick={() => handleResolve(req.id, notes[req.id])}>Resolve</Button>
+                  </div>
+                </div>
+              ) : (
+                <p className={styles.resolved}>
+                  Resolved by {req.resolved_by || "Admin"}
+                  {req.resolved_at ? ` on ${new Date(req.resolved_at).toLocaleDateString()}` : ""}
+                </p>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }

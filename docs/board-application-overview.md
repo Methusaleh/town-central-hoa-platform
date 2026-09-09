@@ -18,7 +18,7 @@ This is the neighborhood site for Town Central: households, documents, notices, 
 | Alerts | Time-sensitive: lost pet, street, safety. Poster or board closes them (Found / Street is open / All clear). Closed items leave Home but stay under Resolved. |
 | Documents | Neighbor library only — folders that actually have files. Board-only folders never appear here. |
 | My Dues | Balance and how to pay: bank bill-pay or check. No card checkout. |
-| ARC & maintenance | Fence, paint, a leak — a ticket the board can resolve. |
+| Requests | Fence, paint, a leak — a ticket the board can review and resolve. |
 | Trusted companies | Vendors the board has listed. |
 | Pool & clubhouse | Coming soon. Not a reservation system yet. |
 | Contact the board | Write the board from inside the site. |
@@ -33,7 +33,7 @@ Admin unlocks when that person’s role is `board_member` or `super_admin`. Same
 | Master roster | One row per street. CSV import. Claim codes. Door-drop PDFs. Invites and owner transfer. Household mail. |
 | Document Manager | Nested folders. Dump a folder of files. **For neighbors** vs **Board only**. |
 | Assessment ledger | Charges, payments, aging, CSV. Record checks. Does not take cards. |
-| Operations | Open / resolve ARC and maintenance tickets. |
+| Operations | Open / in review / resolve neighbor tickets. |
 | Vendor controls | Who shows on Trusted companies. |
 | Moderation | Take down a Porch post, announcement, or alert that violates guidelines. |
 

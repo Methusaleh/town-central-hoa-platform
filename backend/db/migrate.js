@@ -121,6 +121,8 @@ END $$;`,
     WHERE category = 'Traffic / Party'
       AND content LIKE 'Extra cars parked along Redbud%'
       AND resolved_at IS NULL`,
+  `ALTER TABLE community_requests ADD COLUMN IF NOT EXISTS board_note TEXT`,
+  `UPDATE community_requests SET request_type = 'home_change' WHERE request_type = 'arc'`,
   `CREATE TABLE IF NOT EXISTS print_templates (
     kind VARCHAR PRIMARY KEY,
     file_url TEXT NOT NULL,

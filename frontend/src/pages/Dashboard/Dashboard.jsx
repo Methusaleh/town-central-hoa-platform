@@ -27,7 +27,7 @@ export default function DashboardLayout() {
   const { user, isBoard } = usePortal();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState("active");
+  const [viewMode, setViewMode] = useState("open");
 
   useEffect(() => {
     if (!isBoard) {
@@ -46,16 +46,45 @@ export default function DashboardLayout() {
       });
   }, [isBoard]);
 
-  const handleResolve = async (requestId) => {
+  const handleResolve = async (requestId, boardNote) => {
     try {
       const response = await apiFetch(`/api/requests/${requestId}/resolve`, {
         method: "PATCH",
-        body: JSON.stringify({ adminName: user?.first_name || "Admin" }),
+        body: JSON.stringify({
+          adminName: [user?.first_name, user?.last_name].filter(Boolean).join(" ") || "Board",
+          board_note: boardNote || undefined,
+        }),
       });
       if (response.ok) {
+        const row = await response.json().catch(() => null);
         setRequests((current) =>
-          current.map((req) => (req.id === requestId ? { ...req, status: "Resolved" } : req)),
+          current.map((req) =>
+            req.id === requestId
+              ? row || { ...req, status: "Resolved", resolved_by: user?.first_name }
+              : req,
+          ),
         );
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleReview = async (requestId, boardNote) => {
+    try {
+      const response = await apiFetch(`/api/requests/${requestId}/update`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          status: "In review",
+          board_note: boardNote || undefined,
+        }),
+      });
+      if (response.ok) {
+        const row = await response.json().catch(() => null);
+        setRequests((current) =>
+          current.map((req) => (req.id === requestId ? row || { ...req, status: "In review" } : req)),
+        );
+        setViewMode("review");
       }
     } catch (err) {
       console.error(err);
@@ -69,6 +98,7 @@ export default function DashboardLayout() {
         requests,
         loading,
         handleResolve,
+        handleReview,
         viewMode,
         setViewMode,
       }}
@@ -194,8 +224,9 @@ export function AdminRequestsPage() {
         requests={ctx.requests}
         loading={ctx.loading}
         handleResolve={ctx.handleResolve}
+        handleReview={ctx.handleReview}
         viewMode={ctx.viewMode}
-        onToggleView={() => ctx.setViewMode(ctx.viewMode === "active" ? "archived" : "active")}
+        setViewMode={ctx.setViewMode}
       />
     </Panel>
   );

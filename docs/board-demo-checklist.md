@@ -12,7 +12,7 @@ Use this as the run-of-show. Walk it as a neighbor first, then as a named board 
 
 - [ ] Confirm production is up (login, Home, one document, one event).
 - [ ] Have a **personal resident login** ready (your own household, or a named demo neighbor).
-- [ ] Have a **board member login** ready (Chris-shaped: one person, `board_member`, their real street). Not `board@`.
+- [ ] Have **three board review logins** ready (Danelle, Chris, Cole). Not `board@`.
 - [ ] Keep `admin@` off the projector. That login is for site work, not the neighborhood.
 - [ ] Pick one **unclaimed lot** with a claim code (or a door-drop flyer PDF) so you can show claiming.
 - [ ] Know the honest answers: pool is not bookable yet; dues routing/account numbers are not posted yet; texts are not sending yet.
@@ -39,11 +39,11 @@ Log in as a regular household. Stay here until they have seen neighborhood life 
 - [ ] **Alerts.** Lost pet / street / safety. Poster or board can mark Found, Street is open, or All clear. Resolved items leave Home and sit under Resolved. Neighbors cannot close someone else’s alert.
 - [ ] **Docs.** Folders with files, nested where you set them. Empty folders hidden. They should **not** see Legal / Insurance / Vendors.
 - [ ] **My Dues.** Balance, past-due days if any, bill-pay and check copy. Routing still “posted by the treasurer before go-live.”
-- [ ] **ARC & maintenance.** Submit a request. This is how a fence or a leak gets to the board.
+- [ ] **Requests.** Submit a common-area repair or a change to a house. This is how a fence or a leak gets to the board.
 - [ ] **Trusted companies.** Vendor list the board maintains.
 - [ ] **Pool & clubhouse.** Coming soon — hours and reservations are not live.
 - [ ] **Contact the board.** Message from inside the site.
-- [ ] **Profile.** Photo, password, invite someone else at this address. Skip SMS as a live feature (the toggle is not sending texts yet).
+- [ ] **Profile.** Photo, password, appearance, invite someone else at this address. There is no SMS toggle yet.
 
 **If they ask here:** “Can two people at the house share one password?” No. One street, two logins. “Will I see board-only legal files?” No.
 
@@ -51,7 +51,7 @@ Log in as a regular household. Stay here until they have seen neighborhood life 
 
 ## 2. Board member walk (about 20 minutes)
 
-Sign in as Chris (or whoever will actually run the site). Same person they already know from The Porch. **Admin** appears in the nav. Porch still says Chris.
+Sign in as Chris, Danelle, or Cole (whoever will actually run the site). Same person they already know. **Admin** appears in the nav. Porch still says Chris.
 
 - [ ] **Admin home.** Roster, documents, ledger, tickets, vendors — one place.
 - [ ] **Master roster.** One row per street. Occupied vs vacant (Pending). Claimed vs not. Household logins under the street.
@@ -60,7 +60,7 @@ Sign in as Chris (or whoever will actually run the site). Same person they alrea
 - [ ] **Invite / transfer.** Second adult on a claimed house is an invite, not a second roster row. Transfer issues a new claim code.
 - [ ] **Document Manager.** Dump a folder of files. **For neighbors** vs **Board only**. Confirm a board folder does not show in resident Docs.
 - [ ] **Assessment ledger.** Household balances, aging, record a check, CSV if you use it. No Stripe.
-- [ ] **Operations / tickets.** Open an ARC from the neighbor walk and resolve it.
+- [ ] **Operations / tickets.** Open a house-change request from the neighbor walk, start review, then resolve it.
 - [ ] **Vendor controls.** Add or hide a company.
 - [ ] **Broadcast / letters.** Claim letters, welcome letters, household email from the roster (don’t spam the whole neighborhood on the projector).
 - [ ] **Close an alert.** From the board login, mark a safety or street item all clear. Home banner should drop it.
@@ -94,6 +94,13 @@ Sign in as Chris (or whoever will actually run the site). Same person they alrea
 
 ---
 
+## Go-live prep (after this demo)
+
+- [ ] **Pool & clubhouse (`/amenities`).** Keep the nav item. Collapse the page to a short coming-soon note — no “what will live here” layout. Do this in the resident-copy cleanup pass.
+- [ ] **Resident copy.** Instructional notes on the neighbor side only when they are required (dues how-to-pay, claim, who to call). Strip the rest. Board/Admin can stay a bit more instructional so they can learn the desk.
+
+---
+
 ## Local seed shortcuts (only if you are demoing on localhost)
 
 Demo resident password: `Neighborhood1`
@@ -101,7 +108,10 @@ Demo resident password: `Neighborhood1`
 | Login | Role | Use for |
 |---|---|---|
 | `priya.shah@example.com` | Resident | Household with two logins (Anika too) |
-| `elena.ruiz@example.com` | Board member | Chris-shaped Admin walk |
+| `danelle.delp@example.com` | Board member | Board review |
+| `chris.cunningham@example.com` | Board member (president) | Board review |
+| `cole.schaffitzel@example.com` | Board member | Board review |
+| `elena.ruiz@example.com` | Board member | Dummy Admin walk |
 | `riley.ortiz@example.com` | Resident | Can mark Juniper **Found** |
 | `admin@towncentralhoa.org` | Super admin | Site work only — not the projector |
 

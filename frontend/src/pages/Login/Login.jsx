@@ -1,5 +1,7 @@
 // frontend/src/pages/Login/Login.jsx
 import { useState } from "react";
+import BrandMark from "../../components/ui/BrandMark";
+import PasswordField from "../../components/ui/PasswordField";
 import styles from "./Login.module.css";
 import { apiFetch } from "../../api";
 
@@ -40,6 +42,10 @@ export default function Login({ onBack, onLoginSuccess, onNavigateToClaim, onNav
       <button className={styles.backBtn} onClick={onBack}>Back to home</button>
       
       <div className={styles.card}>
+        <div className={styles.brandRow}>
+          <BrandMark size={28} />
+          <span>Town Central</span>
+        </div>
         <h2>Sign in</h2>
         <p>Use your Town Central resident account.</p>
 
@@ -59,12 +65,12 @@ export default function Login({ onBack, onLoginSuccess, onNavigateToClaim, onNav
 
           <div className={styles.inputGroup}>
             <label>Password</label>
-            <input 
-              type="password" 
-              placeholder="••••••••" 
-              value={password} 
-              onChange={(e) => setPassword(e.target.value)} 
-              required 
+            <PasswordField
+              autoComplete="current-password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
             />
             {onNavigateToForgot && (
               <button type="button" className={styles.forgotLink} onClick={onNavigateToForgot}>
@@ -74,7 +80,7 @@ export default function Login({ onBack, onLoginSuccess, onNavigateToClaim, onNav
           </div>
 
           <button type="submit" className={styles.submitBtn} disabled={loading}>
-            {loading ? "Authenticating..." : "Sign In"}
+            {loading ? "Signing in…" : "Sign in"}
           </button>
         </form>
 

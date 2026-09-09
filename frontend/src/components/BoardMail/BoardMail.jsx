@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Check, Send } from "lucide-react";
 import Button from "../ui/Button";
+import CivicGuide from "../CivicGuide/CivicGuide";
 import { apiFetch } from "../../api";
 import { usePortal } from "../../layout/PortalContext";
 import styles from "./BoardMail.module.css";
@@ -74,7 +75,7 @@ export default function BoardMail() {
       <header className={styles.intro}>
         <p className={styles.kicker}>Correspondence</p>
         <h2>Write the board</h2>
-        <p>Private email to the HOA board. It does not post to the neighborhood.</p>
+        <p>Private email to the HOA board. It does not post to the neighborhood. For a common-area repair or a change to your house, use Requests so it can be tracked.</p>
       </header>
 
       {sent ? (
@@ -145,6 +146,8 @@ export default function BoardMail() {
           {error && <p className={styles.error}>{error}</p>}
         </form>
       )}
+
+      <CivicGuide />
     </div>
   );
 }

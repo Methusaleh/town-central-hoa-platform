@@ -475,7 +475,6 @@ export default function FinancialLedger({ onBack, user }) {
                     How it arrived
                     <select value={bulkMethod} onChange={(e) => setBulkMethod(e.target.value)}>
                       <option value="check">Paper check</option>
-                      <option value="zelle">Zelle</option>
                       <option value="ach">ACH / bill pay</option>
                     </select>
                   </label>

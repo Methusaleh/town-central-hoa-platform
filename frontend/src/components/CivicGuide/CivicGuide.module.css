@@ -1,66 +1,85 @@
 .section {
-  padding: 40px 20px; /* Slimmer vertical padding */
-  background-color: #fcfcfc;
-  color: #333;
+  padding: 4px 0 8px;
+  color: var(--tc-ink);
 }
 
 .section h2 {
-  text-align: center;
-  font-size: 1.8rem; /* Smaller, cleaner heading */
-  margin-bottom: 30px;
-  color: #2c3e50;
+  margin: 0 0 8px;
+  font-size: 1.15rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.lede {
+  margin: 0 0 8px;
+  color: var(--tc-muted);
+  line-height: 1.5;
+  max-width: 40rem;
+  font-size: 0.92rem;
+}
+
+.hint {
+  margin: 0 0 16px;
+  color: var(--tc-muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
 }
 
 .container {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 20px;
-  max-width: 1000px;
-  margin: 0 auto;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
 }
 
 .column h3 {
-  font-size: 1.4rem;
-  margin-bottom: 15px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin: 0 0 12px;
   padding-bottom: 8px;
-  border-bottom: 3px solid #2ecc71;
-  color: #2c3e50;
+  border-bottom: 1px solid var(--tc-line);
+  color: var(--tc-muted);
 }
 
 .card {
-  background: white;
-  padding: 15px 20px; /* Tighter internal spacing */
-  border-radius: 8px;
-  margin-bottom: 15px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  transition: transform 0.2s ease;
-}
-
-.card:hover {
-  transform: translateY(-3px);
+  background: var(--tc-bg-elevated);
+  padding: 14px 16px;
+  border-radius: var(--tc-radius);
+  border: 1px solid var(--tc-line);
+  margin-bottom: 12px;
 }
 
 .card h4 {
-  margin: 0 0 5px 0;
-  font-size: 1.05rem;
-  color: #2ecc71;
+  margin: 0 0 4px;
+  font-size: 1.02rem;
+  font-weight: 650;
+  color: var(--tc-ink);
 }
 
 .subText {
-  font-weight: 600;
-  color: #7f8c8d;
-  margin-bottom: 10px;
+  font-weight: 650;
+  color: var(--tc-muted);
+  margin: 0 0 10px;
   font-size: 0.75rem;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
 .card ul {
   padding-left: 18px;
   margin: 0;
-  color: #555;
-  font-size: 0.85rem; /* Smaller list text */
+  color: var(--tc-ink-soft);
+  font-size: 0.88rem;
+  line-height: 1.45;
 }
 
 .card li {
   margin-bottom: 4px;
+}
+
+@media (max-width: 720px) {
+  .container {
+    grid-template-columns: 1fr;
+  }
 }

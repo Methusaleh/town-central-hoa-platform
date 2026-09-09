@@ -7,7 +7,7 @@ const TOOLS = [
   {
     id: "requests",
     label: "Operations & tickets",
-    hint: "Open requests and ARC items.",
+    hint: "Open neighbor requests.",
     icon: ClipboardList,
     tone: "warn",
   },

@@ -1,0 +1,32 @@
+export default function BrandMark({ size = 28, title = "Town Central" }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 32 32"
+      role="img"
+      aria-label={title}
+    >
+      <title>{title}</title>
+      <rect width="32" height="32" rx="7" fill="#3d6b4f" />
+      <path
+        d="M5.5 24.8c4.2-2.4 8.4.6 12.2.2 3.5-.4 6.2-2.2 8.8-1.2"
+        fill="none"
+        stroke="#c4a574"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      <rect x="11.15" y="15.2" width="1.7" height="9.2" rx="0.7" fill="#e8ece9" />
+      <rect x="10.35" y="7.4" width="3.3" height="8.4" rx="1.65" fill="#e8ece9" />
+      <rect x="19.15" y="16.4" width="1.7" height="8" rx="0.7" fill="#e8ece9" />
+      <rect x="18.35" y="9.2" width="3.3" height="7.8" rx="1.65" fill="#e8ece9" />
+      <path
+        d="M9.2 22.2c1.6-1.8 3.4-1.2 4.4.4 1.2-2.2 3.4-2.6 5.1-.4 1.2-1.6 2.8-1.4 4 .2"
+        fill="none"
+        stroke="#e8ece9"
+        strokeWidth="1.15"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}

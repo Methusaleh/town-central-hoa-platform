@@ -1,17 +1,23 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import InviteMember from "../../components/InviteMember/InviteMember";
+import Avatar from "../../components/ui/Avatar";
+import Button from "../../components/ui/Button";
+import PasswordField from "../../components/ui/PasswordField";
+import { applyTheme, getStoredTheme } from "../../layout/theme";
 import styles from "./Profile.module.css";
 import { apiFetch } from "../../api";
 
-export default function Profile({ user, onBack, onUserUpdate }) {
-  // Local state to manage notification toggles
-  const [notifications, setNotifications] = useState({
-    emailAlerts: true,
-    textAlerts: false,
-    newsletter: true,
-  });
+function roleLabel(role) {
+  if (role === "super_admin") return "Site admin";
+  if (role === "board_member") return "Board member";
+  return "Resident";
+}
 
+export default function Profile({ user, onUserUpdate }) {
+  const fileRef = useRef(null);
   const [uploading, setUploading] = useState(false);
+  const [photoError, setPhotoError] = useState("");
+  const [theme, setTheme] = useState(getStoredTheme);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -19,8 +25,9 @@ export default function Profile({ user, onBack, onUserUpdate }) {
   const [passwordMsg, setPasswordMsg] = useState("");
   const [passwordError, setPasswordError] = useState("");
 
-  const handleToggle = (key) => {
-    setNotifications((prev) => ({ ...prev, [key]: !prev[key] }));
+  const handleTheme = (next) => {
+    applyTheme(next);
+    setTheme(next);
   };
 
   const handleAvatarChange = async (e) => {
@@ -28,11 +35,13 @@ export default function Profile({ user, onBack, onUserUpdate }) {
     if (!file) return;
 
     if (file.size > 2 * 1024 * 1024) {
-      alert("Image is too large. Please select a profile image under 2MB.");
+      setPhotoError("Choose a photo under 2MB.");
+      e.target.value = "";
       return;
     }
 
     setUploading(true);
+    setPhotoError("");
     try {
       const body = new FormData();
       body.append("photo", file);
@@ -43,18 +52,13 @@ export default function Profile({ user, onBack, onUserUpdate }) {
       const data = await response.json();
 
       if (response.ok) {
-        if (onUserUpdate) {
-          onUserUpdate({
-            ...user,
-            photo: data.user?.photo,
-          });
-        }
+        onUserUpdate?.({ ...user, photo: data.user?.photo });
       } else {
-        alert(data.error || "Failed to update profile photo.");
+        setPhotoError(data.error || "Could not update the photo.");
       }
     } catch (err) {
       console.error("Avatar upload network fault:", err);
-      alert("Network error updating avatar image profile.");
+      setPhotoError("Network error updating the photo.");
     } finally {
       setUploading(false);
       e.target.value = "";
@@ -102,125 +106,88 @@ export default function Profile({ user, onBack, onUserUpdate }) {
   };
 
   return (
-    <div className={styles.container}>
-      <header className={styles.header}>
-        <button onClick={onBack} className={styles.backBtn}>
-          ← Back to Dashboard
-        </button>
-        <h2>Account Settings</h2>
+    <div className={styles.page}>
+      <header className={styles.intro}>
+        <p className={styles.kicker}>Account</p>
+        <h2>Settings</h2>
+        <p>Your login, photo, and household. This is you on the site — not a shared board inbox.</p>
       </header>
 
       <div className={styles.grid}>
-        {/* Left Card: Profile Overview */}
         <div className={styles.card}>
           <div className={styles.avatarSection}>
-            <label className={styles.avatarLabel} title="Click to upload custom picture">
-              <input 
-                type="file" 
-                accept="image/*" 
-                onChange={handleAvatarChange} 
-                style={{ display: "none" }}
-                disabled={uploading}
-              />
-              {user?.photo ? (
-                <img
-                  src={user.photo}
-                  alt="Profile Avatar"
-                  className={`${styles.avatar} ${uploading ? styles.avatarBlur : ""}`}
-                />
-              ) : (
-                <div className={`${styles.avatarPlaceholderLarge} ${uploading ? styles.avatarBlur : ""}`}>
-                  {user?.first_name ? user.first_name.charAt(0).toUpperCase() : "R"}
-                </div>
-              )}
-              <div className={styles.avatarHoverBadge}>
-                {uploading ? "Saving..." : "📷 Upload"}
-              </div>
-            </label>
-            <h3>{user?.first_name || "Resident"}</h3>
-            <span className={styles.badge}>{user?.role || "Resident"}</span>
+            <Avatar name={user?.first_name} photo={user?.photo} size="xl" />
+            <h3>{[user?.first_name, user?.last_name].filter(Boolean).join(" ") || "Resident"}</h3>
+            <span className={styles.badge}>{roleLabel(user?.role)}</span>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              onChange={handleAvatarChange}
+              hidden
+              disabled={uploading}
+            />
+            <Button
+              variant="secondary"
+              disabled={uploading}
+              onClick={() => fileRef.current?.click()}
+            >
+              {uploading ? "Saving…" : user?.photo ? "Change photo" : "Add a photo"}
+            </Button>
+            {photoError && <p className={styles.statusErr}>{photoError}</p>}
           </div>
 
-          <hr className={styles.divider} />
-
           <div className={styles.infoGroup}>
-            <label>Email Address</label>
+            <label>Email</label>
             <p>{user?.email || "Not linked"}</p>
           </div>
-
           <div className={styles.infoGroup}>
-            <label>Linked Property</label>
-            <p>
-              <strong>{user?.address || "123 Town Central Dr"}</strong>
-            </p>
+            <label>Property</label>
+            <p>{user?.address || "—"}</p>
           </div>
         </div>
 
-        {/* Right Column: Preferences & Management */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
-          {/* Preferences Card */}
+        <div className={styles.stack}>
           <div className={styles.card}>
-            <h3>Community Preferences</h3>
+            <h3>Appearance</h3>
             <p className={styles.subtext}>
-              Manage how you want to receive communication from the HOA Board.
+              Paper is the default. Dark is there if you prefer it — try it and we can keep or drop it.
             </p>
-
-            <div className={styles.settingRow}>
-              <div>
-                <h4>Critical Email Alerts</h4>
-                <p>Immediate notifications for maintenance closures or safety notices.</p>
-              </div>
-              <input
-                type="checkbox"
-                checked={notifications.emailAlerts}
-                onChange={() => handleToggle("emailAlerts")}
-              />
+            <div className={styles.themeRow}>
+              <button
+                type="button"
+                className={`${styles.themeBtn} ${theme === "light" ? styles.themeOn : ""}`}
+                onClick={() => handleTheme("light")}
+              >
+                Paper
+              </button>
+              <button
+                type="button"
+                className={`${styles.themeBtn} ${theme === "dark" ? styles.themeOn : ""}`}
+                onClick={() => handleTheme("dark")}
+              >
+                Dark
+              </button>
             </div>
+          </div>
 
-            <div className={styles.settingRow}>
-              <div>
-                <h4>SMS Mobile Notices</h4>
-                <p>Receive text alerts for urgent community updates.</p>
-              </div>
-              <input
-                type="checkbox"
-                checked={notifications.textAlerts}
-                onChange={() => handleToggle("textAlerts")}
-              />
-            </div>
-
-            <div className={styles.settingRow}>
-              <div>
-                <h4>Monthly Newsletter</h4>
-                <p>Stay up to date on community events and meeting minutes.</p>
-              </div>
-              <input
-                type="checkbox"
-                checked={notifications.newsletter}
-                onChange={() => handleToggle("newsletter")}
-              />
-            </div>
-
-            <button
-              className={styles.saveBtn}
-              onClick={() => alert("Preferences saved successfully!")}
-            >
-              Save Preferences
-            </button>
+          <div className={styles.card}>
+            <h3>How we reach you</h3>
+            <p className={styles.subtext}>
+              Announcements, alerts, and Home live in the app. Email is used for password resets, claim letters, and replies to messages you send the board. Text messages are not sending yet — there is no toggle to flip until they are.
+            </p>
           </div>
 
           <div className={styles.card}>
             <h3>Password</h3>
             <p className={styles.subtext}>
-              Change the password for this login. If you forgot your current password, sign out and use Forgot password on the sign-in page.
+              If you forgot the current one, sign out and use Forgot password on the sign-in page.
             </p>
-
             <form onSubmit={handlePasswordChange}>
               <div className={styles.field}>
                 <label htmlFor="current-password">Current password</label>
-                <input
+                <PasswordField
                   id="current-password"
-                  type="password"
                   autoComplete="current-password"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
@@ -229,9 +196,8 @@ export default function Profile({ user, onBack, onUserUpdate }) {
               </div>
               <div className={styles.field}>
                 <label htmlFor="new-password">New password</label>
-                <input
+                <PasswordField
                   id="new-password"
-                  type="password"
                   autoComplete="new-password"
                   placeholder="At least 8 characters"
                   value={newPassword}
@@ -242,9 +208,8 @@ export default function Profile({ user, onBack, onUserUpdate }) {
               </div>
               <div className={styles.field}>
                 <label htmlFor="confirm-password">Confirm new password</label>
-                <input
+                <PasswordField
                   id="confirm-password"
-                  type="password"
                   autoComplete="new-password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
@@ -252,23 +217,16 @@ export default function Profile({ user, onBack, onUserUpdate }) {
                   minLength={8}
                 />
               </div>
-
               {passwordError && <p className={styles.statusErr}>{passwordError}</p>}
               {passwordMsg && <p className={styles.statusOk}>{passwordMsg}</p>}
-
-              <button
-                type="submit"
-                className={styles.saveBtn}
-                disabled={passwordSaving}
-              >
-                {passwordSaving ? "Updating..." : "Update password"}
-              </button>
+              <Button type="submit" disabled={passwordSaving}>
+                {passwordSaving ? "Updating…" : "Update password"}
+              </Button>
             </form>
           </div>
 
-          {/* Household Management Card */}
           <div className={styles.card}>
-            <h3>Household Management</h3>
+            <h3>Anyone else at this address?</h3>
             <InviteMember user={user} />
           </div>
         </div>

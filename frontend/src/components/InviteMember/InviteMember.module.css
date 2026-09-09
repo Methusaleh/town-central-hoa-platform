@@ -1,34 +1,61 @@
 .inviteContainer {
-  padding: 20px;
-  background: #f8fafc;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
-  margin-top: 20px;
+  margin-top: 4px;
+}
+
+.inviteContainer h4 {
+  display: none;
+}
+
+.inviteContainer p {
+  margin: 0;
+  color: var(--tc-muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
 }
 
 .form {
   display: flex;
   gap: 10px;
-  margin-top: 10px;
+  margin-top: 12px;
 }
 
 .form input {
-  padding: 8px;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--tc-line);
+  border-radius: 8px;
   flex: 1;
+  background: var(--tc-bg);
+  color: var(--tc-ink);
+  font: inherit;
+}
+
+.form input:focus {
+  outline: none;
+  border-color: var(--tc-brand);
 }
 
 .btn {
   padding: 8px 16px;
-  background: #2ecc71;
-  color: white;
+  background: var(--tc-brand);
+  color: #fff;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--tc-brand-hover);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .status {
   font-size: 0.85rem;
   margin-top: 10px;
+  color: var(--tc-ink);
 }

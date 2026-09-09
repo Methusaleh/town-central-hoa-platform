@@ -1,4 +1,6 @@
 import { useState } from "react";
+import BrandMark from "../../components/ui/BrandMark";
+import PasswordField from "../../components/ui/PasswordField";
 import styles from "./Claim.module.css";
 import { apiFetch, persistSession } from "../../api";
 
@@ -9,6 +11,7 @@ export default function Claim({ onBack, onClaimSuccess }) {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteStatus, setInviteStatus] = useState("");
   const [inviting, setInviting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
   const [formData, setFormData] = useState({
     street_address: "",
     onboarding_token: "",
@@ -24,6 +27,7 @@ export default function Claim({ onBack, onClaimSuccess }) {
 
   const handleVerify = async (e) => {
     e.preventDefault();
+    setErrorMsg("");
     try {
       const res = await apiFetch("/api/residents/verify", {
         method: "POST",
@@ -39,16 +43,17 @@ export default function Claim({ onBack, onClaimSuccess }) {
         setResidentId(data.residentId);
         setStep(2);
       } else {
-        alert(data.error || "Invalid address or claim code. Please double-check your welcome letter.");
+        setErrorMsg(data.error || "Invalid address or claim code. Please double-check your welcome letter.");
       }
     } catch (err) {
       console.error("Verification error:", err);
-      alert("Network error during verification.");
+      setErrorMsg("Network error during verification.");
     }
   };
 
   const handleFinalize = async (e) => {
     e.preventDefault();
+    setErrorMsg("");
     try {
       const res = await apiFetch("/api/residents/claim", {
         method: "POST",
@@ -65,11 +70,11 @@ export default function Claim({ onBack, onClaimSuccess }) {
         setClaimPayload(data);
         setStep(3);
       } else {
-        alert(data.error || "There was an issue creating your account. Please try again.");
+        setErrorMsg(data.error || "There was an issue creating your account. Please try again.");
       }
     } catch (err) {
       console.error("Claim finalization error:", err);
-      alert("Network error. Please check your connection.");
+      setErrorMsg("Network error. Please check your connection.");
     }
   };
 
@@ -114,11 +119,17 @@ export default function Claim({ onBack, onClaimSuccess }) {
   return (
     <div className={styles.claimContainer}>
       {step < 3 && (
-        <button className={styles.backBtn} onClick={onBack}>← Back</button>
+        <button className={styles.backBtn} onClick={onBack}>Back to home</button>
       )}
 
       <div className={styles.formCard}>
+        <div className={styles.brandRow}>
+          <BrandMark size={28} />
+          <span>Town Central</span>
+        </div>
         <h2>{title}</h2>
+
+        {errorMsg && <div className={styles.errorBanner}>{errorMsg}</div>}
 
         {step === 1 && (
           <form onSubmit={handleVerify}>
@@ -134,7 +145,7 @@ export default function Claim({ onBack, onClaimSuccess }) {
               onChange={(e) => setFormData({ ...formData, onboarding_token: e.target.value })}
               required
             />
-            <button type="submit" className={styles.submitBtn}>Verify Address</button>
+            <button type="submit" className={styles.submitBtn}>Verify address</button>
           </form>
         )}
 
@@ -158,13 +169,14 @@ export default function Claim({ onBack, onClaimSuccess }) {
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               required
             />
-            <input
-              type="password"
-              placeholder="Create Secure Password"
+            <PasswordField
+              autoComplete="new-password"
+              placeholder="Create a password"
+              value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               required
             />
-            <button type="submit" className={styles.submitBtn}>Activate Account</button>
+            <button type="submit" className={styles.submitBtn}>Activate account</button>
           </form>
         )}
 

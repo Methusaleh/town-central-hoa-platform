@@ -1,9 +1,9 @@
 .footer {
-  background: #3f4c46;
-  color: var(--tc-chrome-muted);
+  background: var(--tc-bg-elevated);
+  color: var(--tc-muted);
   padding: 18px 0;
   margin-top: auto;
-  border-top: 1px solid #4a5851;
+  border-top: 1px solid var(--tc-line);
 }
 
 .content {
@@ -24,13 +24,23 @@
 .link {
   background: none;
   border: none;
-  color: var(--tc-chrome-muted);
+  color: var(--tc-muted);
   cursor: pointer;
   text-decoration: none;
   font-size: 0.85rem;
+  font-family: inherit;
 }
 
 .linkBtn:hover,
 .link:hover {
-  color: var(--tc-brand);
+  color: var(--tc-brand-ink);
+}
+
+@media (max-width: 720px) {
+  .content {
+    flex-direction: column;
+    gap: 10px;
+    padding: 0 20px;
+    text-align: center;
+  }
 }

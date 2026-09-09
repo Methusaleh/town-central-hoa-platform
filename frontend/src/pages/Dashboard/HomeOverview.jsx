@@ -105,7 +105,7 @@ function buildTodayLine({ featured, newPosts, newAlerts, newAnnouncements, dues 
 const GO_TO = [
   { to: PATHS.dues, label: "My dues", hint: "Balance and how to pay", icon: Wallet },
   { to: PATHS.contact, label: "Contact the board", hint: "Write the board", icon: Mail },
-  { to: PATHS.maintenance, label: "ARC & maintenance", hint: "Submit a request", icon: ClipboardList },
+  { to: PATHS.requests, label: "Requests", hint: "Repair or a change to your house", icon: ClipboardList },
   { to: PATHS.amenities, label: "Pool & clubhouse", hint: "Coming soon — not open yet", icon: Waves },
 ];
 

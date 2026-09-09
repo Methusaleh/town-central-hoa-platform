@@ -22,6 +22,7 @@ export const PATHS = {
   alerts: "/dashboard/alerts",
   documents: "/dashboard/documents",
   maintenance: "/dashboard/maintenance",
+  requests: "/dashboard/requests",
   dues: "/dashboard/dues",
   vendors: "/dashboard/vendors",
   contact: "/dashboard/contact",
@@ -53,7 +54,7 @@ export const desktopPrimary = [
 export const moreItems = [
   { to: PATHS.announcements, label: "Announcements", icon: Megaphone },
   { to: PATHS.alerts, label: "Alerts", icon: Bell },
-  { to: PATHS.maintenance, label: "Maintenance & ARC", icon: ClipboardList },
+  { to: PATHS.requests, label: "Requests", icon: ClipboardList },
   { to: PATHS.dues, label: "My Dues", icon: Wallet },
   { to: PATHS.vendors, label: "Trusted Companies", icon: Building2 },
   { to: PATHS.amenities, label: "Pool & clubhouse", icon: Waves },

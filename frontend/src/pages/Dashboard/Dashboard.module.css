@@ -300,7 +300,6 @@
 }
 
 .fadeContent {
-  animation: fadeIn 0.35s ease-out;
   max-width: none;
   width: 100%;
 }
@@ -314,7 +313,6 @@
   grid-template-columns: 1fr 1fr;
   gap: 20px;
   max-width: none;
-  animation: fadeIn 0.35s ease-out;
 }
 
 .explorerWrap {

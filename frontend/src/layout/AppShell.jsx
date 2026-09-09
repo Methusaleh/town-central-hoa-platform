@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { ChevronDown, LogOut, Settings } from "lucide-react";
 import Avatar from "../components/ui/Avatar";
+import BrandMark from "../components/ui/BrandMark";
 import GuidelinesModal from "../components/GuidelinesModal/GuidelinesModal";
 import { markFeedSeen } from "../utils/feedCursors";
 import { usePortal } from "./PortalContext";
@@ -13,6 +14,7 @@ import {
   mobileTabs,
   moreItems,
 } from "./navConfig";
+import { HEADER_PAPER } from "./headerTheme";
 import styles from "./AppShell.module.css";
 
 function linkClass({ isActive }) {
@@ -70,9 +72,9 @@ export default function AppShell() {
         />
       )}
 
-      <header className={styles.topbar}>
+      <header className={`${styles.topbar} ${HEADER_PAPER ? "" : styles.topbarDark}`}>
         <NavLink to={PATHS.home} className={styles.brand} end>
-          <span className={styles.mark} aria-hidden="true" />
+          <BrandMark size={26} />
           <span>Town Central</span>
         </NavLink>
 
@@ -143,7 +145,7 @@ export default function AppShell() {
         <Outlet />
       </main>
 
-      <nav className={styles.tabbar} aria-label="Mobile">
+      <nav className={`${styles.tabbar} ${HEADER_PAPER ? "" : styles.tabbarDark}`} aria-label="Mobile">
         {mobileTabs.map((item) =>
           item.action === "more" ? (
             <button

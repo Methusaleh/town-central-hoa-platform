@@ -1,5 +1,5 @@
-// frontend/src/pages/Contact/ContactPage.jsx
 import CivicGuide from "../../components/CivicGuide/CivicGuide";
+import BrandMark from "../../components/ui/BrandMark";
 import styles from "./ContactPage.module.css";
 
 export default function ContactPage({ onBack }) {
@@ -7,22 +7,25 @@ export default function ContactPage({ onBack }) {
     <div className={styles.container}>
       <nav className={styles.nav}>
         <button onClick={onBack} className={styles.backBtn}>
-          ← Back to Home
+          Back to home
         </button>
-        <span className={styles.logo}>Town Central HOA</span>
+        <span className={styles.logo}>
+          <BrandMark size={26} />
+          Town Central
+        </span>
       </nav>
 
       <header className={styles.header}>
-        <h1>Contact & Civic Resources</h1>
+        <h1>Contact & civic resources</h1>
         <p>
-          Find the right department for your needs or reach out to the Board
+          Find the right department for your needs or reach out to the board
           if you cannot find the answers you need on the portal.
         </p>
       </header>
 
       <section className={styles.contactSection}>
         <div className={styles.contactCard}>
-          <h3>Contact the Board</h3>
+          <h3>Contact the board</h3>
           <p>
             Please check the community documents, calendar, and FAQ sections first. If you still have questions not answered on the site, reach out to the board directly:
           </p>

@@ -10,7 +10,12 @@ body {
   font-family: var(--tc-font);
   background: var(--tc-bg);
   color: var(--tc-ink);
+  color-scheme: light;
   -webkit-font-smoothing: antialiased;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
 }
 
 #root,

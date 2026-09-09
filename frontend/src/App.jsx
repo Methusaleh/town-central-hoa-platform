@@ -181,6 +181,7 @@ function AppRoutes() {
             <Route path="alerts/:alertId" element={<AlertsPage />} />
             <Route path="contact" element={<ContactBoardPage />} />
             <Route path="maintenance" element={<MaintenancePage />} />
+            <Route path="requests" element={<MaintenancePage />} />
             <Route path="dues" element={<DuesPage />} />
             <Route path="vendors" element={<VendorsPage />} />
             <Route path="documents" element={<DocumentsPage />} />
@@ -202,7 +203,6 @@ function AppRoutes() {
             element={
               <Profile
                 user={user}
-                onBack={() => navigate("/dashboard")}
                 onUserUpdate={handleUserUpdate}
               />
             }

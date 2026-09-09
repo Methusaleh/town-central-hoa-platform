@@ -1,4 +1,6 @@
 import { useState } from "react";
+import BrandMark from "../../components/ui/BrandMark";
+import PasswordField from "../../components/ui/PasswordField";
 import styles from "./Login.module.css";
 import { apiFetch } from "../../api";
 
@@ -47,6 +49,10 @@ export default function ResetPassword({ token, onBack, onNavigateToLogin }) {
       <button className={styles.backBtn} onClick={onBack}>Back to home</button>
 
       <div className={styles.card}>
+        <div className={styles.brandRow}>
+          <BrandMark size={28} />
+          <span>Town Central</span>
+        </div>
         <h2>Choose a new password</h2>
         <p>This link can only be used once and expires after one hour.</p>
 
@@ -63,8 +69,8 @@ export default function ResetPassword({ token, onBack, onNavigateToLogin }) {
           <form onSubmit={handleSubmit} className={styles.form}>
             <div className={styles.inputGroup}>
               <label>New Password</label>
-              <input
-                type="password"
+              <PasswordField
+                autoComplete="new-password"
                 placeholder="At least 8 characters"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -74,8 +80,8 @@ export default function ResetPassword({ token, onBack, onNavigateToLogin }) {
             </div>
             <div className={styles.inputGroup}>
               <label>Confirm Password</label>
-              <input
-                type="password"
+              <PasswordField
+                autoComplete="new-password"
                 placeholder="Repeat new password"
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}

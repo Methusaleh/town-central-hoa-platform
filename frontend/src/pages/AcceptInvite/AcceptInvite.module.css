@@ -1,84 +1,127 @@
 .container {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
-  min-height: 100vh;
-  background-color: #f8fafc;
-  padding: 20px;
+  justify-content: center;
+  min-height: 100dvh;
+  padding: 24px;
+  background: var(--tc-bg);
+  box-sizing: border-box;
 }
 
 .card {
-  background: white;
-  padding: 40px;
+  background: var(--tc-bg-elevated);
+  padding: 36px 32px;
   border-radius: 12px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--tc-line);
   width: 100%;
-  max-width: 450px;
-  text-align: center;
+  max-width: 420px;
+  box-sizing: border-box;
+}
+
+.brandRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 22px;
+  color: var(--tc-brand-ink);
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+}
+
+.brandRow svg {
+  display: block;
+  flex-shrink: 0;
 }
 
 .card h2 {
-  margin: 0 0 10px 0;
-  color: #0f172a;
+  margin: 0 0 8px;
+  color: var(--tc-ink);
+  text-align: left;
+  font-size: 1.4rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
 }
 
 .card p {
-  color: #64748b;
-  margin-bottom: 25px;
-  font-size: 0.95rem;
+  color: var(--tc-muted);
+  margin-bottom: 24px;
+  font-size: 0.9rem;
+  text-align: left;
+  line-height: 1.5;
+}
+
+.card p strong {
+  color: var(--tc-ink);
+  font-weight: 650;
+}
+
+.errorBanner {
+  background: var(--tc-danger-soft);
+  color: var(--tc-danger);
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  margin-bottom: 18px;
+  font-weight: 600;
 }
 
 .form {
   display: flex;
   flex-direction: column;
-  gap: 15px;
-  text-align: left;
+  gap: 14px;
 }
 
 .inputGroup {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
 }
 
 .inputGroup label {
-  font-size: 0.85rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  color: #475569;
+  letter-spacing: 0.06em;
+  color: var(--tc-muted);
   text-transform: uppercase;
 }
 
 .inputGroup input {
   padding: 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--tc-line);
   border-radius: 8px;
   font-size: 1rem;
-  transition: border-color 0.2s;
+  box-sizing: border-box;
+  background: var(--tc-bg);
+  color: var(--tc-ink);
+  font-family: inherit;
 }
 
 .inputGroup input:focus {
   outline: none;
-  border-color: #2ecc71;
+  border-color: var(--tc-brand);
 }
 
 .disabledInput {
-  background-color: #f1f5f9;
-  color: #94a3b8;
+  background: var(--tc-bg-hover);
+  color: var(--tc-muted);
   cursor: not-allowed;
 }
 
 .submitBtn {
-  background-color: #2ecc71;
-  color: white;
+  background: var(--tc-brand);
+  color: #fff;
+  padding: 12px;
   border: none;
-  padding: 14px;
   border-radius: 8px;
   font-weight: 700;
   cursor: pointer;
-  margin-top: 10px;
-  transition: background-color 0.2s;
+  margin-top: 8px;
+  font-family: inherit;
 }
 
 .submitBtn:hover {
-  background-color: #27ae60;
+  background: var(--tc-brand-hover);
 }

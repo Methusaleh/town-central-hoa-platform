@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "seed": "node db/seed.js"
+    "seed": "node db/seed.js",
+    "board-reviewers": "node db/ensure-board-reviewers.js"
   },
   "keywords": [],
   "author": "",

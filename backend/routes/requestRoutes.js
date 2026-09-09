@@ -4,10 +4,20 @@ const db = require("../db");
 const { sendMail } = require("../utils/mailer");
 const { authRequired, boardRequired } = require("../middleware/auth");
 
-// POST a new maintenance, ARC, or board contact message
+const TYPE_MAP = { arc: "home_change" };
+const ALLOWED_TYPES = new Set(["maintenance", "home_change"]);
+
+function normalizeType(type) {
+  const raw = String(type || "").trim();
+  const mapped = TYPE_MAP[raw] || raw;
+  return ALLOWED_TYPES.has(mapped) ? mapped : mapped;
+}
+
+// POST a new maintenance, home-change, or board contact message
 router.post("/", authRequired, async (req, res) => {
   try {
     const { resident_id, first_name, last_name, type, subject, description } = req.body;
+    const requestType = type === "Board Message" ? type : normalizeType(type);
 
     // 2. CHECK TYPE: If it is a direct Board Message, email it silently
     if (type === "Board Message") {
@@ -47,19 +57,33 @@ router.post("/", authRequired, async (req, res) => {
       return res.status(201).json({ success: true, message: "Email transmitted to the board successfully." });
     }
 
-    // 3. STANDARD WORKFLOW: Save maintenance or ARC tickets directly to the site database
+    // STANDARD WORKFLOW: Save repair and house-change tickets
     const dbQuery = `
       INSERT INTO community_requests (resident_id, first_name, last_name, request_type, subject, description, status)
       VALUES ($1, $2, $3, $4, $5, $6, 'Open')
       RETURNING *;
     `;
-    const values = [req.user?.id || resident_id || null, first_name, last_name || "", type, subject, description];
+    const values = [req.user?.id || resident_id || null, first_name, last_name || "", requestType, subject, description];
     const { rows } = await db.query(dbQuery, values);
     
     res.status(201).json(rows[0]);
   } catch (err) {
     console.error(err.message);
     res.status(500).json({ error: "Server error while processing entry form query parameters." });
+  }
+});
+
+router.get("/mine", authRequired, async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      `SELECT * FROM community_requests
+        WHERE resident_id = $1
+        ORDER BY created_at DESC`,
+      [req.user.id],
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch your requests" });
   }
 });
 
@@ -78,18 +102,19 @@ router.get("/admin/all", boardRequired, async (req, res) => {
 // PATCH to update request status (Resolve / Close)
 router.patch("/:id/resolve", boardRequired, async (req, res) => {
   const { id } = req.params;
-  const { adminName } = req.body;
+  const { adminName, board_note } = req.body;
 
   try {
     const query = `
       UPDATE community_requests 
       SET status = 'Resolved', 
           resolved_at = CURRENT_TIMESTAMP,
-          resolved_by = $1
+          resolved_by = $1,
+          board_note = COALESCE($3, board_note)
       WHERE id = $2 
       RETURNING *;
     `;
-    const { rows } = await db.query(query, [adminName || "Admin", id]);
+    const { rows } = await db.query(query, [adminName || "Board", id, board_note || null]);
     
     if (rows.length === 0) {
       return res.status(404).json({ error: "Request not found." });
@@ -104,17 +129,17 @@ router.patch("/:id/resolve", boardRequired, async (req, res) => {
 // PATCH to update status or append replies/notes to a ticket
 router.patch("/:id/update", boardRequired, async (req, res) => {
   const { id } = req.params;
-  const { status, admin_notes } = req.body;
+  const { status, board_note } = req.body;
 
   try {
     const query = `
       UPDATE community_requests 
       SET status = COALESCE($1, status),
-          description = CASE WHEN $2::text IS NOT NULL THEN description || E'\n\n[Admin Note]: ' || $2 ELSE description END
+          board_note = COALESCE($2, board_note)
       WHERE id = $3 
       RETURNING *;
     `;
-    const { rows } = await db.query(query, [status, admin_notes, id]);
+    const { rows } = await db.query(query, [status || null, board_note || null, id]);
 
     if (rows.length === 0) {
       return res.status(404).json({ error: "Request not found." });

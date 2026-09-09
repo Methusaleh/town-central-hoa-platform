@@ -1,4 +1,5 @@
 import { useState } from "react";
+import BrandMark from "../../components/ui/BrandMark";
 import styles from "./Login.module.css";
 import { apiFetch } from "../../api";
 
@@ -37,6 +38,10 @@ export default function ForgotPassword({ onBack, onNavigateToLogin }) {
       <button className={styles.backBtn} onClick={onBack}>Back to home</button>
 
       <div className={styles.card}>
+        <div className={styles.brandRow}>
+          <BrandMark size={28} />
+          <span>Town Central</span>
+        </div>
         <h2>Forgot password</h2>
         <p>
           Enter the email on your Town Central account. If it matches, we will send a reset link.

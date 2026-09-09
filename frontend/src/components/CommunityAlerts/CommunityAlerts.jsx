@@ -630,7 +630,7 @@ function CreateModal({ user, onClose, onCreated }) {
     <Modal
       wide
       title="Post an alert"
-      description="Keep it time-sensitive. Complaints and ARC requests go to the board."
+      description="Keep it time-sensitive. House changes and common-area repairs go to Requests."
       onClose={onClose}
     >
       <form className={styles.form} onSubmit={handleSubmit}>
