@@ -3,19 +3,26 @@ import { ImagePlus, X } from "lucide-react";
 import Modal from "../ui/Modal";
 import Button from "../ui/Button";
 import { apiFetch } from "../../api";
-import { EVENT_TYPE_LIST, typeMeta } from "./eventTypes";
+import { EVENT_TYPE_LIST, formatUtcYmd, typeMeta } from "./eventTypes";
 import styles from "./Events.module.css";
 
-export default function EventCreateModal({ onClose, onCreated }) {
-  const [type, setType] = useState("gathering");
-  const [title, setTitle] = useState("");
-  const [eventDate, setEventDate] = useState("");
-  const [eventTime, setEventTime] = useState("");
-  const [location, setLocation] = useState("");
-  const [description, setDescription] = useState("");
-  const [details, setDetails] = useState({});
+function timeInputValue(value) {
+  const parts = String(value || "").split(":");
+  if (parts.length < 2) return "";
+  return `${String(parts[0]).padStart(2, "0")}:${String(parts[1]).padStart(2, "0")}`;
+}
+
+export default function EventCreateModal({ event = null, onClose, onSaved }) {
+  const isEdit = Boolean(event?.id);
+  const [type, setType] = useState(event?.event_type || "gathering");
+  const [title, setTitle] = useState(event?.title || "");
+  const [eventDate, setEventDate] = useState(formatUtcYmd(event?.event_date) || "");
+  const [eventTime, setEventTime] = useState(timeInputValue(event?.event_time));
+  const [location, setLocation] = useState(event?.location || "");
+  const [description, setDescription] = useState(event?.description || "");
+  const [details, setDetails] = useState(event?.details && typeof event.details === "object" ? event.details : {});
   const [coverFile, setCoverFile] = useState(null);
-  const [coverPreview, setCoverPreview] = useState("");
+  const [coverPreview, setCoverPreview] = useState(event?.cover_url || "");
   const [flyerFile, setFlyerFile] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -23,16 +30,17 @@ export default function EventCreateModal({ onClose, onCreated }) {
   const coverRef = useRef(null);
   const coverDragCount = useRef(0);
   const meta = typeMeta(type);
+  const existingFlyer = event?.attachment_name || "";
 
   useEffect(() => {
     if (!coverFile) {
-      setCoverPreview("");
+      setCoverPreview(event?.cover_url || "");
       return undefined;
     }
     const url = URL.createObjectURL(coverFile);
     setCoverPreview(url);
     return () => URL.revokeObjectURL(url);
-  }, [coverFile]);
+  }, [coverFile, event?.cover_url]);
 
   const attachCover = (file) => {
     if (!file) return;
@@ -63,16 +71,19 @@ export default function EventCreateModal({ onClose, onCreated }) {
       if (coverFile) formData.append("cover", coverFile);
       if (flyerFile) formData.append("attachment", flyerFile);
 
-      const res = await apiFetch("/api/events", { method: "POST", body: formData });
+      const res = await apiFetch(isEdit ? `/api/events/${event.id}` : "/api/events", {
+        method: isEdit ? "PATCH" : "POST",
+        body: formData,
+      });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        onCreated(data);
+        onSaved(data);
         onClose();
       } else {
-        setError(data.error || "Couldn't publish that event.");
+        setError(data.error || (isEdit ? "Couldn't save those changes." : "Couldn't publish that event."));
       }
     } catch {
-      setError("Network error creating event.");
+      setError(isEdit ? "Network error saving event." : "Network error creating event.");
     } finally {
       setLoading(false);
     }
@@ -81,8 +92,12 @@ export default function EventCreateModal({ onClose, onCreated }) {
   return (
     <Modal
       wide
-      title="Create an event"
-      description="Pick what kind of gathering this is — the page will match."
+      title={isEdit ? "Edit event" : "Create an event"}
+      description={
+        isEdit
+          ? "Update the details neighbors will see."
+          : "Pick what kind of gathering this is — the page will match."
+      }
       onClose={onClose}
     >
       <form className={styles.form} onSubmit={handleSubmit}>
@@ -122,14 +137,24 @@ export default function EventCreateModal({ onClose, onCreated }) {
               }}
             >
               <img src={coverPreview} alt="" />
-              <button
-                type="button"
-                className={styles.coverClear}
-                onClick={() => setCoverFile(null)}
-                aria-label="Remove cover"
-              >
-                <X size={14} />
-              </button>
+              {coverFile ? (
+                <button
+                  type="button"
+                  className={styles.coverClear}
+                  onClick={() => setCoverFile(null)}
+                  aria-label="Remove cover"
+                >
+                  <X size={14} />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className={styles.coverReplace}
+                  onClick={() => coverRef.current?.click()}
+                >
+                  Replace photo
+                </button>
+              )}
             </div>
           ) : (
             <button
@@ -244,7 +269,9 @@ export default function EventCreateModal({ onClose, onCreated }) {
             accept=".pdf,image/*"
             onChange={(e) => setFlyerFile(e.target.files[0] || null)}
           />
-          {flyerFile && <em className={styles.fileName}>{flyerFile.name}</em>}
+          {(flyerFile || existingFlyer) && (
+            <em className={styles.fileName}>{flyerFile ? flyerFile.name : existingFlyer}</em>
+          )}
         </label>
 
         {error && <p className={styles.formError}>{error}</p>}
@@ -254,7 +281,7 @@ export default function EventCreateModal({ onClose, onCreated }) {
             Cancel
           </Button>
           <Button type="submit" disabled={loading || !title.trim() || !eventDate}>
-            {loading ? "Publishing…" : "Publish event"}
+            {loading ? (isEdit ? "Saving…" : "Publishing…") : isEdit ? "Save changes" : "Publish event"}
           </Button>
         </div>
       </form>

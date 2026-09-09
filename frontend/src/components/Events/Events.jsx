@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, CalendarPlus, Check, ChevronDown, ChevronRight, MapPin } from "lucide-react";
+import { ArrowLeft, CalendarPlus, Check, ChevronDown, ChevronRight, ImagePlus, MapPin } from "lucide-react";
 import Avatar from "../ui/Avatar";
+import Modal from "../ui/Modal";
 import Button from "../ui/Button";
 import { apiFetch } from "../../api";
 import { PATHS } from "../../layout/navConfig";
@@ -12,7 +13,6 @@ import {
   eventDateParts,
   formatEventDate,
   formatEventTime,
-  formatUtcYmd,
   googleCalendarUrl,
   isUpcoming,
   mapsUrl,
@@ -106,8 +106,14 @@ export default function Events({ user }) {
   const [detail, setDetail] = useState(null);
   const [loaded, setLoaded] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [showCancel, setShowCancel] = useState(false);
   const [filter, setFilter] = useState("upcoming");
   const [rsvping, setRsvping] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  const [photoError, setPhotoError] = useState("");
+  const photosRef = useRef(null);
 
   const isAdmin = user?.role === "board_member" || user?.role === "super_admin";
   const today = todayYmd();
@@ -147,8 +153,54 @@ export default function Events({ user }) {
     }
   }, [eventId]);
 
+  const handleCancel = async () => {
+    if (!detail || cancelling) return;
+    setCancelling(true);
+    try {
+      const res = await apiFetch(`/api/events/${detail.id}/cancel`, { method: "PATCH" });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setDetail((current) =>
+          current ? { ...current, cancelled_at: data.cancelled_at || current.cancelled_at } : current,
+        );
+        setShowCancel(false);
+      }
+    } catch (err) {
+      console.error("Cancel event failed:", err);
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  const handlePhotos = async (fileList) => {
+    if (!detail || !fileList?.length || uploadingPhotos) return;
+    setUploadingPhotos(true);
+    setPhotoError("");
+    try {
+      const formData = new FormData();
+      Array.from(fileList).forEach((file) => formData.append("photos", file));
+      const res = await apiFetch(`/api/events/${detail.id}/photos`, {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setDetail((current) =>
+          current ? { ...current, gallery: data.gallery || current.gallery } : current,
+        );
+      } else {
+        setPhotoError(data.error || "Couldn't add those photos.");
+      }
+    } catch {
+      setPhotoError("Network error adding photos.");
+    } finally {
+      setUploadingPhotos(false);
+      if (photosRef.current) photosRef.current.value = "";
+    }
+  };
+
   const handleRsvp = async () => {
-    if (!detail || rsvping) return;
+    if (!detail || rsvping || detail.cancelled_at) return;
     setRsvping(true);
     setDetail((current) =>
       current
@@ -224,7 +276,22 @@ export default function Events({ user }) {
 
             <div className={styles.detailBody}>
               <p className={styles.kicker}>{meta.kicker}</p>
+              {event.cancelled_at && (
+                <p className={styles.cancelledBanner}>This event was cancelled.</p>
+              )}
               <h2>{event.title}</h2>
+              {isAdmin && (
+                <div className={styles.boardActions}>
+                  <Button variant="secondary" onClick={() => setShowEdit(true)}>
+                    Edit
+                  </Button>
+                  {!event.cancelled_at && (
+                    <Button variant="danger" onClick={() => setShowCancel(true)}>
+                      Cancel event
+                    </Button>
+                  )}
+                </div>
+              )}
               <p className={styles.when}>
                 {formatEventDate(event.event_date)}
                 <span> · {formatEventTime(event.event_time)}</span>
@@ -273,12 +340,14 @@ export default function Events({ user }) {
                 <div>
                   <strong>{event.rsvp_count || 0} going</strong>
                   <p>
-                    {rsvps.length
-                      ? rsvps
-                          .slice(0, 8)
-                          .map((row) => row.display_name)
-                          .join(", ") + (rsvps.length > 8 ? ` +${rsvps.length - 8} more` : "")
-                      : "Be the first to say you'll be there."}
+                    {event.cancelled_at
+                      ? "RSVPs are closed because this event was cancelled."
+                      : rsvps.length
+                        ? rsvps
+                            .slice(0, 8)
+                            .map((row) => row.display_name)
+                            .join(", ") + (rsvps.length > 8 ? ` +${rsvps.length - 8} more` : "")
+                        : "Be the first to say you'll be there."}
                   </p>
                 </div>
                 <div className={styles.rsvpPeople}>
@@ -289,13 +358,63 @@ export default function Events({ user }) {
                 <Button
                   variant={event.going ? "secondary" : "primary"}
                   onClick={handleRsvp}
-                  disabled={rsvping}
+                  disabled={rsvping || Boolean(event.cancelled_at)}
                   aria-pressed={event.going}
                 >
                   {event.going && <Check size={16} strokeWidth={2.5} aria-hidden />}
-                  {event.going ? meta.rsvpDone : meta.rsvp}
+                  {event.cancelled_at ? "Cancelled" : event.going ? meta.rsvpDone : meta.rsvp}
                 </Button>
               </div>
+
+              <section className={styles.recap}>
+                <div className={styles.recapHead}>
+                  <h3>{isUpcoming(event, today) ? "Photos" : "Photos from the day"}</h3>
+                  {isAdmin && (
+                    <Button
+                      variant="secondary"
+                      onClick={() => photosRef.current?.click()}
+                      disabled={uploadingPhotos}
+                    >
+                      <ImagePlus size={15} />
+                      {uploadingPhotos ? "Adding…" : "Add photos"}
+                    </Button>
+                  )}
+                </div>
+                <input
+                  ref={photosRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  hidden
+                  onChange={(e) => handlePhotos(e.target.files)}
+                />
+                {photoError && <p className={styles.formError}>{photoError}</p>}
+                {(event.gallery || []).length > 0 ? (
+                  <div className={styles.gallery}>
+                    {(event.gallery || []).map((photo, index) => (
+                      <a
+                        key={`${photo.url}-${index}`}
+                        href={photo.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className={styles.galleryItem}
+                      >
+                        <img src={photo.url} alt={photo.name || "Event photo"} />
+                      </a>
+                    ))}
+                  </div>
+                ) : (
+                  <p className={styles.photoHint}>
+                    {isUpcoming(event, today)
+                      ? isAdmin
+                        ? "After the event, add a recap dump here. Neighbors will see it on this page, including once it moves to Past."
+                        : "Recap photos will show up here after the event."
+                      : isAdmin
+                        ? "Drop a recap dump for neighbors who missed it."
+                        : "No recap photos yet."}
+                  </p>
+                )}
+              </section>
 
               <div className={styles.detailLinks}>
                 <AddToCalendar event={event} />
@@ -307,6 +426,30 @@ export default function Events({ user }) {
               </div>
             </div>
           </article>
+        )}
+
+        {showEdit && event && (
+          <EventCreateModal
+            event={event}
+            onClose={() => setShowEdit(false)}
+            onSaved={() => loadDetail(event.id)}
+          />
+        )}
+        {showCancel && event && (
+          <Modal
+            title="Cancel this event?"
+            description="Neighbors will still see it, marked cancelled. RSVPs will close."
+            onClose={() => setShowCancel(false)}
+          >
+            <div className={styles.formActions}>
+              <Button variant="secondary" onClick={() => setShowCancel(false)}>
+                Keep it
+              </Button>
+              <Button variant="danger" onClick={handleCancel} disabled={cancelling}>
+                {cancelling ? "Cancelling…" : "Cancel event"}
+              </Button>
+            </div>
+          </Modal>
         )}
       </div>
     );
@@ -378,15 +521,25 @@ export default function Events({ user }) {
                     <em>{parts.weekday}</em>
                   </div>
                   <div className={styles.cardCopy}>
-                    <p className={styles.cardKicker}>{meta.label}</p>
+                    <p className={styles.cardKicker}>
+                      {meta.label}
+                      {event.cancelled_at ? " · Cancelled" : ""}
+                    </p>
                     <h3>{event.title}</h3>
                     <p>
                       {formatEventTime(event.event_time)}
                       {event.location ? ` · ${event.location}` : ""}
                     </p>
                     <span className={styles.goingCount}>
-                      {event.rsvp_count ? `${event.rsvp_count} going` : "No RSVPs yet"}
-                      {event.going ? " · you're in" : ""}
+                      {event.cancelled_at
+                        ? "Cancelled"
+                        : event.rsvp_count
+                          ? `${event.rsvp_count} going`
+                          : "No RSVPs yet"}
+                      {!event.cancelled_at && event.going ? " · you're in" : ""}
+                      {(event.gallery || []).length
+                        ? ` · ${event.gallery.length} photo${event.gallery.length === 1 ? "" : "s"}`
+                        : ""}
                     </span>
                   </div>
                   <ChevronRight size={16} className={styles.chevron} />
@@ -400,7 +553,7 @@ export default function Events({ user }) {
       {showCreate && (
         <EventCreateModal
           onClose={() => setShowCreate(false)}
-          onCreated={(created) => {
+          onSaved={(created) => {
             loadList();
             if (created?.id) navigate(`${PATHS.events}/${created.id}`);
           }}

@@ -7,6 +7,14 @@ const { authRequired, boardRequired } = require("../middleware/auth");
 const TYPE_MAP = { arc: "home_change" };
 const ALLOWED_TYPES = new Set(["maintenance", "home_change"]);
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 function normalizeType(type) {
   const raw = String(type || "").trim();
   const mapped = TYPE_MAP[raw] || raw;
@@ -19,12 +27,23 @@ router.post("/", authRequired, async (req, res) => {
     const { resident_id, first_name, last_name, type, subject, description } = req.body;
     const requestType = type === "Board Message" ? type : normalizeType(type);
 
-    // 2. CHECK TYPE: If it is a direct Board Message, email it silently
     if (type === "Board Message") {
-      await sendMail({
+      const senderEmail = req.user?.email || "";
+      const senderAddress = req.user?.address || "";
+      const senderName = [first_name, last_name].filter(Boolean).join(" ").trim() || "Neighbor";
+      const mailed = await sendMail({
         to: "board@towncentralhoa.org",
+        replyTo: senderEmail || undefined,
         subject: `[Portal Contact Form] ${subject}`,
-        text: `Message from ${first_name}:\n\n${description}`,
+        text: [
+          `Message from ${senderName}`,
+          senderEmail ? `Email: ${senderEmail}` : "",
+          senderAddress ? `Address: ${senderAddress}` : "",
+          "",
+          description,
+        ]
+          .filter((line) => line !== "")
+          .join("\n"),
         html: `
           <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
             <div style="background-color: #2c3e50; padding: 24px; text-align: center; color: white;">
@@ -35,24 +54,43 @@ router.post("/", authRequired, async (req, res) => {
               <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 0.9rem;">
                 <tr>
                   <td style="padding: 6px 0; color: #64748b; font-weight: 600; width: 120px;">Sender Resident:</td>
-                  <td style="padding: 6px 0; color: #0f172a; font-weight: bold;">${first_name} ${last_name || ""}</td>
+                  <td style="padding: 6px 0; color: #0f172a; font-weight: bold;">${escapeHtml(senderName)}</td>
                 </tr>
                 <tr>
+                  <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Email:</td>
+                  <td style="padding: 6px 0; color: #0f172a; font-weight: bold;">${escapeHtml(senderEmail || "Not on file")}</td>
+                </tr>
+                ${
+                  senderAddress
+                    ? `<tr>
+                  <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Address:</td>
+                  <td style="padding: 6px 0; color: #0f172a; font-weight: bold;">${escapeHtml(senderAddress)}</td>
+                </tr>`
+                    : ""
+                }
+                <tr>
                   <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Subject:</td>
-                  <td style="padding: 6px 0; color: #0f172a; font-weight: bold;">${subject}</td>
+                  <td style="padding: 6px 0; color: #0f172a; font-weight: bold;">${escapeHtml(subject)}</td>
                 </tr>
               </table>
               <hr style="border: 0; border-top: 1px solid #f1f5f9; margin: 20px 0;" />
-              <p style="color: #475569; font-size: 0.95rem; line-height: 1.6; margin: 0; background-color: #f8fafc; padding: 16px; border-radius: 8px; border-left: 4px solid #2ecc71;">
-                ${description}
+              <p style="color: #475569; font-size: 0.95rem; line-height: 1.6; margin: 0; background-color: #f8fafc; padding: 16px; border-radius: 8px; border-left: 4px solid #2ecc71; white-space: pre-wrap;">
+                ${escapeHtml(description)}
               </p>
             </div>
             <div style="background-color: #f8fafc; padding: 16px; text-align: center; font-size: 0.75rem; color: #94a3b8; border-top: 1px solid #f1f5f9;">
-              Delivered securely via Town Central Zoho SMTP handlers.
+              ${senderEmail ? `Reply goes to ${escapeHtml(senderEmail)}.` : "No reply-to address was on this neighbor's account."}
             </div>
           </div>
-        `
+        `,
       });
+
+      if (mailed?.skipped) {
+        return res.status(503).json({
+          error:
+            "Mail isn't set up on the server right now, so this note was not sent. Email the board at board@towncentralhoa.org, or try again after mail is configured.",
+        });
+      }
 
       return res.status(201).json({ success: true, message: "Email transmitted to the board successfully." });
     }

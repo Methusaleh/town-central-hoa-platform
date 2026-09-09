@@ -26,6 +26,27 @@ function parseDetails(raw) {
   }
 }
 
+function parseGallery(raw) {
+  if (!raw) return [];
+  const list = Array.isArray(raw)
+    ? raw
+    : (() => {
+        try {
+          return JSON.parse(raw);
+        } catch {
+          return [];
+        }
+      })();
+  if (!Array.isArray(list)) return [];
+  return list
+    .map((item) => {
+      if (typeof item === "string" && item) return { url: item };
+      if (item && item.url) return { url: item.url, name: item.name || "" };
+      return null;
+    })
+    .filter(Boolean);
+}
+
 function normalizeType(value, category) {
   const v = String(value || "").toLowerCase().trim();
   if (EVENT_TYPES.includes(v)) return v;
@@ -56,14 +77,43 @@ async function uploadSafeImage(file) {
 }
 
 function shapeEvent(row, extras = {}) {
-  return {
+  const shaped = {
     ...row,
     event_type: normalizeType(row.event_type, row.category),
     details: parseDetails(row.details),
+    gallery: parseGallery(row.gallery),
+    cancelled_at: row.cancelled_at || null,
     rsvp_count: extras.rsvp_count ?? row.rsvp_count ?? 0,
     going: extras.going ?? Boolean(row.going),
-    rsvps: extras.rsvps,
   };
+  if (extras.rsvps !== undefined) shaped.rsvps = extras.rsvps;
+  return shaped;
+}
+
+async function resolveEventMedia(body, files, existing = {}) {
+  const coverFile = files.cover?.[0];
+  const attachmentFile = files.attachment?.[0];
+  let coverUrl = existing.cover_url || body.cover_url || null;
+  let attachmentUrl = existing.attachment_url || body.attachment_url || null;
+  let attachmentName = existing.attachment_name || body.attachment_name || null;
+
+  if (coverFile) {
+    coverUrl = await uploadSafeImage(coverFile);
+  }
+  if (attachmentFile) {
+    const isImage = String(attachmentFile.mimetype || "").startsWith("image/");
+    attachmentUrl = isImage
+      ? await uploadSafeImage(attachmentFile)
+      : await uploadToR2(
+          attachmentFile.buffer,
+          attachmentFile.originalname,
+          attachmentFile.mimetype,
+        );
+    attachmentName = attachmentFile.originalname;
+    if (!coverUrl && isImage) coverUrl = attachmentUrl;
+  }
+
+  return { coverUrl, attachmentUrl, attachmentName };
 }
 
 router.get("/", authRequired, async (req, res) => {
@@ -129,11 +179,15 @@ router.get("/:id", authRequired, async (req, res) => {
 
 router.patch("/:id/rsvp", authRequired, async (req, res) => {
   try {
-    const eventRes = await db.query("SELECT id FROM neighborhood_events WHERE id = $1", [
-      req.params.id,
-    ]);
+    const eventRes = await db.query(
+      "SELECT id, cancelled_at FROM neighborhood_events WHERE id = $1",
+      [req.params.id],
+    );
     if (eventRes.rows.length === 0) {
       return res.status(404).json({ error: "Event not found." });
+    }
+    if (eventRes.rows[0].cancelled_at) {
+      return res.status(400).json({ error: "This event was cancelled." });
     }
 
     const existing = await db.query(
@@ -186,29 +240,10 @@ router.post("/", boardRequired, media, async (req, res) => {
   try {
     const type = normalizeType(event_type, category);
     const details = parseDetails(req.body.details);
-    const files = req.files || {};
-    const coverFile = files.cover?.[0];
-    const attachmentFile = files.attachment?.[0];
-
-    let coverUrl = req.body.cover_url || null;
-    let attachmentUrl = req.body.attachment_url || null;
-    let attachmentName = req.body.attachment_name || null;
-
-    if (coverFile) {
-      coverUrl = await uploadSafeImage(coverFile);
-    }
-    if (attachmentFile) {
-      const isImage = String(attachmentFile.mimetype || "").startsWith("image/");
-      attachmentUrl = isImage
-        ? await uploadSafeImage(attachmentFile)
-        : await uploadToR2(
-            attachmentFile.buffer,
-            attachmentFile.originalname,
-            attachmentFile.mimetype,
-          );
-      attachmentName = attachmentFile.originalname;
-      if (!coverUrl && isImage) coverUrl = attachmentUrl;
-    }
+    const { coverUrl, attachmentUrl, attachmentName } = await resolveEventMedia(
+      req.body,
+      req.files || {},
+    );
 
     const { rows } = await db.query(
       `
@@ -238,6 +273,136 @@ router.post("/", boardRequired, media, async (req, res) => {
   } catch (err) {
     console.error("Event creation error:", err.message);
     res.status(err.status || 500).json({ error: err.message || "Server error while posting event." });
+  }
+});
+
+router.patch("/:id", boardRequired, media, async (req, res) => {
+  const { title, event_date, event_time, location, description, category, event_type } = req.body;
+
+  if (!title || !event_date) {
+    return res.status(400).json({ error: "Title and event date are required fields." });
+  }
+
+  try {
+    const existing = await db.query("SELECT * FROM neighborhood_events WHERE id = $1", [
+      req.params.id,
+    ]);
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ error: "Event not found." });
+    }
+
+    const type = normalizeType(event_type, category);
+    const details = parseDetails(req.body.details);
+    const { coverUrl, attachmentUrl, attachmentName } = await resolveEventMedia(
+      req.body,
+      req.files || {},
+      existing.rows[0],
+    );
+
+    const { rows } = await db.query(
+      `
+      UPDATE neighborhood_events SET
+        title = $1,
+        event_date = $2,
+        event_time = $3,
+        location = $4,
+        description = $5,
+        category = $6,
+        attachment_url = $7,
+        attachment_name = $8,
+        event_type = $9,
+        cover_url = $10,
+        details = $11::jsonb
+      WHERE id = $12
+      RETURNING *;
+    `,
+      [
+        title.trim(),
+        event_date,
+        event_time || null,
+        location || null,
+        description || null,
+        type,
+        attachmentUrl,
+        attachmentName,
+        type,
+        coverUrl,
+        JSON.stringify(details),
+        req.params.id,
+      ],
+    );
+
+    res.json(shapeEvent(rows[0]));
+  } catch (err) {
+    console.error("Event update error:", err.message);
+    res.status(err.status || 500).json({ error: err.message || "Server error while updating event." });
+  }
+});
+
+router.patch("/:id/cancel", boardRequired, async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      `
+      UPDATE neighborhood_events
+         SET cancelled_at = COALESCE(cancelled_at, NOW())
+       WHERE id = $1
+       RETURNING *;
+    `,
+      [req.params.id],
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "Event not found." });
+    }
+    res.json(shapeEvent(rows[0]));
+  } catch (err) {
+    console.error("Event cancel error:", err.message);
+    res.status(500).json({ error: "Couldn't cancel that event." });
+  }
+});
+
+const photosUpload = upload.array("photos", 12);
+
+router.post("/:id/photos", boardRequired, photosUpload, async (req, res) => {
+  try {
+    const files = req.files || [];
+    if (!files.length) {
+      return res.status(400).json({ error: "Add at least one photo." });
+    }
+
+    const existing = await db.query("SELECT id, gallery FROM neighborhood_events WHERE id = $1", [
+      req.params.id,
+    ]);
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ error: "Event not found." });
+    }
+
+    const current = parseGallery(existing.rows[0].gallery);
+    if (current.length + files.length > 40) {
+      return res.status(400).json({ error: "This event already has as many photos as it can hold." });
+    }
+
+    const added = [];
+    for (const file of files) {
+      if (!String(file.mimetype || "").startsWith("image/")) {
+        return res.status(400).json({ error: "Recap photos need to be images." });
+      }
+      added.push({ url: await uploadSafeImage(file), name: file.originalname });
+    }
+
+    const { rows } = await db.query(
+      `
+      UPDATE neighborhood_events
+         SET gallery = COALESCE(gallery, '[]'::jsonb) || $1::jsonb
+       WHERE id = $2
+       RETURNING *;
+    `,
+      [JSON.stringify(added), req.params.id],
+    );
+
+    res.json(shapeEvent(rows[0]));
+  } catch (err) {
+    console.error("Event photos error:", err.message);
+    res.status(err.status || 500).json({ error: err.message || "Couldn't save those photos." });
   }
 });
 

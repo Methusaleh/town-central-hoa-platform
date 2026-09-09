@@ -661,6 +661,84 @@
   margin-top: 6px;
 }
 
+.coverReplace {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 650;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.cancelledBanner {
+  margin: 0 0 8px;
+  color: var(--tc-danger);
+  font-size: 0.85rem;
+  font-weight: 650;
+}
+
+.boardActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+
+.recap {
+  margin: 20px 0 8px;
+  padding-top: 18px;
+  border-top: 1px solid var(--tc-line);
+}
+
+.recapHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.recap h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.photoHint {
+  margin: 0;
+  color: var(--tc-muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.galleryItem {
+  display: block;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--tc-bg);
+  aspect-ratio: 1;
+}
+
+.galleryItem img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 @media (max-width: 640px) {
   .intro {
     flex-direction: column;

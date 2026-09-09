@@ -56,7 +56,7 @@ export default function Login({ onBack, onLoginSuccess, onNavigateToClaim, onNav
             <label>Email Address</label>
             <input 
               type="email" 
-              placeholder="admin@towncentralhoa.org" 
+              placeholder="you@example.com" 
               value={email} 
               onChange={(e) => setEmail(e.target.value)} 
               required 

@@ -66,6 +66,8 @@ END $$;`,
   `ALTER TABLE neighborhood_events ADD COLUMN IF NOT EXISTS event_type VARCHAR DEFAULT 'gathering'`,
   `ALTER TABLE neighborhood_events ADD COLUMN IF NOT EXISTS cover_url TEXT`,
   `ALTER TABLE neighborhood_events ADD COLUMN IF NOT EXISTS details JSONB DEFAULT '{}'::jsonb`,
+  `ALTER TABLE neighborhood_events ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMPTZ`,
+  `ALTER TABLE neighborhood_events ADD COLUMN IF NOT EXISTS gallery JSONB DEFAULT '[]'::jsonb`,
   `UPDATE neighborhood_events
      SET event_type = 'meeting'
    WHERE lower(coalesce(category, '')) LIKE '%meet%'`,

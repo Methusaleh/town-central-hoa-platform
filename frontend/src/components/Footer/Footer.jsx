@@ -9,9 +9,13 @@ export default function Footer({ onContactClick }) {
           <button onClick={onContactClick} className={styles.linkBtn}>
             Contact Us
           </button>
-          <a href="/public-docs" className={styles.link}>
+          <button
+            type="button"
+            className={styles.link}
+            title="The board will post public files here when they have them."
+          >
             Public Documents
-          </a>
+          </button>
         </nav>
       </div>
     </footer>
