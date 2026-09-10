@@ -14,6 +14,7 @@ import {
   mobileTabs,
   moreItems,
 } from "./navConfig";
+import { isRenter } from "../utils/occupancy";
 import { HEADER_PAPER } from "./headerTheme";
 import styles from "./AppShell.module.css";
 
@@ -56,7 +57,9 @@ export default function AppShell() {
     return () => document.removeEventListener("mousedown", onDoc);
   }, []);
 
-  const overflow = isBoard ? [...moreItems, adminItem] : moreItems;
+  const overflow = (isBoard ? [...moreItems, adminItem] : moreItems).filter(
+    (item) => item.to !== PATHS.dues || !isRenter(user),
+  );
   const moreActive = overflow.some((item) => item.to && location.pathname.startsWith(item.to));
 
   return (

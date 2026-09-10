@@ -1,0 +1,89 @@
+.thread {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.privateHint,
+.empty {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--tc-muted);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.item {
+  background: var(--tc-bg);
+  border: 1px solid var(--tc-line);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.meta strong {
+  font-size: 0.82rem;
+  font-weight: 650;
+  color: var(--tc-ink);
+}
+
+.meta span {
+  font-size: 0.75rem;
+  color: var(--tc-muted);
+  flex-shrink: 0;
+}
+
+.item p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--tc-ink-soft);
+  white-space: pre-wrap;
+}
+
+.composer {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.composer textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--tc-ink);
+  background: var(--tc-bg);
+  border: 1px solid var(--tc-line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  resize: vertical;
+}
+
+.composer textarea:focus {
+  outline: none;
+  border-color: var(--tc-brand);
+}
+
+.err {
+  margin: 0;
+  color: var(--tc-danger);
+  font-size: 0.85rem;
+  font-weight: 650;
+}

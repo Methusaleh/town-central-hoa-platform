@@ -218,6 +218,83 @@
   gap: 8px;
 }
 
+.logCard,
+.archiveBar {
+  background: var(--tc-bg-elevated);
+  border: 1px solid var(--tc-line);
+  border-radius: var(--tc-radius);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.logCard h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.logCard p,
+.archiveBar p {
+  margin: 0;
+  color: var(--tc-muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.logCard label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.78rem;
+  font-weight: 650;
+  color: var(--tc-muted);
+}
+
+.logCard input,
+.logCard select,
+.logCard textarea {
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 500;
+  color: var(--tc-ink);
+  background: var(--tc-bg);
+  border: 1px solid var(--tc-line);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.typeBoard {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #5c472c;
+  background: var(--tc-accent-soft);
+  padding: 4px 8px;
+  border-radius: 999px;
+}
+
+.privateHint {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--tc-muted);
+}
+
+.ok {
+  margin: 0;
+  color: var(--tc-brand-ink);
+  font-size: 0.85rem;
+  font-weight: 650;
+}
+
+.err {
+  margin: 0;
+  color: var(--tc-danger);
+  font-size: 0.85rem;
+  font-weight: 650;
+}
+
 @media (max-width: 860px) {
   .intro {
     flex-direction: column;

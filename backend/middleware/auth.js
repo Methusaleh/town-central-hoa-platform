@@ -23,6 +23,7 @@ function signToken(user) {
 }
 
 function publicUser(row) {
+  const occupancy = row.occupancy === "renter" || row.occupancy === "owner" ? row.occupancy : null;
   return {
     id: row.id,
     first_name: row.first_name,
@@ -30,6 +31,7 @@ function publicUser(row) {
     email: row.email,
     address: row.address,
     role: row.role || "resident",
+    occupancy,
     agreed_to_guidelines: Boolean(row.agreed_to_guidelines),
     photo: row.profile_photo || null,
   };

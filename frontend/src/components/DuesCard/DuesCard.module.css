@@ -26,12 +26,12 @@
 }
 
 .paidTag {
-  background: #d1fae5;
-  color: #065f46;
+  background: var(--tc-brand-soft);
+  color: var(--tc-brand-ink);
 }
 .pendingTag {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--tc-warn-soft);
+  color: var(--tc-warn);
 }
 
 .amountArea {
@@ -118,4 +118,42 @@
 
 .backLinkBtn:hover {
   color: var(--tc-ink);
+}
+
+.payPanel {
+  background: var(--tc-bg);
+  padding: 18px;
+  border-radius: 12px;
+  border: 1px solid var(--tc-line);
+}
+
+.payPanel h4 {
+  margin: 0 0 8px;
+  color: var(--tc-ink);
+}
+
+.payPanel p,
+.payPanel ul {
+  font-size: 0.85rem;
+  color: var(--tc-ink-soft);
+  line-height: 1.4;
+  margin: 0 0 10px;
+}
+
+.payPanel ul {
+  padding-left: 16px;
+  margin: 0 0 15px;
+  line-height: 1.5;
+}
+
+.payBox {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--tc-ink);
+  background: var(--tc-bg-elevated);
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--tc-line);
+  margin: 0 0 15px;
+  line-height: 1.5;
 }

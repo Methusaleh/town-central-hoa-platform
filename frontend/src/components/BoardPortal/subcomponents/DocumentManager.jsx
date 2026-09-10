@@ -21,8 +21,8 @@ const LIBRARIES = [
 const SKIP_NAMES = new Set([".ds_store", "thumbs.db", "desktop.ini"]);
 
 function IconFolder({ size = 44, locked = false }) {
-  const fill = locked ? "#94a3b8" : "#f5c451";
-  const shade = locked ? "#64748b" : "#e0a82e";
+  const fill = locked ? "#b7c1bb" : "#c4a574";
+  const shade = locked ? "#6a746e" : "#8d6e44";
   return (
     <svg width={size} height={size * 0.82} viewBox="0 0 48 40" aria-hidden="true">
       <path fill={fill} d="M4 8a4 4 0 0 1 4-4h10l4 4h18a4 4 0 0 1 4 4v20a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V8z" />
@@ -34,8 +34,8 @@ function IconFolder({ size = 44, locked = false }) {
 function IconFile({ size = 40 }) {
   return (
     <svg width={size * 0.78} height={size} viewBox="0 0 32 40" aria-hidden="true">
-      <path fill="#f8fafc" stroke="#cbd5e1" d="M6 2.5h13l9 9V36a2.5 2.5 0 0 1-2.5 2.5H6A2.5 2.5 0 0 1 3.5 36V5A2.5 2.5 0 0 1 6 2.5z" />
-      <path fill="#e2e8f0" d="M19 2.5V12h9" />
+      <path fill="#f7f8f6" stroke="#d3dad5" d="M6 2.5h13l9 9V36a2.5 2.5 0 0 1-2.5 2.5H6A2.5 2.5 0 0 1 3.5 36V5A2.5 2.5 0 0 1 6 2.5z" />
+      <path fill="#e8ece9" d="M19 2.5V12h9" />
     </svg>
   );
 }

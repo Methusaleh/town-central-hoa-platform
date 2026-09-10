@@ -14,40 +14,108 @@ const TABLES = {
   comments: "porch_comments",
 };
 
-router.get("/", authRequired, async (req, res) => {
-  try {
-    const postsRes = await db.query(`
-      SELECT p.*, u.profile_photo AS author_photo
-      FROM porch_posts p
-      LEFT JOIN users u ON lower(trim(u.email)) = lower(trim(p.author_email))
-      ORDER BY p.created_at DESC;
-    `);
-    const commentsRes = await db.query(`
-      SELECT c.*, u.profile_photo AS author_photo
-      FROM porch_comments c
-      LEFT JOIN LATERAL (
-        SELECT profile_photo
+const COMMENT_PHOTO_SQL = `
+  SELECT c.*, u.profile_photo AS author_photo
+    FROM porch_comments c
+    LEFT JOIN LATERAL (
+      SELECT profile_photo
         FROM users
-        WHERE (c.author_email IS NOT NULL AND lower(trim(email)) = lower(trim(c.author_email)))
-           OR (
-             c.author_email IS NULL AND (
-               lower(trim(first_name || ' ' || last_name)) = lower(trim(c.author_name))
-               OR lower(trim(first_name)) = lower(trim(c.author_name))
-             )
-           )
-        ORDER BY CASE WHEN c.author_email IS NOT NULL THEN 0 ELSE 1 END
-        LIMIT 1
-      ) u ON true
-      ORDER BY c.created_at ASC;
-    `);
+       WHERE (c.author_email IS NOT NULL AND lower(trim(email)) = lower(trim(c.author_email)))
+          OR (
+            c.author_email IS NULL AND (
+              lower(trim(first_name || ' ' || last_name)) = lower(trim(c.author_name))
+              OR lower(trim(first_name)) = lower(trim(c.author_name))
+            )
+          )
+       ORDER BY CASE WHEN c.author_email IS NOT NULL THEN 0 ELSE 1 END
+       LIMIT 1
+    ) u ON true
+`;
 
-    res.json({
-      posts: postsRes.rows,
-      comments: commentsRes.rows,
-    });
+function parseLimit(value) {
+  const n = Number.parseInt(value, 10);
+  if (!Number.isFinite(n)) return 20;
+  return Math.min(50, Math.max(1, n));
+}
+
+function parseId(value) {
+  const n = Number.parseInt(value, 10);
+  return Number.isInteger(n) && n > 0 ? n : null;
+}
+
+async function commentsForPost(postId) {
+  const { rows } = await db.query(
+    `${COMMENT_PHOTO_SQL}
+      WHERE c.post_id = $1
+      ORDER BY c.created_at ASC`,
+    [postId],
+  );
+  return rows;
+}
+
+router.get("/", authRequired, async (req, res) => {
+  const limit = parseLimit(req.query.limit);
+  const before = parseId(req.query.before);
+  const q = String(req.query.q || "").trim().slice(0, 80) || null;
+
+  try {
+    const { rows } = await db.query(
+      `
+      SELECT p.*, u.profile_photo AS author_photo,
+             (SELECT COUNT(*)::int FROM porch_comments c WHERE c.post_id = p.id) AS reply_count
+        FROM porch_posts p
+        LEFT JOIN users u ON lower(trim(u.email)) = lower(trim(p.author_email))
+       WHERE (
+          $1::int IS NULL
+          OR (p.created_at, p.id) < (
+            SELECT pp.created_at, pp.id FROM porch_posts pp WHERE pp.id = $1
+          )
+        )
+         AND (
+          $2::text IS NULL
+          OR p.content ILIKE '%' || $2 || '%'
+          OR p.author_name ILIKE '%' || $2 || '%'
+        )
+       ORDER BY p.created_at DESC, p.id DESC
+       LIMIT $3
+      `,
+      [before, q, limit + 1],
+    );
+
+    const hasMore = rows.length > limit;
+    const posts = hasMore ? rows.slice(0, limit) : rows;
+    res.json({ posts, hasMore });
   } catch (err) {
     console.error("Error fetching Porch stream:", err.message);
     res.status(500).json({ error: "Server error while fetching Porch posts." });
+  }
+});
+
+router.get("/:id", authRequired, async (req, res) => {
+  const id = parseId(req.params.id);
+  if (!id) {
+    return res.status(404).json({ error: "Post not found." });
+  }
+
+  try {
+    const { rows } = await db.query(
+      `
+      SELECT p.*, u.profile_photo AS author_photo,
+             (SELECT COUNT(*)::int FROM porch_comments c WHERE c.post_id = p.id) AS reply_count
+        FROM porch_posts p
+        LEFT JOIN users u ON lower(trim(u.email)) = lower(trim(p.author_email))
+       WHERE p.id = $1
+      `,
+      [id],
+    );
+    if (!rows[0]) {
+      return res.status(404).json({ error: "Post not found." });
+    }
+    const comments = await commentsForPost(id);
+    res.json({ post: rows[0], comments });
+  } catch (err) {
+    console.error("Error fetching Porch post:", err.message);
+    res.status(500).json({ error: "Server error while fetching that post." });
   }
 });
 

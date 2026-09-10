@@ -124,7 +124,16 @@ END $$;`,
       AND content LIKE 'Extra cars parked along Redbud%'
       AND resolved_at IS NULL`,
   `ALTER TABLE community_requests ADD COLUMN IF NOT EXISTS board_note TEXT`,
+  `ALTER TABLE community_requests ADD COLUMN IF NOT EXISTS source VARCHAR DEFAULT 'resident'`,
+  `ALTER TABLE community_requests ADD COLUMN IF NOT EXISTS street_address VARCHAR`,
   `UPDATE community_requests SET request_type = 'home_change' WHERE request_type = 'arc'`,
+  `ALTER TABLE neighborhood_roster ADD COLUMN IF NOT EXISTS occupancy VARCHAR`,
+  `CREATE TABLE IF NOT EXISTS community_settings (
+    key VARCHAR PRIMARY KEY,
+    value JSONB NOT NULL DEFAULT '{}'::jsonb,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_by VARCHAR
+  )`,
   `CREATE TABLE IF NOT EXISTS print_templates (
     kind VARCHAR PRIMARY KEY,
     file_url TEXT NOT NULL,
@@ -133,6 +142,33 @@ END $$;`,
     updated_by VARCHAR,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
   )`,
+  `CREATE TABLE IF NOT EXISTS request_comments (
+    id SERIAL PRIMARY KEY,
+    request_id INTEGER NOT NULL REFERENCES community_requests(id) ON DELETE CASCADE,
+    author_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    author_name VARCHAR NOT NULL,
+    body TEXT NOT NULL,
+    visibility VARCHAR NOT NULL DEFAULT 'household',
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE INDEX IF NOT EXISTS request_comments_request_idx
+     ON request_comments (request_id, created_at)`,
+  `INSERT INTO request_comments (request_id, author_name, body, visibility, created_at)
+     SELECT id,
+            'Board',
+            board_note,
+            CASE
+              WHEN COALESCE(source, 'resident') = 'board' OR request_type = 'board_note'
+                THEN 'board'
+              ELSE 'household'
+            END,
+            COALESCE(created_at, CURRENT_TIMESTAMP)
+       FROM community_requests
+      WHERE board_note IS NOT NULL
+        AND trim(board_note) <> ''
+        AND NOT EXISTS (
+          SELECT 1 FROM request_comments c WHERE c.request_id = community_requests.id
+        )`,
 ];
 
 async function migrate(query) {

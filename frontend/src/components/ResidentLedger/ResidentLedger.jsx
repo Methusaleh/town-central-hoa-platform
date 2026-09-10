@@ -34,7 +34,7 @@ export default function ResidentLedger({ user }) {
                 <td style={{ textTransform: "capitalize" }}>{t.transaction_type}</td>
                 {/* Method displays exactly as recorded in the database */}
                 <td>{t.payment_method || "Check"}</td>
-                <td style={{ color: t.transaction_type === "charge" ? "#ef4444" : "#10b981" }}>
+                <td className={t.transaction_type === "charge" ? styles.charge : styles.credit}>
                   {t.transaction_type === "charge" ? "+" : "-"}${parseFloat(t.amount).toFixed(2)}
                 </td>
               </tr>

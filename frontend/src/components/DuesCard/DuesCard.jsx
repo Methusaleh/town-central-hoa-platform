@@ -76,13 +76,13 @@ export default function DuesCard({ user }) {
       )}
 
       {paymentMode === "billpay" && (
-        <div style={{ background: "#f8fafc", padding: "18px", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
-          <h4 style={{ margin: "0 0 8px 0", color: "#0f172a" }}>Fee-Free Bank Bill-Pay</h4>
-          <p style={{ fontSize: "0.85rem", color: "#475569", lineHeight: "1.4", margin: "0 0 10px 0" }}>
+        <div className={styles.payPanel}>
+          <h4>Fee-Free Bank Bill-Pay</h4>
+          <p>
             Use your bank’s bill-pay to send dues to Town Central HOA. Put your street in the memo.
             The board will post the routing and account numbers here before the first assessment is collected through the portal.
           </p>
-          <ul style={{ fontSize: "0.85rem", color: "#334155", paddingLeft: "16px", margin: "0 0 15px 0", lineHeight: "1.5" }}>
+          <ul>
             <li><strong>Payee:</strong> Town Central HOA</li>
             <li><strong>Routing / Account:</strong> Posted by the treasurer before go-live</li>
             <li><strong>Memo / Reference:</strong> <em>{duesInfo?.street_address || user?.address}</em></li>
@@ -92,13 +92,13 @@ export default function DuesCard({ user }) {
       )}
 
       {paymentMode === "check" && (
-        <div style={{ background: "#f8fafc", padding: "18px", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
-          <h4 style={{ margin: "0 0 8px 0", color: "#0f172a" }}>Physical Check Instructions</h4>
-          <p style={{ fontSize: "0.85rem", color: "#475569", lineHeight: "1.4", margin: "0 0 10px 0" }}>
+        <div className={styles.payPanel}>
+          <h4>Physical Check Instructions</h4>
+          <p>
             Make checks payable to <strong>Town Central HOA</strong> and put your street in the memo.
             The lockbox address will be posted here before the board starts collecting through the portal.
           </p>
-          <p style={{ fontSize: "0.85rem", fontWeight: "600", color: "#0f172a", background: "white", padding: "12px", borderRadius: "8px", border: "1px solid #e2e8f0", margin: "0 0 15px 0", lineHeight: "1.5" }}>
+          <p className={styles.payBox}>
             Town Central HOA<br />
             Lockbox address coming from the treasurer<br />
             <em>Memo: {duesInfo?.street_address || user?.address}</em>

@@ -42,3 +42,13 @@
   color: var(--tc-muted);
   margin-left: 8px;
 }
+
+.charge {
+  color: var(--tc-danger);
+  font-weight: 650;
+}
+
+.credit {
+  color: var(--tc-brand-ink);
+  font-weight: 650;
+}

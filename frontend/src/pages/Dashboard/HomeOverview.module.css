@@ -126,6 +126,29 @@
   color: var(--tc-danger);
 }
 
+.trashBanner {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 16px;
+  border: 1px solid var(--tc-line);
+  border-radius: var(--tc-radius);
+  background: var(--tc-bg-elevated);
+  color: var(--tc-ink);
+}
+
+.trashBanner strong {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tc-brand-ink);
+}
+
+.trashBanner span {
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
 .feature {
   display: grid;
   border-radius: 16px;
@@ -413,7 +436,7 @@
 }
 
 .featuredNote.urgent { border-left-color: var(--tc-danger); }
-.featuredNote.event { border-left-color: #6b8cce; }
+.featuredNote.event { border-left-color: var(--tc-brand); }
 .featuredNote.sticky { border-left-color: var(--tc-accent); }
 
 .featuredNote img {

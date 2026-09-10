@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Outlet, useNavigate, useOutletContext } from "react-router-dom";
+import { Navigate, Outlet, useNavigate, useOutletContext } from "react-router-dom";
 import MissionControl from "../../components/BoardPortal/subcomponents/MissionControl";
 import RosterDirectory from "../../components/BoardPortal/subcomponents/RosterDirectory";
 import FinancialLedger from "../../components/BoardPortal/subcomponents/FinancialLedger";
@@ -22,6 +22,7 @@ import { usePortal } from "../../layout/PortalContext";
 import { PATHS } from "../../layout/navConfig";
 import styles from "./Dashboard.module.css";
 import { apiFetch } from "../../api";
+import { isRenter } from "../../utils/occupancy";
 
 export default function DashboardLayout() {
   const { user, isBoard } = usePortal();
@@ -46,13 +47,12 @@ export default function DashboardLayout() {
       });
   }, [isBoard]);
 
-  const handleResolve = async (requestId, boardNote) => {
+  const handleResolve = async (requestId) => {
     try {
       const response = await apiFetch(`/api/requests/${requestId}/resolve`, {
         method: "PATCH",
         body: JSON.stringify({
           adminName: [user?.first_name, user?.last_name].filter(Boolean).join(" ") || "Board",
-          board_note: boardNote || undefined,
         }),
       });
       if (response.ok) {
@@ -70,14 +70,11 @@ export default function DashboardLayout() {
     }
   };
 
-  const handleReview = async (requestId, boardNote) => {
+  const handleReview = async (requestId) => {
     try {
       const response = await apiFetch(`/api/requests/${requestId}/update`, {
         method: "PATCH",
-        body: JSON.stringify({
-          status: "In review",
-          board_note: boardNote || undefined,
-        }),
+        body: JSON.stringify({ status: "In review" }),
       });
       if (response.ok) {
         const row = await response.json().catch(() => null);
@@ -91,6 +88,40 @@ export default function DashboardLayout() {
     }
   };
 
+  const handleComment = async (requestId, body) => {
+    const response = await apiFetch(`/api/requests/${requestId}/comments`, {
+      method: "POST",
+      body: JSON.stringify({ body }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data.error || "Couldn't post that note.");
+    }
+    setRequests((current) =>
+      current.map((req) =>
+        req.id === requestId ? { ...req, comments: [...(req.comments || []), data] } : req,
+      ),
+    );
+    return data;
+  };
+
+  const handleLogInteraction = async (payload) => {
+    const response = await apiFetch("/api/requests/log", {
+      method: "POST",
+      body: JSON.stringify({
+        ...payload,
+        admin_name: [user?.first_name, user?.last_name].filter(Boolean).join(" ") || "Board",
+      }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data.error || "Couldn't save that interaction.");
+    }
+    setRequests((current) => [data, ...current]);
+    setViewMode("open");
+    return data;
+  };
+
   return (
     <Outlet
       context={{
@@ -99,6 +130,8 @@ export default function DashboardLayout() {
         loading,
         handleResolve,
         handleReview,
+        handleComment,
+        handleLogInteraction,
         viewMode,
         setViewMode,
       }}
@@ -173,6 +206,7 @@ export function MaintenancePage() {
 
 export function DuesPage() {
   const { user } = usePortal();
+  if (isRenter(user)) return <Navigate to={PATHS.home} replace />;
   return (
     <div className={`${styles.fadeContent} ${styles.duesGrid}`}>
       <DuesCard user={user} />
@@ -225,6 +259,8 @@ export function AdminRequestsPage() {
         loading={ctx.loading}
         handleResolve={ctx.handleResolve}
         handleReview={ctx.handleReview}
+        handleComment={ctx.handleComment}
+        handleLogInteraction={ctx.handleLogInteraction}
         viewMode={ctx.viewMode}
         setViewMode={ctx.setViewMode}
       />

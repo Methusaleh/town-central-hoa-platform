@@ -14,6 +14,7 @@ const {
 const { sendWelcomePacket, sendClaimCodeEmail, sendHouseholdInvite, sendMail, sendPasswordReset } = require("../utils/mailer");
 const { checkImageBuffer, checkImageDataUrl } = require("../utils/safetyFilter");
 const { uploadToR2, deleteFromR2 } = require("../utils/s3Storage");
+const { normalizeOccupancy } = require("../utils/occupancy");
 const {
   saveTemplate,
   updateStamp,
@@ -37,6 +38,23 @@ const pdfUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 12 * 1024 * 1024 },
 });
+
+async function occupancyForAddress(address) {
+  if (!address) return null;
+  const { rows } = await db.query(
+    `SELECT occupancy FROM neighborhood_roster
+      WHERE lower(trim(street_address)) = lower(trim($1))
+      LIMIT 1`,
+    [address],
+  );
+  return normalizeOccupancy(rows[0]?.occupancy);
+}
+
+async function toPublicUser(record) {
+  const occupancy =
+    record.occupancy !== undefined ? normalizeOccupancy(record.occupancy) : await occupancyForAddress(record.address);
+  return publicUser({ ...record, occupancy });
+}
 
 function runPdfUpload(req, res, next) {
   pdfUpload.single("file")(req, res, (err) => {
@@ -188,7 +206,7 @@ router.post("/login", async (req, res) => {
     record.role = role;
     delete record.password_hash;
 
-    const user = publicUser(record);
+    const user = await toPublicUser(record);
     res.json({ success: true, token: signToken(user), user });
   } catch (err) {
     console.error("Login verification fault:", err.message);
@@ -324,7 +342,7 @@ router.get("/me", authRequired, async (req, res) => {
     const record = rows[0];
     record.role = resolveRole(record);
     delete record.password_hash;
-    res.json({ user: publicUser(record) });
+    res.json({ user: await toPublicUser(record) });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -370,10 +388,14 @@ router.post("/lookup", async (req, res) => {
 });
 
 router.post("/claim", async (req, res) => {
-  const { first_name, last_name, email, password, street_address, residentId, onboarding_token } = req.body;
+  const { first_name, last_name, email, password, street_address, residentId, onboarding_token, occupancy } = req.body;
+  const occupancyValue = normalizeOccupancy(occupancy);
 
   if (!residentId || !password || !email) {
     return res.status(400).json({ error: "Account details are required." });
+  }
+  if (!occupancyValue) {
+    return res.status(400).json({ error: "Say whether this household owns or rents." });
   }
 
   try {
@@ -423,15 +445,15 @@ router.post("/claim", async (req, res) => {
     );
 
     await db.query(
-      "UPDATE neighborhood_roster SET is_claimed = true, first_name = $1, last_name = $2, email = $3 WHERE id = $4",
-      [first_name, last_name, email.trim().toLowerCase(), residentId],
+      "UPDATE neighborhood_roster SET is_claimed = true, first_name = $1, last_name = $2, email = $3, occupancy = $4 WHERE id = $5",
+      [first_name, last_name, email.trim().toLowerCase(), occupancyValue, residentId],
     );
 
     await db.query("COMMIT");
 
     const record = insertRes.rows[0];
     delete record.password_hash;
-    const user = publicUser(record);
+    const user = await toPublicUser({ ...record, occupancy: occupancyValue });
 
     const lotStreet = lot.street_address;
     welcomeAttachments({ firstName: first_name, streetAddress: lotStreet })
@@ -654,7 +676,7 @@ router.put("/avatar", authRequired, runAvatarUpload, async (req, res) => {
 
     const record = rows[0];
     delete record.password_hash;
-    const user = publicUser(record);
+    const user = await toPublicUser(record);
 
     res.json({
       success: true,
@@ -749,7 +771,7 @@ router.post("/invite/accept", async (req, res) => {
 
     const record = insertRes.rows[0];
     delete record.password_hash;
-    const user = publicUser(record);
+    const user = await toPublicUser(record);
 
     res.status(201).json({ success: true, token: signToken(user), user });
   } catch (err) {
@@ -786,7 +808,7 @@ router.delete("/account/:id", boardRequired, async (req, res) => {
     let propertyUnclaimed = false;
     if (remainingResidents === 0) {
       await db.query(
-        "UPDATE neighborhood_roster SET is_claimed = false WHERE lower(trim(street_address)) = lower(trim($1))",
+        "UPDATE neighborhood_roster SET is_claimed = false, occupancy = NULL WHERE lower(trim(street_address)) = lower(trim($1))",
         [userAddress],
       );
       propertyUnclaimed = true;
@@ -817,6 +839,7 @@ router.get("/master-list-placeholder", boardRequired, async (_req, res) => {
         r.email,
         r.street_address,
         r.is_claimed,
+        r.occupancy,
         r.onboarding_token,
         r.claim_letter_sent_at,
         COALESCE((
@@ -1085,7 +1108,8 @@ router.post("/lots/:id/transfer", boardRequired, async (req, res) => {
            last_name = $2,
            email = $3,
            onboarding_token = $4,
-           is_claimed = false
+           is_claimed = false,
+           occupancy = NULL
        WHERE id = $5
        RETURNING id, first_name, last_name, email, street_address, onboarding_token, is_claimed`,
       [first_name.trim(), last_name.trim(), nextEmail, token, lot.id],
@@ -1115,6 +1139,25 @@ router.post("/lots/:id/transfer", boardRequired, async (req, res) => {
   } catch (err) {
     console.error("Transfer error:", err.message);
     res.status(500).json({ error: "Could not transfer this lot." });
+  }
+});
+
+router.patch("/lots/:id/occupancy", boardRequired, async (req, res) => {
+  const occupancy = normalizeOccupancy(req.body.occupancy);
+  if (!occupancy) {
+    return res.status(400).json({ error: "Choose owner or renter." });
+  }
+  try {
+    const { rows } = await db.query(
+      `UPDATE neighborhood_roster SET occupancy = $1 WHERE id = $2
+       RETURNING id, street_address, occupancy`,
+      [occupancy, req.params.id],
+    );
+    if (!rows[0]) return res.status(404).json({ error: "That lot is not on the roster." });
+    res.json(rows[0]);
+  } catch (err) {
+    console.error("Occupancy update error:", err.message);
+    res.status(500).json({ error: "Could not update occupancy." });
   }
 });
 

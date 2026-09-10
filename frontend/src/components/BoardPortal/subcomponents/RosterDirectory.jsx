@@ -229,6 +229,7 @@ export default function RosterDirectory({ onBack }) {
   const [emailStatus, setEmailStatus] = useState("");
   const [mobileDetail, setMobileDetail] = useState(false);
   const [selectedPeople, setSelectedPeople] = useState(() => savedSelection.selectedPeople || []);
+  const [inspectingLot, setInspectingLot] = useState(false);
   const [welcomeConfirm, setWelcomeConfirm] = useState(null);
   const [showImport, setShowImport] = useState(false);
   const [importLots, setImportLots] = useState([]);
@@ -327,6 +328,7 @@ export default function RosterDirectory({ onBack }) {
   }, [lots, query]);
 
   const toggleOne = (id) => {
+    setInspectingLot(false);
     setSelectedIds((current) => {
       const selectedIds = current.includes(id)
         ? current.filter((item) => item !== id)
@@ -338,6 +340,7 @@ export default function RosterDirectory({ onBack }) {
   };
 
   const togglePerson = (person, street) => {
+    setInspectingLot(false);
     setSelectedPeople((current) => {
       const selectedPeople = current.some((item) => item.id === person.id)
         ? current.filter((item) => item.id !== person.id)
@@ -375,13 +378,14 @@ export default function RosterDirectory({ onBack }) {
     setCompose("");
     setEmailStatus("");
     setWelcomeConfirm(null);
+    setInspectingLot(false);
     setMobileDetail(statusType !== "clear");
   };
 
   const openLot = (lot) => {
-    if (selectedIds.length > 0 || selectedPeople.length > 0) return;
     setSelectedId(lot.id);
     persistNow({ selectedId: lot.id });
+    setInspectingLot(true);
     setMobileDetail(true);
     setShowTransfer(false);
     setInviteEmail("");
@@ -664,6 +668,26 @@ export default function RosterDirectory({ onBack }) {
     }
   };
 
+  const setOccupancy = async (occupancy) => {
+    if (!selected || occupancy === selected.occupancy) return;
+    try {
+      const res = await apiFetch(`/api/residents/lots/${selected.id}/occupancy`, {
+        method: "PATCH",
+        body: JSON.stringify({ occupancy }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setLots((current) =>
+          current.map((lot) => (lot.id === selected.id ? { ...lot, occupancy } : lot)),
+        );
+      } else {
+        setStatus({ type: "err", text: data.error || "Could not update occupancy." });
+      }
+    } catch {
+      setStatus({ type: "err", text: "Network error updating occupancy." });
+    }
+  };
+
   const removeLogin = async (person) => {
     if (!window.confirm(`Remove ${displayName(person)}'s login? They will lose access until invited again.`)) return;
     try {
@@ -790,6 +814,7 @@ export default function RosterDirectory({ onBack }) {
   const claimedCount = lots.filter((lot) => lot.is_claimed).length;
   const loginCount = lots.reduce((sum, lot) => sum + householdOf(lot).length, 0);
   const batchMode = loaded && (selectedIds.length > 0 || selectedPeople.length > 0);
+  const showBatch = batchMode && !inspectingLot;
   const selectedLots = lots.filter((lot) => selectedIds.some((id) => String(id) === String(lot.id)));
   const reachableLots = selectedLots.filter(lotHasEmail);
   const printLots = selectedLots.filter((lot) => !lotHasEmail(lot));
@@ -1159,26 +1184,28 @@ export default function RosterDirectory({ onBack }) {
                 const members = householdOf(lot);
                 const checked = selectedIds.some((id) => String(id) === String(lot.id));
                 const peopleOn = members.some((person) => selectedPeople.some((item) => item.id === person.id));
+                const lotOn = String(lot.id) === String(selectedId) && (inspectingLot || !batchMode);
                 return (
                   <div
                     key={lot.id}
                     className={`${styles.rowBlock} ${
-                      batchMode
+                      showBatch
                         ? checked || peopleOn ? styles.rowOn : ""
-                        : String(lot.id) === String(selectedId) ? styles.rowOn : ""
+                        : lotOn ? styles.rowOn : ""
                     }`}
+                    onClick={() => openLot(lot)}
                   >
                     <div className={styles.row}>
-                      <label className={styles.check}>
+                      <label className={styles.check} onClick={(e) => e.stopPropagation()}>
                         <input
                           type="checkbox"
                           checked={checked}
                           onChange={() => toggleOne(lot.id)}
                         />
                       </label>
-                      <button type="button" className={styles.rowMain} onClick={() => openLot(lot)}>
+                      <div className={styles.rowMain}>
                         <strong>{lot.street_address}</strong>
-                      </button>
+                      </div>
                       <em className={lot.is_claimed ? styles.claimed : styles.pending}>
                         {lot.is_claimed ? "Claimed" : "Pending"}
                       </em>
@@ -1189,7 +1216,7 @@ export default function RosterDirectory({ onBack }) {
                       ) : (
                         members.map((person) => (
                           <li key={person.id}>
-                            <label>
+                            <label className={styles.memberPick} onClick={(e) => e.stopPropagation()}>
                               <input
                                 type="checkbox"
                                 checked={selectedPeople.some((item) => item.id === person.id)}
@@ -1215,7 +1242,7 @@ export default function RosterDirectory({ onBack }) {
             All households
           </button>
 
-          {batchMode ? (
+          {showBatch ? (
             <>
               <div className={styles.accountHead}>
                 <div>
@@ -1435,6 +1462,27 @@ export default function RosterDirectory({ onBack }) {
                 </em>
               </div>
 
+              <div className={styles.occupancyRow}>
+                <span>This household</span>
+                <div>
+                  <button
+                    type="button"
+                    className={selected.occupancy === "owner" ? styles.occupancyOn : styles.occupancyBtn}
+                    onClick={() => setOccupancy("owner")}
+                  >
+                    Owns
+                  </button>
+                  <button
+                    type="button"
+                    className={selected.occupancy === "renter" ? styles.occupancyOn : styles.occupancyBtn}
+                    onClick={() => setOccupancy("renter")}
+                  >
+                    Rents
+                  </button>
+                </div>
+                <p>Dues only. Renters still get the rest of the site. New residents choose again when the lot transfers.</p>
+              </div>
+
               <div className={styles.codeRow}>
                 <div>
                   <span>Claim code</span>
@@ -1517,7 +1565,7 @@ export default function RosterDirectory({ onBack }) {
               {showTransfer ? (
                 <form className={styles.form} onSubmit={transferLot}>
                   <h4>Transfer owner</h4>
-                  <p>Issues a new claim code. Existing logins stay until you remove them.</p>
+                  <p>Issues a new claim code and clears owner/renter so the new household chooses again. Existing logins stay until you remove them.</p>
                   <div className={styles.formRow}>
                     <label>
                       First name

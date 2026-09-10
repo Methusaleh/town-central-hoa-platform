@@ -19,6 +19,7 @@ export default function Claim({ onBack, onClaimSuccess }) {
     password: "",
     first_name: "",
     last_name: "",
+    occupancy: "",
   });
 
   const goToHome = (payload = claimPayload) => {
@@ -176,7 +177,33 @@ export default function Claim({ onBack, onClaimSuccess }) {
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               required
             />
-            <button type="submit" className={styles.submitBtn}>Activate account</button>
+            <p className={styles.fieldLabel}>Do you own or rent this house?</p>
+            <p className={styles.hint}>
+              This only controls whether this household sees HOA dues. It does not limit anything else on the site — events, the Porch, meetings, and documents stay open.
+            </p>
+            <div className={styles.occupancy}>
+              <button
+                type="button"
+                className={formData.occupancy === "owner" ? styles.occupancyOn : styles.occupancyBtn}
+                onClick={() => setFormData({ ...formData, occupancy: "owner" })}
+              >
+                We own it
+              </button>
+              <button
+                type="button"
+                className={formData.occupancy === "renter" ? styles.occupancyOn : styles.occupancyBtn}
+                onClick={() => setFormData({ ...formData, occupancy: "renter" })}
+              >
+                We rent it
+              </button>
+            </div>
+            <button
+              type="submit"
+              className={styles.submitBtn}
+              disabled={!formData.occupancy}
+            >
+              Activate account
+            </button>
           </form>
         )}
 

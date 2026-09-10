@@ -15,6 +15,7 @@ import { countUnseen, readFeedCursors } from "../../utils/feedCursors";
 import { usePortal } from "../../layout/PortalContext";
 import { PATHS } from "../../layout/navConfig";
 import { apiFetch } from "../../api";
+import { isRenter } from "../../utils/occupancy";
 import {
   coverFor,
   eventDateParts,
@@ -112,12 +113,14 @@ const GO_TO = [
 export default function HomeOverview() {
   const { user } = usePortal();
   const navigate = useNavigate();
+  const renter = isRenter(user);
   const [recentAlerts, setRecentAlerts] = useState([]);
   const [recentPosts, setRecentPosts] = useState([]);
   const [recentAnnouncements, setRecentAnnouncements] = useState([]);
   const [events, setEvents] = useState([]);
   const [dues, setDues] = useState(null);
   const [rsvping, setRsvping] = useState(false);
+  const [trashBanner, setTrashBanner] = useState(null);
 
   useEffect(() => {
     apiFetch("/api/alerts")
@@ -149,15 +152,23 @@ export default function HomeOverview() {
       .then((res) => res.json())
       .then((data) => setEvents(Array.isArray(data) ? data : []))
       .catch((err) => console.error("Events preview fetch error:", err));
+
+    apiFetch("/api/settings/trash")
+      .then((res) => res.json())
+      .then((data) => setTrashBanner(data?.banner || null))
+      .catch(() => setTrashBanner(null));
   }, []);
 
   useEffect(() => {
-    if (!user?.email) return;
+    if (!user?.email || isRenter(user)) {
+      setDues(null);
+      return;
+    }
     apiFetch(`/api/dues/${encodeURIComponent(user.email)}`)
       .then((res) => res.json())
       .then((data) => setDues(data && !data.error ? data : null))
       .catch((err) => console.error("Dues preview fetch error:", err));
-  }, [user?.email]);
+  }, [user?.email, user?.occupancy]);
 
   const now = new Date();
   const greeting = greetingForHour(now.getHours());
@@ -278,6 +289,13 @@ export default function HomeOverview() {
           </div>
         </div>
       </section>
+
+      {trashBanner && (
+        <div className={styles.trashBanner}>
+          <strong>{trashBanner.kicker}</strong>
+          <span>{trashBanner.text}</span>
+        </div>
+      )}
 
       {activeAlert && (
         <button
@@ -527,7 +545,7 @@ export default function HomeOverview() {
       )}
 
       <nav className={styles.goto} aria-label="Around Town Central">
-        {GO_TO.map((item) => {
+        {GO_TO.filter((item) => item.to !== PATHS.dues || !renter).map((item) => {
           const Icon = item.icon;
           return (
             <button

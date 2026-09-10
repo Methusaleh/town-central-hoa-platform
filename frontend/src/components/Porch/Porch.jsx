@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, ChevronRight, ImagePlus, MessageCircle, Smile, X } from "lucide-react";
+import { ArrowLeft, ChevronRight, ImagePlus, MessageCircle, Search, Smile, X } from "lucide-react";
 import EmojiPicker from "../ui/EmojiPicker";
 import GifPicker from "../ui/GifPicker";
 import Modal from "../ui/Modal";
@@ -10,6 +10,7 @@ import { apiFetch } from "../../api";
 import { PATHS } from "../../layout/navConfig";
 import styles from "./Porch.module.css";
 
+const PAGE_SIZE = 20;
 const QUICK_REACT = ["👍", "❤️", "😂", "🎉", "🙏"];
 
 const STOCK_REASONS = [
@@ -93,7 +94,12 @@ export default function Porch({ user }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [posts, setPosts] = useState([]);
-  const [commentsMap, setCommentsMap] = useState({});
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [thread, setThread] = useState(null);
+  const [threadLoaded, setThreadLoaded] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [newContent, setNewContent] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
@@ -130,32 +136,66 @@ export default function Porch({ user }) {
 
   const isAdmin = user?.role === "board_member" || user?.role === "super_admin";
   const identity = user?.email || String(user?.id || "");
-  const activePost = posts.find((post) => String(post.id) === String(postId));
-  const threadComments = activePost ? commentsMap[activePost.id] || [] : [];
+  const activePost = thread?.post || null;
+  const threadComments = thread?.comments || [];
 
-  const loadFeed = async () => {
+  const loadFeed = async ({ reset = false, before = null, q = debouncedQuery } = {}) => {
+    if (!reset) setLoadingMore(true);
     try {
-      const res = await apiFetch("/api/porch");
+      const params = new URLSearchParams();
+      params.set("limit", String(PAGE_SIZE));
+      if (before) params.set("before", String(before));
+      if (q) params.set("q", q);
+      const res = await apiFetch(`/api/porch?${params.toString()}`);
       const data = await res.json();
       if (res.ok) {
-        setPosts(data.posts || []);
-        const map = {};
-        (data.comments || []).forEach((comment) => {
-          if (!map[comment.post_id]) map[comment.post_id] = [];
-          map[comment.post_id].push(comment);
-        });
-        setCommentsMap(map);
+        const page = Array.isArray(data.posts) ? data.posts : [];
+        setPosts((current) => (reset ? page : [...current, ...page]));
+        setHasMore(Boolean(data.hasMore));
       }
     } catch (err) {
       console.error("Porch fetch error:", err);
     } finally {
       setLoaded(true);
+      setLoadingMore(false);
     }
   };
 
+  const loadThread = async (id) => {
+    const res = await apiFetch(`/api/porch/${id}`);
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.post) {
+      setThread({ post: data.post, comments: Array.isArray(data.comments) ? data.comments : [] });
+      return true;
+    }
+    setThread(null);
+    return false;
+  };
+
   useEffect(() => {
-    loadFeed();
-  }, []);
+    const timer = setTimeout(() => setDebouncedQuery(query.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  useEffect(() => {
+    loadFeed({ reset: true, q: debouncedQuery });
+  }, [debouncedQuery]);
+
+  useEffect(() => {
+    if (!postId) {
+      setThread(null);
+      setThreadLoaded(false);
+      return undefined;
+    }
+    let cancelled = false;
+    setThreadLoaded(false);
+    loadThread(postId).finally(() => {
+      if (!cancelled) setThreadLoaded(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [postId]);
 
   useEffect(() => {
     setReplyText("");
@@ -258,7 +298,9 @@ export default function Porch({ user }) {
         setGifUrl("");
         setShowGifPicker(false);
         setShowComposerEmoji(false);
-        loadFeed();
+        setQuery("");
+        if (debouncedQuery) setDebouncedQuery("");
+        else loadFeed({ reset: true, q: "" });
       } else {
         setError(data.error || "Couldn't publish that post.");
       }
@@ -295,7 +337,12 @@ export default function Porch({ user }) {
         setShowReplyEmoji(false);
         setShowReplyGif(false);
         if (replyFileRef.current) replyFileRef.current.value = "";
-        loadFeed();
+        await loadThread(id);
+        setPosts((current) =>
+          current.map((post) =>
+            post.id === id ? { ...post, reply_count: (post.reply_count || 0) + 1 } : post,
+          ),
+        );
       } else {
         setReplyError(data.error || "Couldn't post that reply.");
       }
@@ -308,18 +355,18 @@ export default function Porch({ user }) {
   };
 
   const handleReact = async (id, emoji) => {
-    setPosts((current) =>
-      current.map((post) => {
-        if (post.id !== id) return post;
-        const reactions = normalizeReactions(post.reactions);
-        const list = reactions[emoji] || [];
-        reactions[emoji] = list.includes(identity)
-          ? list.filter((item) => item !== identity)
-          : [...list, identity];
-        if (reactions[emoji].length === 0) delete reactions[emoji];
-        return { ...post, reactions };
-      }),
-    );
+    const apply = (post) => {
+      if (post.id !== id) return post;
+      const reactions = normalizeReactions(post.reactions);
+      const list = reactions[emoji] || [];
+      reactions[emoji] = list.includes(identity)
+        ? list.filter((item) => item !== identity)
+        : [...list, identity];
+      if (reactions[emoji].length === 0) delete reactions[emoji];
+      return { ...post, reactions };
+    };
+    setPosts((current) => current.map(apply));
+    setThread((current) => (current?.post ? { ...current, post: apply(current.post) } : current));
     try {
       await apiFetch(`/api/porch/${id}/reactions`, {
         method: "PATCH",
@@ -339,7 +386,8 @@ export default function Porch({ user }) {
       });
       if (res.ok) {
         setModModalItem(null);
-        loadFeed();
+        if (postId) await loadThread(postId);
+        loadFeed({ reset: true, q: debouncedQuery });
       }
     } catch (err) {
       console.error("Moderation network error:", err);
@@ -417,7 +465,7 @@ export default function Porch({ user }) {
           All posts
         </button>
 
-        {!loaded ? (
+        {!threadLoaded ? (
           <div className={styles.empty}>Loading…</div>
         ) : !activePost ? (
           <div className={styles.empty}>
@@ -752,12 +800,25 @@ export default function Porch({ user }) {
         </div>
       </form>
 
-      {posts.length === 0 ? (
-        <div className={styles.empty}>The Porch is quiet. Be the first to say hello.</div>
+      <label className={styles.find}>
+        <Search size={16} />
+        <input
+          type="search"
+          placeholder="Search posts"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+      </label>
+
+      {!loaded ? (
+        <div className={styles.empty}>Loading…</div>
+      ) : posts.length === 0 ? (
+        <div className={styles.empty}>
+          {debouncedQuery ? "Nothing matches that." : "The Porch is quiet. Be the first to say hello."}
+        </div>
       ) : (
         <div className={styles.list}>
           {posts.map((post) => {
-            const comments = commentsMap[post.id] || [];
             const reactions = normalizeReactions(post.reactions);
             const snippet =
               clip(post.content, 160) ||
@@ -783,7 +844,7 @@ export default function Porch({ user }) {
                   <time dateTime={post.created_at}>{relativeTime(post.created_at)}</time>
                   <Link to={`${PATHS.porch}/${post.id}`} className={styles.replyHint}>
                     <MessageCircle size={14} />
-                    {replyLabel(comments.length)}
+                    {replyLabel(post.reply_count || 0)}
                   </Link>
                   {!post.is_removed && (
                     <ReactionBar
@@ -807,6 +868,22 @@ export default function Porch({ user }) {
             );
           })}
         </div>
+      )}
+
+      {hasMore && (
+        <Button
+          className={styles.more}
+          variant="secondary"
+          disabled={loadingMore}
+          onClick={() =>
+            loadFeed({
+              before: posts[posts.length - 1]?.id,
+              q: debouncedQuery,
+            })
+          }
+        >
+          {loadingMore ? "Loading…" : "Load more"}
+        </Button>
       )}
 
       {lightboxEl}

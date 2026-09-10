@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Building2, ClipboardList, FolderOpen, Users, Wallet } from "lucide-react";
 import { adminToolPaths } from "../../../layout/navConfig";
+import TrashSchedule from "./TrashSchedule";
 import styles from "./MissionControl.module.css";
 
 const TOOLS = [
@@ -72,6 +73,8 @@ export default function MissionControl() {
           );
         })}
       </div>
+
+      <TrashSchedule />
     </div>
   );
 }
