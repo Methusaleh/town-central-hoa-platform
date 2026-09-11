@@ -438,10 +438,10 @@ router.post("/claim", async (req, res) => {
     const lotAddress = lot.street_address;
 
     const insertRes = await db.query(
-      `INSERT INTO users (first_name, last_name, email, password_hash, address, role)
-       VALUES ($1, $2, $3, $4, $5, 'resident')
+      `INSERT INTO users (first_name, last_name, email, password_hash, address, role, roster_lot_id)
+       VALUES ($1, $2, $3, $4, $5, 'resident', $6)
        RETURNING ${USER_COLUMNS}`,
-      [first_name, last_name, email.trim().toLowerCase(), hashedPassword, lotAddress],
+      [first_name, last_name, email.trim().toLowerCase(), hashedPassword, lotAddress, lot.id],
     );
 
     await db.query(
@@ -754,10 +754,10 @@ router.post("/invite/accept", async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
     const insertRes = await db.query(
-      `INSERT INTO users (first_name, last_name, email, password_hash, address, role)
-       VALUES ($1, $2, $3, $4, $5, 'resident')
+      `INSERT INTO users (first_name, last_name, email, password_hash, address, role, roster_lot_id)
+       VALUES ($1, $2, $3, $4, $5, 'resident', $6)
        RETURNING ${USER_COLUMNS}`,
-      [first_name, last_name, email, hashedPassword, lotAddress],
+      [first_name, last_name, email, hashedPassword, lotAddress, lot?.id || null],
     );
 
     await db.query("UPDATE invitations SET is_used = true WHERE token = $1", [token]);

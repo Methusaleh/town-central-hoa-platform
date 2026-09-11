@@ -212,9 +212,6 @@ export default function OperationsDashboard({
               </div>
               <h3>{req.subject}</h3>
               <p className={styles.desc}>{req.description || "No description provided."}</p>
-              {!(req.comments || []).length && req.board_note && (
-                <p className={styles.note}>Board note: {req.board_note}</p>
-              )}
               <p className={styles.statusLine}>{ticketStatusLabel(req.status)}</p>
 
               {req.status === "Open" ? (

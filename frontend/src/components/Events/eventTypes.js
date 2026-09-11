@@ -181,8 +181,10 @@ export function outlookCalendarUrl(event) {
   return `https://outlook.live.com/calendar/0/deeplink/compose?${params.toString()}`;
 }
 
-export function mapsUrl(location) {
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`;
+export function mapsUrl(location, placeId) {
+  const params = new URLSearchParams({ api: "1", query: location || "" });
+  if (placeId) params.set("query_place_id", placeId);
+  return `https://www.google.com/maps/search/?${params.toString()}`;
 }
 
 function icsEscape(value) {

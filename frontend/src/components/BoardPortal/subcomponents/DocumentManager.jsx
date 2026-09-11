@@ -434,7 +434,7 @@ export default function DocumentManager({ onBack }) {
     const res = await apiFetch(path, { method: "PATCH", body: JSON.stringify(body) });
     setRenaming(null);
     if (res.ok) fetchData();
-    else alert("Rename failed.");
+    else alert((await readError(res)) || "Rename failed.");
   };
 
   const deleteSelected = async (items) => {
@@ -459,6 +459,7 @@ export default function DocumentManager({ onBack }) {
         : { category_id: targetFolderId, is_private: targetAudience === "board" };
     const res = await apiFetch(path, { method: "PATCH", body: JSON.stringify(body) });
     if (res.ok) fetchData();
+    else alert((await readError(res)) || "Could not move that item.");
   };
 
   const moveToLibrary = async (item, destLibrary) => {

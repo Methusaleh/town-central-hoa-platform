@@ -18,6 +18,10 @@ function asAudience(value) {
   return value === "board" ? "board" : "residents";
 }
 
+function isUniqueFolderName(err) {
+  return err?.code === "23505";
+}
+
 function fileNameFromUrl(fileUrl) {
   try {
     return decodeURIComponent(new URL(fileUrl).pathname.split("/").pop());
@@ -141,6 +145,9 @@ router.post("/categories", boardRequired, async (req, res) => {
     );
     res.status(201).json(rows[0]);
   } catch (err) {
+    if (isUniqueFolderName(err)) {
+      return res.status(409).json({ error: "A folder with that name is already here." });
+    }
     res.status(500).json({ error: err.message });
   }
 });
@@ -212,6 +219,9 @@ router.patch("/categories/:id", boardRequired, async (req, res) => {
     }
     res.json(rows[0]);
   } catch (err) {
+    if (isUniqueFolderName(err)) {
+      return res.status(409).json({ error: "A folder with that name is already here." });
+    }
     res.status(500).json({ error: err.message });
   }
 });

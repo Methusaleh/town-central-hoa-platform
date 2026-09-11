@@ -10,6 +10,10 @@ const pool = new Pool({
   connectionTimeoutMillis: 2000,
 });
 
+pool.on("error", (err) => {
+  console.error("Database pool error:", err.message);
+});
+
 const query = (text, params) => pool.query(text, params);
 
 async function runMigrations() {

@@ -31,9 +31,6 @@ function TicketItem({ req, onReply }) {
       </div>
       <strong>{req.subject}</strong>
       <p>{req.description}</p>
-      {!(req.comments || []).length && req.board_note && (
-        <p className={styles.note}>Board: {req.board_note}</p>
-      )}
       <TicketThread
         comments={req.comments || []}
         canReply={req.status === "In review"}

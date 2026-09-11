@@ -4,6 +4,7 @@ import Modal from "../ui/Modal";
 import Button from "../ui/Button";
 import { apiFetch } from "../../api";
 import { EVENT_TYPE_LIST, formatUtcYmd, typeMeta } from "./eventTypes";
+import PlaceSearch from "./PlaceSearch";
 import styles from "./Events.module.css";
 
 function timeInputValue(value) {
@@ -67,7 +68,9 @@ export default function EventCreateModal({ event = null, onClose, onSaved }) {
       formData.append("location", location.trim());
       formData.append("description", description.trim());
       formData.append("event_type", type);
-      formData.append("details", JSON.stringify(details));
+      const payload = { ...details };
+      if (!payload.maps_place_id) delete payload.maps_place_id;
+      formData.append("details", JSON.stringify(payload));
       if (coverFile) formData.append("cover", coverFile);
       if (flyerFile) formData.append("attachment", flyerFile);
 
@@ -222,10 +225,18 @@ export default function EventCreateModal({ event = null, onClose, onSaved }) {
 
         <label>
           Where
-          <input
+          <PlaceSearch
             value={location}
-            onChange={(e) => setLocation(e.target.value)}
             placeholder={type === "pool" ? "Community pool" : "Clubhouse, cul-de-sac, someone's yard…"}
+            onChange={(next, meta) => {
+              setLocation(next);
+              setDetails((prev) => {
+                const copy = { ...prev };
+                if (meta?.placeId) copy.maps_place_id = meta.placeId;
+                else delete copy.maps_place_id;
+                return copy;
+              });
+            }}
           />
         </label>
 

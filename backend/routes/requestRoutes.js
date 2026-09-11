@@ -314,16 +314,24 @@ router.post("/log", boardRequired, async (req, res) => {
   }
 
   try {
+    await db.query("BEGIN");
     const { rows } = await db.query(
       `INSERT INTO community_requests
-        (resident_id, first_name, last_name, request_type, subject, description, status, source, street_address, board_note)
-       VALUES (NULL, $1, '', 'board_note', $2, $3, 'Open', 'board', $4, $5)
+        (resident_id, first_name, last_name, request_type, subject, description, status, source, street_address)
+       VALUES (NULL, $1, '', 'board_note', $2, $3, 'Open', 'board', $4)
        RETURNING *`,
-      [neighborName, subject, description, street || null, `Logged by ${loggedBy}`],
+      [neighborName, subject, description, street || null],
     );
+    await db.query(
+      `INSERT INTO request_comments (request_id, author_id, author_name, body, visibility)
+       VALUES ($1, $2, $3, $4, 'board')`,
+      [rows[0].id, req.user.id, loggedBy, `Logged by ${loggedBy}`],
+    );
+    await db.query("COMMIT");
     const [ticket] = await withComments(rows, { includeBoard: true });
     res.status(201).json(ticket);
   } catch (err) {
+    await db.query("ROLLBACK");
     console.error("Board log error:", err.message);
     res.status(500).json({ error: "Couldn't save that interaction." });
   }
@@ -361,7 +369,6 @@ router.post("/admin/archive-export", boardRequired, async (req, res) => {
       "name",
       "subject",
       "description",
-      "board_note",
       "thread",
       "resolved_by",
     ];
@@ -376,7 +383,6 @@ router.post("/admin/archive-export", boardRequired, async (req, res) => {
       `${row.first_name || ""} ${row.last_name || ""}`.trim(),
       row.subject,
       row.description,
-      row.board_note,
       (commentMap.get(row.id) || [])
         .map((comment) => `${comment.author_name}: ${comment.body}`)
         .join(" | "),

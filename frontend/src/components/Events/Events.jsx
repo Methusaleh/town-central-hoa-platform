@@ -299,7 +299,7 @@ export default function Events({ user }) {
               {event.location && (
                 <a
                   className={styles.place}
-                  href={mapsUrl(event.location)}
+                  href={mapsUrl(event.location, event.details?.maps_place_id)}
                   target="_blank"
                   rel="noreferrer"
                 >

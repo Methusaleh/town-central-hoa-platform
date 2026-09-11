@@ -123,7 +123,6 @@ END $$;`,
     WHERE category = 'Traffic / Party'
       AND content LIKE 'Extra cars parked along Redbud%'
       AND resolved_at IS NULL`,
-  `ALTER TABLE community_requests ADD COLUMN IF NOT EXISTS board_note TEXT`,
   `ALTER TABLE community_requests ADD COLUMN IF NOT EXISTS source VARCHAR DEFAULT 'resident'`,
   `ALTER TABLE community_requests ADD COLUMN IF NOT EXISTS street_address VARCHAR`,
   `UPDATE community_requests SET request_type = 'home_change' WHERE request_type = 'arc'`,
@@ -153,22 +152,61 @@ END $$;`,
   )`,
   `CREATE INDEX IF NOT EXISTS request_comments_request_idx
      ON request_comments (request_id, created_at)`,
-  `INSERT INTO request_comments (request_id, author_name, body, visibility, created_at)
-     SELECT id,
-            'Board',
-            board_note,
-            CASE
-              WHEN COALESCE(source, 'resident') = 'board' OR request_type = 'board_note'
-                THEN 'board'
-              ELSE 'household'
-            END,
-            COALESCE(created_at, CURRENT_TIMESTAMP)
-       FROM community_requests
-      WHERE board_note IS NOT NULL
-        AND trim(board_note) <> ''
-        AND NOT EXISTS (
-          SELECT 1 FROM request_comments c WHERE c.request_id = community_requests.id
-        )`,
+  `DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+     WHERE table_schema = 'public'
+       AND table_name = 'community_requests'
+       AND column_name = 'board_note'
+  ) THEN
+    INSERT INTO request_comments (request_id, author_name, body, visibility, created_at)
+    SELECT id,
+           'Board',
+           board_note,
+           CASE
+             WHEN COALESCE(source, 'resident') = 'board' OR request_type = 'board_note'
+               THEN 'board'
+             ELSE 'household'
+           END,
+           COALESCE(created_at, CURRENT_TIMESTAMP)
+      FROM community_requests
+     WHERE board_note IS NOT NULL
+       AND trim(board_note) <> ''
+       AND NOT EXISTS (
+         SELECT 1 FROM request_comments c
+          WHERE c.request_id = community_requests.id
+            AND c.body = community_requests.board_note
+       );
+    ALTER TABLE community_requests DROP COLUMN board_note;
+  END IF;
+END $$;`,
+  `DROP TABLE IF EXISTS maintenance_requests`,
+  `DROP TABLE IF EXISTS neighborhood_notifications`,
+  `DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'community_requests_resident_id_fkey'
+  ) THEN
+    ALTER TABLE community_requests
+      ADD CONSTRAINT community_requests_resident_id_fkey
+      FOREIGN KEY (resident_id) REFERENCES users(id) ON DELETE SET NULL;
+  END IF;
+END $$;`,
+  `UPDATE users u
+      SET roster_lot_id = r.id
+     FROM neighborhood_roster r
+    WHERE u.roster_lot_id IS NULL
+      AND u.address IS NOT NULL
+      AND btrim(u.address) <> ''
+      AND lower(trim(u.address)) = lower(trim(r.street_address))`,
+  `ALTER TABLE document_categories DROP CONSTRAINT IF EXISTS document_categories_name_key`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS document_categories_sibling_name
+     ON document_categories (parent_id, lower(trim(name)))
+     WHERE parent_id IS NOT NULL`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS document_categories_root_name
+     ON document_categories (lower(COALESCE(audience, 'residents')), lower(trim(name)))
+     WHERE parent_id IS NULL`,
 ];
 
 async function migrate(query) {
