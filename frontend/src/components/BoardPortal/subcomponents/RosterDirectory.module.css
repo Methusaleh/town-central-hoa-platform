@@ -476,6 +476,10 @@
   padding-right: 8px;
 }
 
+.batchBar {
+  display: none;
+}
+
 .rowBlock {
   border-bottom: 1px solid var(--tc-line);
   cursor: pointer;
@@ -695,6 +699,63 @@
   cursor: pointer;
 }
 
+.tickets {
+  margin-top: 8px;
+  padding-top: 18px;
+  border-top: 1px solid var(--tc-line);
+}
+
+.tickets h4 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+  font-weight: 650;
+}
+
+.tickets ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tickets li {
+  border-bottom: 1px solid var(--tc-line);
+}
+
+.ticketLink {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 10px 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.ticketLink:hover strong,
+.ticketLink:focus-visible strong {
+  color: var(--tc-brand-ink);
+}
+
+.ticketLink span {
+  font-size: 0.8rem;
+  color: var(--tc-muted);
+}
+
+.resolvedToggle {
+  margin: 10px 0 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--tc-brand-ink);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
 .empty,
 .emptyInline {
   margin: 0;
@@ -814,5 +875,29 @@
 
   .mobileBack {
     display: inline-flex;
+  }
+
+  .batchBar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: auto;
+    padding: 12px 14px;
+    border-top: 1px solid var(--tc-line);
+    background: var(--tc-bg-elevated);
+  }
+
+  .batchBar p {
+    margin: 0;
+    font-size: 0.88rem;
+    font-weight: 650;
+  }
+
+  .batchBarActions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
   }
 }

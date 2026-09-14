@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Download, Info, Search } from "lucide-react";
+import Button from "../../ui/Button";
 import AdminPaymentForm from "./AdminPaymentForm";
 import { apiFetch } from "../../../api";
 import { readBoardSelection, writeBoardSelection } from "../../../utils/boardSelection";
@@ -215,7 +216,7 @@ export default function FinancialLedger({ onBack, user }) {
       persistNow({ selectedStreets });
       return selectedStreets;
     });
-    setMobileDetail(true);
+    setMobileDetail(false);
   };
 
   const postBulkEntry = async (e) => {
@@ -394,6 +395,25 @@ export default function FinancialLedger({ onBack, user }) {
               })}
             </div>
           )}
+          {bulkMode && !mobileDetail && (
+            <div className={styles.batchBar}>
+              <p>
+                {selectedStreets.length} household{selectedStreets.length === 1 ? "" : "s"} selected
+              </p>
+              <div className={styles.batchBarActions}>
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setSelectedStreets([]);
+                    persistNow({ selectedStreets: [] });
+                  }}
+                >
+                  Clear
+                </Button>
+                <Button onClick={() => setMobileDetail(true)}>Continue</Button>
+              </div>
+            </div>
+          )}
         </section>
 
         <section className={styles.desk}>
@@ -401,7 +421,7 @@ export default function FinancialLedger({ onBack, user }) {
             <>
               <button type="button" className={styles.mobileBack} onClick={() => setMobileDetail(false)}>
                 <ArrowLeft size={16} />
-                All households
+                Add more
               </button>
               <div className={styles.accountHead}>
                 <div>

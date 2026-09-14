@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { ArrowLeft, Copy, Download, FileText, FileUp, Info, Mail, Search } from "lucide-react";
 import Button from "../../ui/Button";
 import { apiFetch } from "../../../api";
 import { usePortal } from "../../../layout/PortalContext";
+import { adminToolPaths } from "../../../layout/navConfig";
 import {
   readBoardSelection,
   restoreRosterSelection,
@@ -10,6 +12,7 @@ import {
   writeBoardSelection,
 } from "../../../utils/boardSelection";
 import { downloadDoorDropPdf } from "../../../utils/doorDropPdf";
+import { requestTypeLabel, ticketStatusLabel } from "../../../utils/requestTypes";
 import styles from "./RosterDirectory.module.css";
 
 const EMPTY_FORM = {
@@ -242,10 +245,39 @@ export default function RosterDirectory({ onBack }) {
   const [printBusy, setPrintBusy] = useState("");
   const doorDropFileRef = useRef(null);
   const welcomeFileRef = useRef(null);
+  const [tickets, setTickets] = useState([]);
+  const [ticketsLoading, setTicketsLoading] = useState(false);
+  const [showResolvedTickets, setShowResolvedTickets] = useState(false);
 
   const selected = lots.find((lot) => String(lot.id) === String(selectedId)) || null;
   const selectionRef = useRef({ selectedId, selectedIds, selectedPeople, lots });
   selectionRef.current = { selectedId, selectedIds, selectedPeople, lots };
+
+  useEffect(() => {
+    const street = selected?.street_address;
+    if (!street) {
+      setTickets([]);
+      setTicketsLoading(false);
+      return undefined;
+    }
+    let cancelled = false;
+    setTicketsLoading(true);
+    setShowResolvedTickets(false);
+    apiFetch(`/api/requests/admin/by-address?address=${encodeURIComponent(street)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled) setTickets(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {
+        if (!cancelled) setTickets([]);
+      })
+      .finally(() => {
+        if (!cancelled) setTicketsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selected?.id, selected?.street_address]);
 
   const persistNow = (patch = {}) => {
     const next = { ...selectionRef.current, ...patch };
@@ -336,7 +368,7 @@ export default function RosterDirectory({ onBack }) {
       persistNow({ selectedIds });
       return selectedIds;
     });
-    setMobileDetail(true);
+    setMobileDetail(false);
   };
 
   const togglePerson = (person, street) => {
@@ -354,7 +386,7 @@ export default function RosterDirectory({ onBack }) {
       persistNow({ selectedPeople });
       return selectedPeople;
     });
-    setMobileDetail(true);
+    setMobileDetail(false);
   };
 
   const selectByStatus = (statusType) => {
@@ -379,7 +411,7 @@ export default function RosterDirectory({ onBack }) {
     setEmailStatus("");
     setWelcomeConfirm(null);
     setInspectingLot(false);
-    setMobileDetail(statusType !== "clear");
+    setMobileDetail(false);
   };
 
   const openLot = (lot) => {
@@ -826,6 +858,8 @@ export default function RosterDirectory({ onBack }) {
     ...selectedLots.flatMap((lot) => householdOf(lot).filter((person) => person.email)),
   ];
   const welcomeCount = new Set(welcomeTargets.map((person) => String(person.email).toLowerCase())).size;
+  const openTickets = tickets.filter((ticket) => ticket.status !== "Resolved");
+  const resolvedTickets = tickets.filter((ticket) => ticket.status === "Resolved");
 
   const startCompose = (kind, audience = "households") => {
     setCompose(kind);
@@ -1234,12 +1268,36 @@ export default function RosterDirectory({ onBack }) {
               })}
             </div>
           )}
+          {batchMode && !mobileDetail && (
+            <div className={styles.batchBar}>
+              <p>
+                {selectedPeople.length > 0 && selectedLots.length > 0
+                  ? `${selectedPeople.length} people · ${selectedLots.length} streets`
+                  : selectedPeople.length > 0
+                    ? `${selectedPeople.length} ${selectedPeople.length === 1 ? "person" : "people"} selected`
+                    : `${selectedLots.length} household${selectedLots.length === 1 ? "" : "s"} selected`}
+              </p>
+              <div className={styles.batchBarActions}>
+                <Button variant="ghost" onClick={() => selectByStatus("clear")}>
+                  Clear
+                </Button>
+                <Button
+                  onClick={() => {
+                    setInspectingLot(false);
+                    setMobileDetail(true);
+                  }}
+                >
+                  Continue
+                </Button>
+              </div>
+            </div>
+          )}
         </section>
 
         <section className={styles.desk}>
           <button type="button" className={styles.mobileBack} onClick={() => setMobileDetail(false)}>
             <ArrowLeft size={16} />
-            All households
+            {showBatch ? "Add more" : "All households"}
           </button>
 
           {showBatch ? (
@@ -1612,6 +1670,73 @@ export default function RosterDirectory({ onBack }) {
                   Transfer owner
                 </Button>
               )}
+
+              <div className={styles.tickets}>
+                <h4>Tickets</h4>
+                {ticketsLoading ? (
+                  <p className={styles.emptyInline}>Loading tickets…</p>
+                ) : tickets.length === 0 ? (
+                  <p className={styles.emptyInline}>No tickets for this street.</p>
+                ) : (
+                  <>
+                    {openTickets.length > 0 && (
+                      <ul>
+                        {openTickets.map((ticket) => (
+                          <li key={ticket.id}>
+                            <Link
+                              className={styles.ticketLink}
+                              to={`${adminToolPaths.requests}?ticket=${ticket.id}`}
+                            >
+                              <strong>{ticket.subject}</strong>
+                              <span>
+                                {requestTypeLabel(ticket.request_type)}
+                                {` · ${ticketStatusLabel(ticket.status)}`}
+                                {ticket.created_at
+                                  ? ` · ${new Date(ticket.created_at).toLocaleDateString()}`
+                                  : ""}
+                              </span>
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {resolvedTickets.length > 0 && (
+                      <>
+                        <button
+                          type="button"
+                          className={styles.resolvedToggle}
+                          onClick={() => setShowResolvedTickets((open) => !open)}
+                        >
+                          {showResolvedTickets
+                            ? "Hide resolved"
+                            : `${resolvedTickets.length} resolved`}
+                        </button>
+                        {showResolvedTickets && (
+                          <ul>
+                            {resolvedTickets.map((ticket) => (
+                              <li key={ticket.id}>
+                                <Link
+                                  className={styles.ticketLink}
+                                  to={`${adminToolPaths.requests}?ticket=${ticket.id}`}
+                                >
+                                  <strong>{ticket.subject}</strong>
+                                  <span>
+                                    {requestTypeLabel(ticket.request_type)}
+                                    {` · ${ticketStatusLabel(ticket.status)}`}
+                                    {ticket.resolved_at
+                                      ? ` · ${new Date(ticket.resolved_at).toLocaleDateString()}`
+                                      : ""}
+                                  </span>
+                                </Link>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
             </>
           )}
         </section>

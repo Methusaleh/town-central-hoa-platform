@@ -47,3 +47,10 @@ export function isArchivedTicket(request, now = new Date()) {
   cutoff.setFullYear(cutoff.getFullYear() - 2);
   return resolved < cutoff;
 }
+
+export function operationsTabForTicket(request) {
+  if (isArchivedTicket(request)) return "archive";
+  if (request?.status === "In review") return "review";
+  if (request?.status === "Resolved") return "resolved";
+  return "open";
+}

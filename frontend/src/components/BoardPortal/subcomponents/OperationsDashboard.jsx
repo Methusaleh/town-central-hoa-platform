@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import Button from "../../ui/Button";
 import TicketThread from "../../TicketThread/TicketThread";
 import { apiFetch } from "../../../api";
-import { requestTypeLabel, ticketStatusLabel, isBoardNote, isArchivedTicket } from "../../../utils/requestTypes";
+import { requestTypeLabel, ticketStatusLabel, isBoardNote, isArchivedTicket, operationsTabForTicket } from "../../../utils/requestTypes";
 import styles from "./OperationsDashboard.module.css";
 
 const TABS = [
@@ -42,9 +43,29 @@ export default function OperationsDashboard({
   const [logSending, setLogSending] = useState(false);
   const [exportStatus, setExportStatus] = useState({ type: "", text: "" });
   const [exporting, setExporting] = useState(false);
+  const [searchParams] = useSearchParams();
+  const ticketId = searchParams.get("ticket");
 
   const tab = TABS.find((item) => item.id === viewMode) || TABS[0];
   const filteredRequests = requests.filter((req) => matchesTab(tab.id, req));
+  const focusedId = ticketId && requests.some((req) => String(req.id) === String(ticketId))
+    ? String(ticketId)
+    : "";
+
+  useEffect(() => {
+    if (!ticketId || loading) return;
+    const req = requests.find((item) => String(item.id) === String(ticketId));
+    if (!req) return;
+    const nextTab = operationsTabForTicket(req);
+    if (viewMode !== nextTab) setViewMode(nextTab);
+  }, [ticketId, requests, loading, viewMode, setViewMode]);
+
+  useEffect(() => {
+    if (!focusedId || loading) return;
+    const card = document.getElementById(`ops-ticket-${focusedId}`);
+    if (!card) return;
+    card.scrollIntoView({ block: "start", behavior: "smooth" });
+  }, [focusedId, viewMode, loading, filteredRequests.length]);
 
   useEffect(() => {
     apiFetch("/api/residents/master-list-placeholder")
@@ -195,7 +216,11 @@ export default function OperationsDashboard({
       ) : (
         <ul className={styles.list}>
           {filteredRequests.map((req) => (
-            <li key={req.id} className={styles.card}>
+            <li
+              key={req.id}
+              id={`ops-ticket-${req.id}`}
+              className={`${styles.card} ${focusedId && String(req.id) === focusedId ? styles.cardFocus : ""}`}
+            >
               <div className={styles.cardTop}>
                 <p className={styles.meta}>
                   {[

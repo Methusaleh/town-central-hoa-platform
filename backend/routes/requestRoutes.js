@@ -204,6 +204,37 @@ router.get("/admin/all", boardRequired, async (req, res) => {
   }
 });
 
+router.get("/admin/by-address", boardRequired, async (req, res) => {
+  const street = String(req.query.address || "").trim();
+  if (!street) {
+    return res.status(400).json({ error: "Address is required." });
+  }
+
+  try {
+    const { rows } = await db.query(
+      `SELECT id, subject, description, status, request_type, source, street_address,
+              first_name, last_name, created_at, resolved_at, resolved_by, resident_id
+         FROM community_requests
+        WHERE lower(trim(COALESCE(street_address, ''))) = lower(trim($1))
+           OR resident_id IN (
+                SELECT id FROM users WHERE lower(trim(COALESCE(address, ''))) = lower(trim($1))
+              )
+        ORDER BY
+          CASE
+            WHEN status = 'Open' THEN 0
+            WHEN status = 'In review' THEN 1
+            ELSE 2
+          END,
+          created_at DESC`,
+      [street],
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error("Tickets by address error:", err.message);
+    res.status(500).json({ error: "Couldn't load tickets for that street." });
+  }
+});
+
 router.post("/:id/comments", authRequired, async (req, res) => {
   const body = String(req.body.body || "").trim();
   if (!body) {
