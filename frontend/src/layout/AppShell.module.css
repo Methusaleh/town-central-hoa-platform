@@ -9,6 +9,14 @@
   color: var(--tc-ink);
 }
 
+.shellLock {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .topbar {
   height: var(--tc-header-h);
   min-height: var(--tc-header-h);

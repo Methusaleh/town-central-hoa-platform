@@ -5,8 +5,8 @@ import {
   Check,
   ChevronRight,
   ClipboardList,
-  Mail,
   MapPin,
+  Users,
   Wallet,
   Waves,
 } from "lucide-react";
@@ -105,7 +105,7 @@ function buildTodayLine({ featured, newPosts, newAlerts, newAnnouncements, dues 
 
 const GO_TO = [
   { to: PATHS.dues, label: "My dues", hint: "Balance and how to pay", icon: Wallet },
-  { to: PATHS.contact, label: "Contact the board", hint: "Write the board", icon: Mail },
+  { to: PATHS.contact, label: "The Board", hint: "Who they are, and how to write them", icon: Users },
   { to: PATHS.requests, label: "Requests", hint: "Repair or a change to your house", icon: ClipboardList },
   { to: PATHS.amenities, label: "Pool & clubhouse", hint: "Coming soon — not open yet", icon: Waves },
 ];
@@ -260,7 +260,7 @@ export default function HomeOverview() {
           <div className={styles.heroActions}>
             <Button onClick={openPorchCompose}>Say hello on The Porch</Button>
             {featured && (
-              <Button variant="secondary" className={styles.heroGhost} onClick={() => navigate(`${PATHS.events}/${featured.id}`)}>
+              <Button variant="secondary" onClick={() => navigate(`${PATHS.events}/${featured.id}`)}>
                 {featured.going ? "Your next event" : "See what’s next"}
               </Button>
             )}

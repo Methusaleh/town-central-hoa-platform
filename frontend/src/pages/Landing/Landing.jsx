@@ -2,7 +2,7 @@ import Footer from "../../components/Footer/Footer";
 import BrandMark from "../../components/ui/BrandMark";
 import styles from "./Landing.module.css";
 
-export default function Landing({ onLogin, onRegisterClick, onContactClick }) {
+export default function Landing({ onLogin, onRegisterClick, onContactClick, onGuidelinesClick }) {
   return (
     <div className={styles.container}>
       <div className={styles.heroWrapper}>
@@ -36,7 +36,7 @@ export default function Landing({ onLogin, onRegisterClick, onContactClick }) {
         </main>
       </div>
 
-      <Footer onContactClick={onContactClick} />
+      <Footer onContactClick={onContactClick} onGuidelinesClick={onGuidelinesClick} />
     </div>
   );
 }

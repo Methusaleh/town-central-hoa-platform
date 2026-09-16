@@ -3,6 +3,7 @@ import InviteMember from "../../components/InviteMember/InviteMember";
 import Avatar from "../../components/ui/Avatar";
 import Button from "../../components/ui/Button";
 import PasswordField from "../../components/ui/PasswordField";
+import GuidelinesModal from "../../components/GuidelinesModal/GuidelinesModal";
 import { applyTheme, getStoredTheme } from "../../layout/theme";
 import styles from "./Profile.module.css";
 import { apiFetch } from "../../api";
@@ -24,6 +25,7 @@ export default function Profile({ user, onUserUpdate }) {
   const [passwordSaving, setPasswordSaving] = useState(false);
   const [passwordMsg, setPasswordMsg] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const [showGuidelines, setShowGuidelines] = useState(false);
 
   const handleTheme = (next) => {
     applyTheme(next);
@@ -229,8 +231,22 @@ export default function Profile({ user, onUserUpdate }) {
             <h3>Anyone else at this address?</h3>
             <InviteMember user={user} />
           </div>
+
+          <div className={styles.card}>
+            <h3>Community guidelines</h3>
+            <p className={styles.subtext}>
+              The rules you agreed to when you first signed in.
+            </p>
+            <Button variant="secondary" onClick={() => setShowGuidelines(true)}>
+              Read them
+            </Button>
+          </div>
         </div>
       </div>
+
+      {showGuidelines && (
+        <GuidelinesModal mode="review" onClose={() => setShowGuidelines(false)} />
+      )}
     </div>
   );
 }

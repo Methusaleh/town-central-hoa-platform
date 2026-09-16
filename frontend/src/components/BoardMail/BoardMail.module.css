@@ -1,8 +1,8 @@
 .page {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  max-width: 720px;
+  gap: 18px;
+  max-width: 860px;
   width: 100%;
   margin: 0 auto;
 }
@@ -14,11 +14,18 @@
   letter-spacing: -0.03em;
 }
 
-.intro p {
+.lede {
   margin: 0;
   color: var(--tc-muted);
   line-height: 1.5;
-  max-width: 36rem;
+  max-width: 38rem;
+}
+
+.sampleNote {
+  margin: 10px 0 0;
+  color: var(--tc-accent);
+  font-size: 0.85rem;
+  line-height: 1.45;
 }
 
 .kicker {
@@ -28,6 +35,77 @@
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--tc-muted);
+}
+
+.roster {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--tc-bg-elevated);
+  border: 1px solid var(--tc-line);
+  border-radius: var(--tc-radius);
+}
+
+.card img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  object-position: center top;
+  background: var(--tc-brand-soft);
+}
+
+.cardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px 16px;
+}
+
+.role {
+  margin: 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--tc-accent);
+}
+
+.cardBody h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.cardBody p:last-child {
+  margin: 4px 0 0;
+  color: var(--tc-ink-soft);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.write h3 {
+  margin: 0 0 4px;
+  font-size: 1.15rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.write p {
+  margin: 0;
+  color: var(--tc-muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
 }
 
 .letter {
@@ -175,6 +253,12 @@
   max-width: 26rem;
   color: var(--tc-muted);
   line-height: 1.5;
+}
+
+@media (max-width: 720px) {
+  .roster {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 640px) {

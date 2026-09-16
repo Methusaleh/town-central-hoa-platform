@@ -42,7 +42,7 @@ Log in as a regular household. Stay here until they have seen neighborhood life 
 - [ ] **Requests.** Submit a common-area repair or a change to a house. This is how a fence or a leak gets to the board.
 - [ ] **Trusted companies.** Vendor list the board maintains.
 - [ ] **Pool & clubhouse.** Coming soon — hours and reservations are not live.
-- [ ] **Contact the board.** Message from inside the site.
+- [ ] **The Board.** Sample bios, then a private note from inside the site.
 - [ ] **Profile.** Photo, password, appearance, invite someone else at this address. There is no SMS toggle yet.
 
 **If they ask here:** “Can two people at the house share one password?” No. One street, two logins. “Will I see board-only legal files?” No.

@@ -200,7 +200,7 @@ export default function Events({ user }) {
   };
 
   const handleRsvp = async () => {
-    if (!detail || rsvping || detail.cancelled_at) return;
+    if (!detail || rsvping || detail.cancelled_at || !isUpcoming(detail, today)) return;
     setRsvping(true);
     setDetail((current) =>
       current
@@ -244,6 +244,7 @@ export default function Events({ user }) {
       .map((field) => ({ ...field, value: event?.details?.[field.key] }))
       .filter((field) => field.value);
     const rsvps = event?.rsvps || [];
+    const upcoming = event ? isUpcoming(event, today) : false;
 
     return (
       <div className={styles.page}>
@@ -285,7 +286,7 @@ export default function Events({ user }) {
                   <Button variant="secondary" onClick={() => setShowEdit(true)}>
                     Edit
                   </Button>
-                  {!event.cancelled_at && (
+                  {upcoming && !event.cancelled_at && (
                     <Button variant="danger" onClick={() => setShowCancel(true)}>
                       Cancel event
                     </Button>
@@ -338,7 +339,9 @@ export default function Events({ user }) {
 
               <div className={styles.rsvpBox}>
                 <div>
-                  <strong>{event.rsvp_count || 0} going</strong>
+                  <strong>
+                    {event.rsvp_count || 0} {upcoming ? "going" : "went"}
+                  </strong>
                   <p>
                     {event.cancelled_at
                       ? "RSVPs are closed because this event was cancelled."
@@ -347,7 +350,9 @@ export default function Events({ user }) {
                             .slice(0, 8)
                             .map((row) => row.display_name)
                             .join(", ") + (rsvps.length > 8 ? ` +${rsvps.length - 8} more` : "")
-                        : "Be the first to say you'll be there."}
+                        : upcoming
+                          ? "Be the first to say you'll be there."
+                          : "Nobody RSVP'd."}
                   </p>
                 </div>
                 <div className={styles.rsvpPeople}>
@@ -355,15 +360,17 @@ export default function Events({ user }) {
                     <Avatar key={`${row.display_name}-${i}`} name={row.display_name} photo={row.photo} size="sm" />
                   ))}
                 </div>
-                <Button
-                  variant={event.going ? "secondary" : "primary"}
-                  onClick={handleRsvp}
-                  disabled={rsvping || Boolean(event.cancelled_at)}
-                  aria-pressed={event.going}
-                >
-                  {event.going && <Check size={16} strokeWidth={2.5} aria-hidden />}
-                  {event.cancelled_at ? "Cancelled" : event.going ? meta.rsvpDone : meta.rsvp}
-                </Button>
+                {upcoming && !event.cancelled_at && (
+                  <Button
+                    variant={event.going ? "secondary" : "primary"}
+                    onClick={handleRsvp}
+                    disabled={rsvping}
+                    aria-pressed={event.going}
+                  >
+                    {event.going && <Check size={16} strokeWidth={2.5} aria-hidden />}
+                    {event.going ? meta.rsvpDone : meta.rsvp}
+                  </Button>
+                )}
               </div>
 
               <section className={styles.recap}>
@@ -416,14 +423,16 @@ export default function Events({ user }) {
                 )}
               </section>
 
-              <div className={styles.detailLinks}>
-                <AddToCalendar event={event} />
-                {event.attachment_url && (
-                  <a href={event.attachment_url} target="_blank" rel="noopener noreferrer">
-                    Flyer / handout
-                  </a>
-                )}
-              </div>
+              {((upcoming && !event.cancelled_at) || event.attachment_url) && (
+                <div className={styles.detailLinks}>
+                  {upcoming && !event.cancelled_at && <AddToCalendar event={event} />}
+                  {event.attachment_url && (
+                    <a href={event.attachment_url} target="_blank" rel="noopener noreferrer">
+                      Flyer / handout
+                    </a>
+                  )}
+                </div>
+              )}
             </div>
           </article>
         )}
@@ -534,8 +543,10 @@ export default function Events({ user }) {
                       {event.cancelled_at
                         ? "Cancelled"
                         : event.rsvp_count
-                          ? `${event.rsvp_count} going`
-                          : "No RSVPs yet"}
+                          ? `${event.rsvp_count} ${isUpcoming(event, today) ? "going" : "went"}`
+                          : isUpcoming(event, today)
+                            ? "No RSVPs yet"
+                            : "No RSVPs"}
                       {!event.cancelled_at && event.going ? " · you're in" : ""}
                       {(event.gallery || []).length
                         ? ` · ${event.gallery.length} photo${event.gallery.length === 1 ? "" : "s"}`

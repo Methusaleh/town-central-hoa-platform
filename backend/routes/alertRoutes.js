@@ -5,6 +5,7 @@ const db = require("../db");
 const { uploadToR2 } = require("../utils/s3Storage");
 const { checkImageSafety, checkTextToxicity, checkImageBuffer } = require("../utils/safetyFilter");
 const { authRequired, boardRequired, isBoard } = require("../middleware/auth");
+const { guidelinesRequired } = require("../middleware/guidelines");
 
 function closeLabelFor(category) {
   if (category === "Lost Pet") return "Found";
@@ -93,7 +94,7 @@ router.get("/", authRequired, async (req, res) => {
 });
 
 // POST: Publish a new community alert with an optional image file attachment & safety filters
-router.post("/", authRequired, upload.single("image"), async (req, res) => {
+router.post("/", authRequired, guidelinesRequired, upload.single("image"), async (req, res) => {
   const { category, author, content } = req.body;
 
   if (!category || !content) {
@@ -147,7 +148,7 @@ router.post("/", authRequired, upload.single("image"), async (req, res) => {
 });
 
 // POST: Sighting note (and optional photo) on a lost-pet alert
-router.post("/:alertId/comments", authRequired, upload.single("image"), async (req, res) => {
+router.post("/:alertId/comments", authRequired, guidelinesRequired, upload.single("image"), async (req, res) => {
   const { alertId } = req.params;
   const { author_name, content } = req.body;
   const text = (content || "").trim();

@@ -5,6 +5,7 @@ const db = require("../db");
 const { uploadToR2 } = require("../utils/s3Storage");
 const { checkImageSafety, checkTextToxicity, checkImageBuffer } = require("../utils/safetyFilter");
 const { authRequired, boardRequired } = require("../middleware/auth");
+const { guidelinesRequired } = require("../middleware/guidelines");
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
@@ -78,7 +79,7 @@ router.post("/", boardRequired, upload.single("image"), async (req, res) => {
 });
 
 // POST: Add a comment/reply to an announcement with safety filters
-router.post("/:announcementId/comments", authRequired, async (req, res) => {
+router.post("/:announcementId/comments", authRequired, guidelinesRequired, async (req, res) => {
   const { announcementId } = req.params;
   const { author_name, content } = req.body;
 

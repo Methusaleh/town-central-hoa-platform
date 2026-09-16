@@ -21,6 +21,7 @@ import DashboardLayout, {
   VendorsPage,
 } from "./pages/Dashboard/Dashboard";
 import ContactPage from "./pages/Contact/ContactPage";
+import GuidelinesPage from "./pages/Guidelines/Guidelines";
 import AcceptInvite from "./pages/AcceptInvite/AcceptInvite";
 import Profile from "./pages/Profile/Profile";
 import Claim from "./pages/Claim/Claim";
@@ -45,6 +46,7 @@ function LandingPage() {
       onLogin={() => navigate("/login")}
       onRegisterClick={() => navigate("/claim")}
       onContactClick={() => navigate("/contact")}
+      onGuidelinesClick={() => navigate("/guidelines")}
     />
   );
 }
@@ -159,6 +161,10 @@ function AppRoutes() {
         <Route
           path="/invite/:token"
           element={<AcceptInvitePage onJoinSuccess={handleAuthSuccess} />}
+        />
+        <Route
+          path="/guidelines"
+          element={<GuidelinesPage onBack={() => navigate("/")} />}
         />
         <Route
           path="/contact"

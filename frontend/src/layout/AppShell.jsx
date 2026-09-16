@@ -29,7 +29,6 @@ export default function AppShell() {
   const [moreOpen, setMoreOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [mobileMore, setMobileMore] = useState(false);
-  const [showGuidelines, setShowGuidelines] = useState(!user?.agreed_to_guidelines);
   const moreRef = useRef(null);
   const accountRef = useRef(null);
 
@@ -61,20 +60,17 @@ export default function AppShell() {
     (item) => item.to !== PATHS.dues || !isRenter(user),
   );
   const moreActive = overflow.some((item) => item.to && location.pathname.startsWith(item.to));
+  const needsGuidelines = !user?.agreed_to_guidelines;
 
   return (
     <div className={styles.shell}>
-      {showGuidelines && (
+      {needsGuidelines && (
         <GuidelinesModal
-          user={user}
-          onAgree={() => {
-            setShowGuidelines(false);
-            const updatedUser = { ...user, agreed_to_guidelines: true };
-            if (onUserUpdate) onUserUpdate(updatedUser);
-          }}
+          onAgree={() => onUserUpdate?.({ ...user, agreed_to_guidelines: true })}
         />
       )}
 
+      <div className={styles.shellLock} inert={needsGuidelines || undefined}>
       <header className={`${styles.topbar} ${HEADER_PAPER ? "" : styles.topbarDark}`}>
         <NavLink to={PATHS.home} className={styles.brand} end>
           <BrandMark size={26} />
@@ -183,6 +179,7 @@ export default function AppShell() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

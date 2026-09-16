@@ -7,10 +7,8 @@
 }
 
 .hero {
-  padding: 36px 36px 32px;
-  border-radius: 18px;
-  background: var(--tc-chrome);
-  color: var(--tc-chrome-ink);
+  padding: 8px 2px 4px;
+  color: var(--tc-ink);
 }
 
 .eyebrow {
@@ -19,21 +17,24 @@
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--tc-chrome-muted);
+  color: var(--tc-accent);
 }
 
 .hero h1 {
   margin: 0 0 10px;
-  font-size: clamp(1.8rem, 4vw, 2.55rem);
-  font-weight: 650;
-  letter-spacing: -0.045em;
+  font-family: var(--tc-display);
+  font-size: clamp(1.9rem, 4vw, 2.7rem);
+  font-weight: 550;
+  font-optical-sizing: auto;
+  letter-spacing: -0.025em;
   line-height: 1.12;
+  color: var(--tc-brand-ink);
 }
 
 .lede {
   margin: 0;
   max-width: 40rem;
-  color: #d5ddd8;
+  color: var(--tc-ink-soft);
   font-size: 1.05rem;
   line-height: 1.55;
 }
@@ -52,16 +53,6 @@
   gap: 10px;
 }
 
-.heroGhost {
-  background: transparent !important;
-  color: var(--tc-chrome-ink) !important;
-  border-color: rgba(255, 255, 255, 0.22) !important;
-}
-
-.heroGhost:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.08) !important;
-}
-
 .chips {
   display: flex;
   flex-wrap: wrap;
@@ -69,9 +60,9 @@
 }
 
 .chip {
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.08);
-  color: #e8eee9;
+  border: 1px solid var(--tc-line);
+  background: var(--tc-bg-elevated);
+  color: var(--tc-ink-soft);
   border-radius: 999px;
   padding: 6px 12px;
   font: inherit;
@@ -81,17 +72,33 @@
 }
 
 .chip:hover {
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--tc-bg-hover);
+  border-color: var(--tc-line-strong);
+  color: var(--tc-ink);
 }
 
 .chipAlert {
-  background: rgba(244, 180, 176, 0.18);
-  border-color: rgba(244, 180, 176, 0.35);
+  background: var(--tc-danger-soft);
+  border-color: #f0c8c4;
+  color: var(--tc-danger);
+}
+
+.chipAlert:hover {
+  background: var(--tc-danger-soft);
+  border-color: #e0a8a4;
+  color: var(--tc-danger);
 }
 
 .chipWarn {
-  background: rgba(246, 238, 220, 0.16);
-  border-color: rgba(243, 234, 220, 0.35);
+  background: var(--tc-warn-soft);
+  border-color: #e4d4b0;
+  color: var(--tc-warn);
+}
+
+.chipWarn:hover {
+  background: var(--tc-warn-soft);
+  border-color: #d4c090;
+  color: var(--tc-warn);
 }
 
 .alertBanner {
@@ -663,7 +670,7 @@
   }
 
   .hero {
-    padding: 26px 22px 24px;
+    padding: 4px 0 2px;
   }
 }
 

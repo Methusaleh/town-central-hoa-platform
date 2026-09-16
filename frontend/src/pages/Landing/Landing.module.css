@@ -117,9 +117,11 @@
 }
 
 .title {
+  font-family: var(--tc-display);
   font-size: clamp(2.4rem, 5vw, 3.6rem);
   font-weight: 550;
-  letter-spacing: -0.04em;
+  font-optical-sizing: auto;
+  letter-spacing: -0.03em;
   line-height: 1.1;
   margin: 0 0 16px;
   color: #f7f8f6;

@@ -21,7 +21,7 @@ This is the neighborhood site for Town Central: households, documents, notices, 
 | Requests | Fence, paint, a leak — a ticket the board can review and resolve. |
 | Trusted companies | Vendors the board has listed. |
 | Pool & clubhouse | Coming soon. Not a reservation system yet. |
-| Contact the board | Write the board from inside the site. |
+| The Board | Who they are, and a private note from inside the site. |
 | Profile | Photo, password, household invite. |
 
 ## What the board gets (on a personal login)
@@ -117,7 +117,7 @@ What you are buying is control and fit: one row per street, door-drop for people
 
 **What is in place**
 
-- Community guidelines at first login.
+- Community guidelines at first login. Readable later in Settings, or from the public footer.
 - Image scan (nudity, weapons, gore) on Porch, alerts, announcements, events, and avatars — **when Sightengine keys are set**. If the scanner is down, those uploads are **blocked** (fail closed).
 - Text screening on some posts when an OpenAI key is set; if it is not set, text is not scanned.
 - GIFs only from Giphy, rating `g`. Arbitrary GIF URLs are not a back door.

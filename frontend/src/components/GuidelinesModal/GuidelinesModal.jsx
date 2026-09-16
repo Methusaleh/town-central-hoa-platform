@@ -1,70 +1,104 @@
-import { useState } from "react";
-import styles from "./GuidelinesModal.module.css";
+import { useEffect, useRef, useState } from "react";
+import Button from "../ui/Button";
 import { apiFetch } from "../../api";
+import { GuidelinesList } from "./guidelines.jsx";
+import styles from "./GuidelinesModal.module.css";
 
-export default function GuidelinesModal({ user, onAgree }) {
+export default function GuidelinesModal({ mode = "agree", onAgree, onClose }) {
+  const review = mode === "review";
   const [isChecked, setIsChecked] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const cardRef = useRef(null);
+
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    cardRef.current?.focus();
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!review) return undefined;
+    const onKey = (e) => {
+      if (e.key === "Escape") onClose?.();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [review, onClose]);
 
   const handleAccept = async (e) => {
     e.preventDefault();
-    if (!isChecked) return;
-
+    if (!isChecked || loading) return;
     setLoading(true);
+    setError("");
     try {
       const res = await apiFetch("/api/residents/agree-guidelines", {
         method: "POST",
-        body: JSON.stringify({})
+        body: JSON.stringify({}),
       });
-
       if (res.ok) {
-        onAgree(); // Unlocks the portal features in parent state
+        onAgree?.();
       } else {
-        alert("Failed to save agreement status.");
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || "Couldn't save that. Try again.");
       }
-    } catch (err) {
-      console.error("Network error:", err);
-      alert("Network error connecting to server.");
+    } catch {
+      setError("Network error saving your agreement.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className={styles.modalBackdrop}>
-      <div className={styles.modalCard}>
-        <h2>🏡 Community Standards & Forum Guidelines</h2>
-        <p className={styles.subtext}>
-          Welcome to the Town Central digital community! To protect the welcoming, positive nature of our neighborhood, please review and accept our guidelines before participating in community discussions.
+    <div
+      className={styles.backdrop}
+      onClick={review ? onClose : undefined}
+      role="presentation"
+    >
+      <div
+        ref={cardRef}
+        className={styles.card}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="guidelines-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <p className={styles.kicker}>Town Central</p>
+        <h2 id="guidelines-title">Community guidelines</h2>
+        <p className={styles.lede}>
+          {review
+            ? "These apply to The Porch, Alerts, and anything you post."
+            : "Read these before you use The Porch, Alerts, or anything you post. One checkbox, then you're in."}
         </p>
 
-        <div className={styles.rulesBox}>
-          <ul>
-            <li><strong>Be Kind & Respectful:</strong> Treat neighbors with the same courtesy you would expect in person.</li>
-            <li><strong>Keep it Constructive:</strong> Focus on community building, safety, and fun. Individual grievances or complaints should be directed to the board privately via email rather than public channels.</li>
-            <li><strong>No Explicit Media:</strong> Uploads, photos, and GIFs are monitored. Posting explicit, violent, or unsafe media will result in immediate content removal and account review.</li>
-            <li><strong>Admin Oversight:</strong> Board members and admins reserve the right to remove non-compliant posts or comments.</li>
-          </ul>
-        </div>
+        <GuidelinesList className={styles.rules} />
 
-        <form onSubmit={handleAccept} className={styles.form}>
-          <label className={styles.checkboxLabel}>
-            <input 
-              type="checkbox" 
-              checked={isChecked} 
-              onChange={(e) => setIsChecked(e.target.checked)} 
-            />
-            <span>I have read, understood, and agree to abide by the Town Central community guidelines.</span>
-          </label>
-
-          <button 
-            type="submit" 
-            className={styles.submitBtn} 
-            disabled={!isChecked || loading}
-          >
-            {loading ? "Saving..." : "Accept & Enter Community"}
-          </button>
-        </form>
+        {review ? (
+          <div className={styles.actions}>
+            <Button variant="secondary" onClick={onClose}>
+              Close
+            </Button>
+          </div>
+        ) : (
+          <form onSubmit={handleAccept} className={styles.form}>
+            <label className={styles.checkboxLabel}>
+              <input
+                type="checkbox"
+                checked={isChecked}
+                onChange={(e) => setIsChecked(e.target.checked)}
+              />
+              <span>I have read these guidelines and will follow them.</span>
+            </label>
+            {error && <p className={styles.error}>{error}</p>}
+            <Button type="submit" disabled={!isChecked || loading}>
+              {loading ? "Saving…" : "Agree"}
+            </Button>
+          </form>
+        )}
       </div>
     </div>
   );

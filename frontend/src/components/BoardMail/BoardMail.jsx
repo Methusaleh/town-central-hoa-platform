@@ -5,6 +5,7 @@ import Button from "../ui/Button";
 import CivicGuide from "../CivicGuide/CivicGuide";
 import { apiFetch } from "../../api";
 import { usePortal } from "../../layout/PortalContext";
+import { BOARD_CARDS_ARE_SAMPLE, BOARD_MEMBERS } from "./boardMembers";
 import styles from "./BoardMail.module.css";
 
 export default function BoardMail() {
@@ -26,8 +27,6 @@ export default function BoardMail() {
     if (incomingSubject) {
       setSubject(incomingSubject);
       bodyRef.current?.focus();
-    } else {
-      subjectRef.current?.focus();
     }
   }, [incomingSubject]);
 
@@ -73,10 +72,37 @@ export default function BoardMail() {
   return (
     <div className={styles.page}>
       <header className={styles.intro}>
-        <p className={styles.kicker}>Correspondence</p>
-        <h2>Write the board</h2>
-        <p>Private email to the HOA board. It does not post to the neighborhood. For a common-area repair or a change to your house, use Requests so it can be tracked.</p>
+        <p className={styles.kicker}>Town Central</p>
+        <h2>The Board</h2>
+        <p className={styles.lede}>
+          Who they are, and how to write them. Notes stay private — they don&apos;t post to The Porch.
+          For a common-area repair or a change to your house, use Requests.
+        </p>
+        {BOARD_CARDS_ARE_SAMPLE && (
+          <p className={styles.sampleNote}>
+            Sample cards so the layout is clear. Swap names, photos, and blurbs when you have them.
+          </p>
+        )}
       </header>
+
+      <ul className={styles.roster}>
+        {BOARD_MEMBERS.map((member) => (
+          <li key={member.id} className={styles.card}>
+            <img src={member.photo} alt="" />
+            <div className={styles.cardBody}>
+              <p className={styles.role}>{member.title}</p>
+              <h3>{member.name}</h3>
+              <p>{member.blurb}</p>
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      <section className={styles.write}>
+        <p className={styles.kicker}>Write a note</p>
+        <h3>Private email to the board</h3>
+        <p>They will reply to the email on your account.</p>
+      </section>
 
       {sent ? (
         <div className={styles.letter}>

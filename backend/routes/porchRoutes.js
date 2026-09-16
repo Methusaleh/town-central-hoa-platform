@@ -5,6 +5,7 @@ const db = require("../db");
 const { uploadToR2 } = require("../utils/s3Storage");
 const { checkImageSafety, checkTextToxicity, checkImageBuffer, isAllowedGifUrl } = require("../utils/safetyFilter");
 const { authRequired, boardRequired } = require("../middleware/auth");
+const { guidelinesRequired } = require("../middleware/guidelines");
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
@@ -119,7 +120,7 @@ router.get("/:id", authRequired, async (req, res) => {
   }
 });
 
-router.post("/", authRequired, upload.single("image"), async (req, res) => {
+router.post("/", authRequired, guidelinesRequired, upload.single("image"), async (req, res) => {
   const { author_name, author_email, content } = req.body;
 
   if (!content || !content.trim()) {
@@ -167,7 +168,7 @@ router.post("/", authRequired, upload.single("image"), async (req, res) => {
   }
 });
 
-router.patch("/:id/reactions", authRequired, async (req, res) => {
+router.patch("/:id/reactions", authRequired, guidelinesRequired, async (req, res) => {
   const { emoji } = req.body;
   const identity = req.user.email || String(req.user.id);
   if (!emoji || typeof emoji !== "string") {
@@ -203,7 +204,7 @@ router.patch("/:id/reactions", authRequired, async (req, res) => {
   }
 });
 
-router.post("/:postId/comments", authRequired, upload.single("image"), async (req, res) => {
+router.post("/:postId/comments", authRequired, guidelinesRequired, upload.single("image"), async (req, res) => {
   const { postId } = req.params;
   const { author_name, content } = req.body;
   const text = (content || "").trim();

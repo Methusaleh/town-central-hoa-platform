@@ -25,7 +25,7 @@ export default function ContactPage({ onBack }) {
 
       <section className={styles.contactSection}>
         <div className={styles.contactCard}>
-          <h3>Contact the board</h3>
+          <h3>Email the board</h3>
           <p>
             Please check the community documents, calendar, and FAQ sections first. If you still have questions not answered on the site, reach out to the board directly:
           </p>
