@@ -59,10 +59,7 @@ export default function VendorDirectory() {
         <div>
           <p className={styles.kicker}>Neighbors</p>
           <h2>Trusted companies</h2>
-          <p>
-            Companies the board has used or would call. This is a starting point, not a promise
-            about every job — still get your own bid.
-          </p>
+          <p>Companies the board has used or would call. Get your own bid.</p>
         </div>
       </header>
 
@@ -71,7 +68,7 @@ export default function VendorDirectory() {
       ) : error ? (
         <p className={styles.empty}>{error}</p>
       ) : vendors.length === 0 ? (
-        <p className={styles.empty}>The board has not listed any companies yet.</p>
+        <p className={styles.empty}>No companies listed yet.</p>
       ) : (
         <>
           <div className={styles.tools}>

@@ -9,6 +9,7 @@
   --tc-line-strong: #b7c1bb;
   --tc-brand: #3d6b4f;
   --tc-brand-hover: #315643;
+  --tc-on-brand: #f7f8f6;
   --tc-brand-soft: #e4efe8;
   --tc-brand-ink: #2a4a38;
   --tc-accent: #8d6e44;
@@ -41,6 +42,7 @@
   --tc-line-strong: #4d5852;
   --tc-brand: #6a9a7a;
   --tc-brand-hover: #7aab8a;
+  --tc-on-brand: #f7f8f6;
   --tc-brand-soft: #2a3d32;
   --tc-brand-ink: #c5e0cf;
   --tc-accent: #c4a574;

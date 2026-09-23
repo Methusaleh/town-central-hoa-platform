@@ -80,7 +80,7 @@
 
 .filterOn {
   background: var(--tc-brand-soft);
-  border-color: #c5d9cc;
+  border-color: var(--tc-brand);
   color: var(--tc-brand-ink);
 }
 

@@ -59,7 +59,7 @@ That matches how the neighborhood actually works: one house, more than one adult
 | Credit cards / Stripe | Out. Stripe may still exist in code; it is not how dues work. | Pay by bank bill-pay or check. |
 | Routing / lockbox numbers | Placeholder copy until the treasurer posts real numbers. | “We’ll put the payee details here before we collect through the portal.” |
 | Pool / clubhouse booking | Coming-soon page only. | Not open, not reservable. |
-| SMS / text alerts | A profile toggle exists. It does not send texts. | Email and the site for now. |
+| SMS / text alerts | Not in the product. | Email and the site. |
 | Management-company accounting | No. Ledger is what the board records. | This is not AppFolio. |
 | Shared `board@` login | Do not do this. | One person, one login, a role on that login. |
 
@@ -144,11 +144,10 @@ These would help once the roster is real and people are claiming. None of them s
 
 1. **Real payee details on My Dues** — the one item neighbors will judge you on. Treasurer routing / lockbox, then the placeholder copy comes down.
 2. **Board 2FA or passkeys** — small cost, protects Document Manager and the ledger.
-3. **True SMS for lost pet / safety** — Twilio (or similar) plus a real opt-in. The profile toggle is a stub; turning it on without a vendor would be dishonest. Budget: a few cents per text, plus a monthly number.
+3. **True SMS for lost pet / safety** — Twilio (or similar) plus a real opt-in. Not in the product today. Budget: a few cents per text, plus a monthly number.
 4. **Alert end dates** — street and weather could auto-drop off Home after a date. Lost pets should stay until someone marks Found.
 5. **Pool booking** — only when the pool exists. Rules, guest limits, household-only holds. Easy to over-build before there is water.
 6. **Export / backup drill** — roster CSV you already have; add a periodic download of documents and a written “who has Vercel / Neon / Zoho.”
-7. **Turn off or hide the SMS and newsletter checkboxes** until they do something, so the board is not promising texts.
 
 ---
 

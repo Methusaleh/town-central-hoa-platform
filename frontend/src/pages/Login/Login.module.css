@@ -119,7 +119,7 @@
 
 .submitBtn {
   background: var(--tc-brand);
-  color: #fff;
+  color: var(--tc-on-brand);
   padding: 12px;
   border: none;
   border-radius: 8px;

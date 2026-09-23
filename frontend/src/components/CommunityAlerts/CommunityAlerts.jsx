@@ -363,7 +363,7 @@ export default function CommunityAlerts({ user }) {
                   <p className={styles.noSightings}>
                     {isResolved(active)
                       ? "No sightings were reported."
-                      : "No sightings yet. Be the first to report one."}
+                      : "No sightings yet."}
                   </p>
                 ) : (
                   sightings.map((item) => {
@@ -485,7 +485,6 @@ export default function CommunityAlerts({ user }) {
         <div>
           <p className={styles.kicker}>Neighborhood</p>
           <h2>Alerts</h2>
-          <p>Time-sensitive notes for the block — a lost pet, extra traffic, something to watch for.</p>
         </div>
         <Button onClick={() => setShowCreate(true)}>Post an alert</Button>
       </header>

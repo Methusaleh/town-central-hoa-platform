@@ -76,7 +76,7 @@
 
 .tabOn {
   background: var(--tc-brand-soft);
-  border-color: #c5d9cc;
+  border-color: var(--tc-brand);
   color: var(--tc-brand-ink);
 }
 
@@ -212,28 +212,28 @@
 }
 
 .wash_gathering {
-  background: #dce8e0;
+  background: var(--tc-brand-soft);
   color: var(--tc-brand-ink);
 }
 
 .wash_cookout {
-  background: #efe4d2;
-  color: #6a4e2c;
+  background: var(--tc-accent-soft);
+  color: var(--tc-accent);
 }
 
 .wash_kids {
-  background: #f3ddd4;
-  color: #7a3e2c;
+  background: var(--tc-danger-soft);
+  color: var(--tc-danger);
 }
 
 .wash_meeting {
-  background: #dfe3e1;
-  color: #2d3531;
+  background: var(--tc-bg-hover);
+  color: var(--tc-ink-soft);
 }
 
 .wash_pool {
-  background: #d4e4e6;
-  color: #2b5558;
+  background: var(--tc-brand-soft);
+  color: var(--tc-brand-ink);
 }
 
 .type_meeting {
@@ -245,11 +245,11 @@
 }
 
 .type_kids {
-  border-left: 4px solid #c2785c;
+  border-left: 4px solid var(--tc-danger);
 }
 
 .type_pool {
-  border-left: 4px solid #3d6b6b;
+  border-left: 4px solid var(--tc-brand);
 }
 
 .type_gathering {

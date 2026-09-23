@@ -120,7 +120,6 @@ export default function DocumentCenter() {
         <div>
           <p className={styles.kicker}>Library</p>
           <h2>Documents</h2>
-          <p>Covenants, meeting packets, and neighborhood files the board posts for households.</p>
         </div>
         <label className={styles.search}>
           <input

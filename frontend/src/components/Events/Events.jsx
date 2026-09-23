@@ -351,7 +351,7 @@ export default function Events({ user }) {
                             .map((row) => row.display_name)
                             .join(", ") + (rsvps.length > 8 ? ` +${rsvps.length - 8} more` : "")
                         : upcoming
-                          ? "Be the first to say you'll be there."
+                          ? "No RSVPs yet."
                           : "Nobody RSVP'd."}
                   </p>
                 </div>
@@ -474,7 +474,6 @@ export default function Events({ user }) {
         <div>
           <p className={styles.kicker}>Neighborhood</p>
           <h2>Events</h2>
-          <p>What's coming up on the block — open one to see the details and say you're going.</p>
         </div>
         {isAdmin && (
           <Button onClick={() => setShowCreate(true)}>Create event</Button>
@@ -502,7 +501,7 @@ export default function Events({ user }) {
         <div className={styles.empty}>Loading…</div>
       ) : shown.length === 0 ? (
         <div className={styles.empty}>
-          {filter === "past" ? "No past events yet." : "Nothing on the books. The calendar is wide open."}
+          {filter === "past" ? "No past events yet." : "Nothing on the books."}
         </div>
       ) : (
         <div className={styles.list}>

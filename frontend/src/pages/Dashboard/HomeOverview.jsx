@@ -98,7 +98,7 @@ function buildTodayLine({ featured, newPosts, newAlerts, newAnnouncements, dues 
     bits.push("Dues are current");
   }
   if (!bits.length) {
-    return "You’re caught up. Say hello on The Porch, or see what’s coming up.";
+    return "You’re caught up.";
   }
   return bits.slice(0, 3).join("  ·  ");
 }
@@ -107,7 +107,7 @@ const GO_TO = [
   { to: PATHS.dues, label: "My dues", hint: "Balance and how to pay", icon: Wallet },
   { to: PATHS.contact, label: "The Board", hint: "Who they are, and how to write them", icon: Users },
   { to: PATHS.requests, label: "Requests", hint: "Repair or a change to your house", icon: ClipboardList },
-  { to: PATHS.amenities, label: "Pool & clubhouse", hint: "Coming soon — not open yet", icon: Waves },
+  { to: PATHS.amenities, label: "Pool & clubhouse", hint: "Coming soon", icon: Waves },
 ];
 
 export default function HomeOverview() {
@@ -347,7 +347,7 @@ export default function HomeOverview() {
             <p className={styles.featureGoing}>
               {featured.rsvp_count
                 ? `${featured.rsvp_count} neighbor${featured.rsvp_count === 1 ? "" : "s"} going`
-                : "Be the first to RSVP"}
+                : "No RSVPs yet"}
               {featured.going ? " · you’re in" : ""}
             </p>
             <div className={styles.featureActions}>
@@ -369,21 +369,19 @@ export default function HomeOverview() {
       )}
 
       <div className={styles.columns}>
-        <section className={styles.panel}>
-          <header className={styles.panelHead}>
-            <div>
-              <p className={styles.kicker}>Events</p>
-              <h3>Coming up</h3>
-            </div>
-            <button type="button" className={styles.openLink} onClick={() => navigate(PATHS.events)}>
-              Full calendar
-            </button>
-          </header>
-          {upcoming.length === 0 ? (
-            <p className={styles.empty}>Nothing on the books yet. The calendar is wide open.</p>
-          ) : (
+        {moreEvents.length > 0 && (
+          <section className={styles.panel}>
+            <header className={styles.panelHead}>
+              <div>
+                <p className={styles.kicker}>Events</p>
+                <h3>Coming up</h3>
+              </div>
+              <button type="button" className={styles.openLink} onClick={() => navigate(PATHS.events)}>
+                Full calendar
+              </button>
+            </header>
             <ul className={styles.eventList}>
-              {(featured ? moreEvents : upcoming.slice(0, 4)).map((event) => {
+              {moreEvents.map((event) => {
                 const parts = eventDateParts(event.event_date);
                 return (
                   <li key={event.id}>
@@ -408,12 +406,9 @@ export default function HomeOverview() {
                   </li>
                 );
               })}
-              {featured && moreEvents.length === 0 && (
-                <li className={styles.quiet}>That’s the next gathering. More dates will show up here.</li>
-              )}
             </ul>
-          )}
-        </section>
+          </section>
+        )}
 
         <section className={styles.panel}>
           <header className={styles.panelHead}>
@@ -488,7 +483,7 @@ export default function HomeOverview() {
           <span>What’s happening on the block, {user?.first_name || "neighbor"}?</span>
         </button>
         {porchPreview.length === 0 ? (
-          <p className={styles.empty}>Quiet so far. Be the first to say hello.</p>
+          <p className={styles.empty}>Quiet so far.</p>
         ) : (
           <ul className={styles.chatList}>
             {porchPreview.map((post) => (

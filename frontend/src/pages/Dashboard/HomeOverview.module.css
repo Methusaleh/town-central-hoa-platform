@@ -79,25 +79,25 @@
 
 .chipAlert {
   background: var(--tc-danger-soft);
-  border-color: #f0c8c4;
+  border-color: var(--tc-danger);
   color: var(--tc-danger);
 }
 
 .chipAlert:hover {
   background: var(--tc-danger-soft);
-  border-color: #e0a8a4;
+  border-color: var(--tc-danger);
   color: var(--tc-danger);
 }
 
 .chipWarn {
   background: var(--tc-warn-soft);
-  border-color: #e4d4b0;
+  border-color: var(--tc-warn);
   color: var(--tc-warn);
 }
 
 .chipWarn:hover {
   background: var(--tc-warn-soft);
-  border-color: #d4c090;
+  border-color: var(--tc-warn);
   color: var(--tc-warn);
 }
 
@@ -107,7 +107,7 @@
   gap: 12px;
   width: 100%;
   padding: 14px 16px;
-  border: 1px solid #f0c8c4;
+  border: 1px solid var(--tc-danger);
   border-radius: var(--tc-radius);
   background: var(--tc-danger-soft);
   color: var(--tc-ink);
@@ -178,7 +178,7 @@
   position: relative;
   padding: 0;
   border: none;
-  background: #2b3832;
+  background: var(--tc-chrome);
   cursor: pointer;
   min-height: 188px;
   max-height: 220px;
@@ -297,6 +297,10 @@
   display: grid;
   grid-template-columns: 0.95fr 1.05fr;
   gap: 16px;
+}
+
+.columns:has(> :only-child) {
+  grid-template-columns: 1fr;
 }
 
 .panel,

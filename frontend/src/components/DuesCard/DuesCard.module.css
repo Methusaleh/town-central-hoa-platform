@@ -63,7 +63,7 @@
 
 .payBtn {
   background: var(--tc-brand);
-  color: var(--tc-bg-elevated);
+  color: var(--tc-on-brand);
   border: none;
   padding: 14px;
   border-radius: 12px;

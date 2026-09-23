@@ -44,10 +44,7 @@ export default function InviteMember({ user }) {
   return (
     <div className={styles.inviteContainer}>
       <h4>Anyone else at this address?</h4>
-      <p>
-        Invite a spouse, partner, or anyone else who lives here. They get their own login.
-        Don’t share yours.
-      </p>
+      <p>Invite someone who lives here. They get their own login — don’t share yours.</p>
       <form onSubmit={handleInvite} className={styles.form}>
         <input
           type="email"

@@ -9,8 +9,8 @@
 }
 
 .cardOn {
-  border-color: #c5d9cc;
-  box-shadow: 0 0 0 1px #c5d9cc;
+  border-color: var(--tc-brand);
+  box-shadow: 0 0 0 1px var(--tc-brand);
 }
 
 .head {

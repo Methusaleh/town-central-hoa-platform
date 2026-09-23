@@ -126,7 +126,6 @@ export default function AnnouncementFeed({ user }) {
         <div>
           <p className={styles.kicker}>From the board</p>
           <h2>Announcements</h2>
-          <p>Official notices from the board. These are posted for the neighborhood to read, not a place to reply.</p>
         </div>
         {isAdmin && <Button onClick={() => setShowCreate(true)}>Post announcement</Button>}
       </header>

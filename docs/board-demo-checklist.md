@@ -43,7 +43,7 @@ Log in as a regular household. Stay here until they have seen neighborhood life 
 - [ ] **Trusted companies.** Vendor list the board maintains.
 - [ ] **Pool & clubhouse.** Coming soon — hours and reservations are not live.
 - [ ] **The Board.** Sample bios, then a private note from inside the site.
-- [ ] **Profile.** Photo, password, appearance, invite someone else at this address. There is no SMS toggle yet.
+- [ ] **Profile.** Photo, password, appearance, invite someone else at this address.
 
 **If they ask here:** “Can two people at the house share one password?” No. One street, two logins. “Will I see board-only legal files?” No.
 
@@ -96,8 +96,8 @@ Sign in as Chris, Danelle, or Cole (whoever will actually run the site). Same pe
 
 ## Go-live prep (after this demo)
 
-- [ ] **Pool & clubhouse (`/amenities`).** Keep the nav item. Collapse the page to a short coming-soon note — no “what will live here” layout. Do this in the resident-copy cleanup pass.
-- [ ] **Resident copy.** Instructional notes on the neighbor side only when they are required (dues how-to-pay, claim, who to call). Strip the rest. Board/Admin can stay a bit more instructional so they can learn the desk.
+- [x] **Pool & clubhouse (`/amenities`).** Keep the nav item. Collapse the page to a short coming-soon note — no “what will live here” layout. Do this in the resident-copy cleanup pass.
+- [x] **Resident copy.** Instructional notes on the neighbor side only when they are required (dues how-to-pay, claim, who to call). Strip the rest. Board/Admin can stay a bit more instructional so they can learn the desk.
 
 ---
 

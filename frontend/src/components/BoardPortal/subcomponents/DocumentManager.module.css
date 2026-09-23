@@ -512,12 +512,12 @@
 .menuItem:hover,
 .menuLink:hover {
   background: var(--tc-brand);
-  color: var(--tc-bg-elevated);
+  color: var(--tc-on-brand);
 }
 
 .menuDanger:hover {
   background: var(--tc-danger);
-  color: var(--tc-bg-elevated);
+  color: var(--tc-on-brand);
 }
 
 .menuSep {

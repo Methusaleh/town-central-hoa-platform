@@ -178,9 +178,7 @@ export default function Claim({ onBack, onClaimSuccess }) {
               required
             />
             <p className={styles.fieldLabel}>Do you own or rent this house?</p>
-            <p className={styles.hint}>
-              This only controls whether this household sees HOA dues. It does not limit anything else on the site — events, the Porch, meetings, and documents stay open.
-            </p>
+            <p className={styles.hint}>This only controls whether this household sees HOA dues.</p>
             <div className={styles.occupancy}>
               <button
                 type="button"

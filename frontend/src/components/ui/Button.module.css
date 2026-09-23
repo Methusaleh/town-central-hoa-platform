@@ -21,7 +21,7 @@
 
 .primary {
   background: var(--tc-brand);
-  color: #fff;
+  color: var(--tc-on-brand);
 }
 
 .primary:hover:not(:disabled) {
@@ -52,5 +52,5 @@
 .danger {
   background: var(--tc-danger-soft);
   color: var(--tc-danger);
-  border-color: #f0c8c4;
+  border-color: var(--tc-danger);
 }

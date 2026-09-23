@@ -47,7 +47,6 @@ export default function Login({ onBack, onLoginSuccess, onNavigateToClaim, onNav
           <span>Town Central</span>
         </div>
         <h2>Sign in</h2>
-        <p>Use your Town Central resident account.</p>
 
         {errorMsg && <div className={styles.errorBanner}>{errorMsg}</div>}
 

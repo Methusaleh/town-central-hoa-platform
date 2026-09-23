@@ -170,7 +170,7 @@
 
 .filterOn {
   background: var(--tc-brand-soft) !important;
-  border-color: #c5d9cc !important;
+  border-color: var(--tc-brand) !important;
   color: var(--tc-brand-ink) !important;
 }
 
@@ -281,7 +281,7 @@
   border-radius: 8px;
   padding: 10px 12px;
   background: var(--tc-brand);
-  color: #fff;
+  color: var(--tc-on-brand);
   font-weight: 650;
   cursor: pointer;
 }
@@ -312,7 +312,7 @@
 
 .typeOn {
   background: var(--tc-brand-soft);
-  border-color: #c5d9cc;
+  border-color: var(--tc-brand);
   color: var(--tc-brand-ink);
 }
 

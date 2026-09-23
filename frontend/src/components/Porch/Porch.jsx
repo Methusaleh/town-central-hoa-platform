@@ -701,10 +701,6 @@ export default function Porch({ user }) {
         <div>
           <p className={styles.kicker}>Neighborhood</p>
           <h2>The Porch</h2>
-          <p>
-            Say hello, share a photo, or pass along something useful. Open a post to read and
-            reply.
-          </p>
         </div>
       </header>
 
@@ -814,7 +810,7 @@ export default function Porch({ user }) {
         <div className={styles.empty}>Loading…</div>
       ) : posts.length === 0 ? (
         <div className={styles.empty}>
-          {debouncedQuery ? "Nothing matches that." : "The Porch is quiet. Be the first to say hello."}
+          {debouncedQuery ? "Nothing matches that." : "The Porch is quiet."}
         </div>
       ) : (
         <div className={styles.list}>

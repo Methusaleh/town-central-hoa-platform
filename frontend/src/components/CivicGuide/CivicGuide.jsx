@@ -5,10 +5,7 @@ export default function CivicGuide() {
     <section className={styles.section}>
       <h2>Who to call</h2>
       <p className={styles.lede}>
-        The HOA does not handle everything. If it is dangerous right now, call emergency services. If it is a city service, call Piedmont. Use Town Central for association business.
-      </p>
-      <p className={styles.hint}>
-        Exact city numbers and the items this board usually refers out can be filled in as you collect them.
+        If it is dangerous right now, call emergency services. If it is a city service, call Piedmont. Use Town Central for association business.
       </p>
 
       <div className={styles.container}>

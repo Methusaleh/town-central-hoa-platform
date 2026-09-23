@@ -37,7 +37,7 @@
 .btn {
   padding: 8px 16px;
   background: var(--tc-brand);
-  color: #fff;
+  color: var(--tc-on-brand);
   border: none;
   border-radius: 8px;
   cursor: pointer;

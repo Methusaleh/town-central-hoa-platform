@@ -9,7 +9,7 @@ import { BOARD_CARDS_ARE_SAMPLE, BOARD_MEMBERS } from "./boardMembers";
 import styles from "./BoardMail.module.css";
 
 export default function BoardMail() {
-  const { user } = usePortal();
+  const { user, isBoard } = usePortal();
   const [params, setParams] = useSearchParams();
   const incomingSubject = params.get("subject") || "";
   const [subject, setSubject] = useState(incomingSubject);
@@ -75,10 +75,9 @@ export default function BoardMail() {
         <p className={styles.kicker}>Town Central</p>
         <h2>The Board</h2>
         <p className={styles.lede}>
-          Who they are, and how to write them. Notes stay private — they don&apos;t post to The Porch.
-          For a common-area repair or a change to your house, use Requests.
+          Notes stay private — they don&apos;t post to The Porch. For a common-area repair or a change to your house, use Requests.
         </p>
-        {BOARD_CARDS_ARE_SAMPLE && (
+        {BOARD_CARDS_ARE_SAMPLE && isBoard && (
           <p className={styles.sampleNote}>
             Sample cards so the layout is clear. Swap names, photos, and blurbs when you have them.
           </p>

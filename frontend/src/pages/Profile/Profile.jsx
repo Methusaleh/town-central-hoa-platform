@@ -112,7 +112,7 @@ export default function Profile({ user, onUserUpdate }) {
       <header className={styles.intro}>
         <p className={styles.kicker}>Account</p>
         <h2>Settings</h2>
-        <p>Your login, photo, and household. This is you on the site — not a shared board inbox.</p>
+        <p>Your login, photo, and household.</p>
       </header>
 
       <div className={styles.grid}>
@@ -152,9 +152,7 @@ export default function Profile({ user, onUserUpdate }) {
         <div className={styles.stack}>
           <div className={styles.card}>
             <h3>Appearance</h3>
-            <p className={styles.subtext}>
-              Paper is the default. Dark is there if you prefer it — try it and we can keep or drop it.
-            </p>
+            <p className={styles.subtext}>Paper is the default. Dark is there if you prefer it.</p>
             <div className={styles.themeRow}>
               <button
                 type="button"
@@ -171,13 +169,6 @@ export default function Profile({ user, onUserUpdate }) {
                 Dark
               </button>
             </div>
-          </div>
-
-          <div className={styles.card}>
-            <h3>How we reach you</h3>
-            <p className={styles.subtext}>
-              Announcements, alerts, and Home live in the app. Email is used for password resets, claim letters, and replies to messages you send the board. Text messages are not sending yet — there is no toggle to flip until they are.
-            </p>
           </div>
 
           <div className={styles.card}>
