@@ -56,16 +56,42 @@
 }
 
 .roster:has(:only-child) {
-  grid-template-columns: minmax(0, 22rem);
+  grid-template-columns: minmax(0, 48rem);
+}
+
+.roster:has(:only-child) .card {
+  display: grid;
+  grid-template-columns: 17rem minmax(0, 1fr);
+  align-items: stretch;
 }
 
 .card img {
   display: block;
   width: 100%;
-  aspect-ratio: 4 / 3;
+  height: 100%;
+  aspect-ratio: 3 / 4;
   object-fit: cover;
-  object-position: center 18%;
+  object-position: center 30%;
   background: var(--tc-brand-soft);
+}
+
+.roster:has(:only-child) .card img {
+  height: auto;
+}
+
+.roster:has(:only-child) .cardBody {
+  justify-content: center;
+  gap: 8px;
+  padding: 22px 26px 24px;
+}
+
+.roster:has(:only-child) .cardBody h3 {
+  font-size: 1.35rem;
+}
+
+.roster:has(:only-child) .cardBody p:last-child {
+  font-size: 1rem;
+  line-height: 1.6;
 }
 
 .cardBody {
@@ -260,8 +286,13 @@
 }
 
 @media (max-width: 720px) {
-  .roster {
+  .roster,
+  .roster:has(:only-child) .card {
     grid-template-columns: 1fr;
+  }
+
+  .roster:has(:only-child) .card img {
+    max-width: 18rem;
   }
 }
 
