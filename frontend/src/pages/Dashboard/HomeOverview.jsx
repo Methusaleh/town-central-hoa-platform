@@ -24,6 +24,7 @@ import {
   formatUtcYmd,
   typeMeta,
 } from "../../components/Events/eventTypes";
+import NeighborhoodRotator from "./NeighborhoodRotator";
 import styles from "./HomeOverview.module.css";
 
 function greetingForHour(hour) {
@@ -251,66 +252,69 @@ export default function HomeOverview() {
   return (
     <div className={styles.home}>
       <section className={styles.hero}>
-        <p className={styles.eyebrow}>{dateLabel}</p>
-        <h1>
-          {greeting}, {user?.first_name || "neighbor"}
-        </h1>
-        <p className={styles.lede}>{todayLine}</p>
-        <div className={styles.heroBar}>
-          <div className={styles.heroActions}>
-            <Button onClick={openPorchCompose}>Say hello on The Porch</Button>
-            {featured && (
-              <Button variant="secondary" onClick={() => navigate(`${PATHS.events}/${featured.id}`)}>
-                {featured.going ? "Your next event" : "See what’s next"}
-              </Button>
-            )}
+        <div className={styles.heroMain}>
+          <div className={styles.heroCopy}>
+            <p className={styles.eyebrow}>{dateLabel}</p>
+            <h1>
+              {greeting}, {user?.first_name || "neighbor"}
+            </h1>
+            <p className={styles.lede}>{todayLine}</p>
+            <div className={styles.heroBar}>
+              <div className={styles.heroActions}>
+                <Button onClick={openPorchCompose}>Say hello on The Porch</Button>
+                {featured && (
+                  <Button variant="secondary" onClick={() => navigate(`${PATHS.events}/${featured.id}`)}>
+                    {featured.going ? "Your next event" : "See what’s next"}
+                  </Button>
+                )}
+              </div>
+              <div className={styles.chips}>
+                {newPosts > 0 && (
+                  <button type="button" className={styles.chip} onClick={() => navigate(PATHS.porch)}>
+                    {newPosts} new on The Porch
+                  </button>
+                )}
+                {newAnnouncements > 0 && (
+                  <button type="button" className={styles.chip} onClick={() => navigate(PATHS.announcements)}>
+                    {newAnnouncements} from the board
+                  </button>
+                )}
+                {newAlerts > 0 && (
+                  <button type="button" className={`${styles.chip} ${styles.chipAlert}`} onClick={() => navigate(PATHS.alerts)}>
+                    {newAlerts} alert{newAlerts === 1 ? "" : "s"}
+                  </button>
+                )}
+                {duesPastDue && (
+                  <button type="button" className={`${styles.chip} ${styles.chipWarn}`} onClick={() => navigate(PATHS.dues)}>
+                    Dues past due
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
-          <div className={styles.chips}>
-            {newPosts > 0 && (
-              <button type="button" className={styles.chip} onClick={() => navigate(PATHS.porch)}>
-                {newPosts} new on The Porch
-              </button>
-            )}
-            {newAnnouncements > 0 && (
-              <button type="button" className={styles.chip} onClick={() => navigate(PATHS.announcements)}>
-                {newAnnouncements} from the board
-              </button>
-            )}
-            {newAlerts > 0 && (
-              <button type="button" className={`${styles.chip} ${styles.chipAlert}`} onClick={() => navigate(PATHS.alerts)}>
-                {newAlerts} alert{newAlerts === 1 ? "" : "s"}
-              </button>
-            )}
-            {duesPastDue && (
-              <button type="button" className={`${styles.chip} ${styles.chipWarn}`} onClick={() => navigate(PATHS.dues)}>
-                Dues past due
-              </button>
-            )}
-          </div>
+          {trashBanner && (
+            <div className={styles.trashBanner}>
+              <strong>{trashBanner.kicker}</strong>
+              <span>{trashBanner.text}</span>
+            </div>
+          )}
+          {activeAlert && (
+            <button
+              type="button"
+              className={styles.alertBanner}
+              onClick={() => navigate(`${PATHS.alerts}/${activeAlert.id}`)}
+            >
+              <Bell size={16} />
+              <span>
+                <strong>{activeAlert.category || "Alert"}</strong>
+                {clip(activeAlert.content, 88)}
+              </span>
+              <ChevronRight size={16} />
+            </button>
+          )}
         </div>
+        <NeighborhoodRotator />
       </section>
-
-      {trashBanner && (
-        <div className={styles.trashBanner}>
-          <strong>{trashBanner.kicker}</strong>
-          <span>{trashBanner.text}</span>
-        </div>
-      )}
-
-      {activeAlert && (
-        <button
-          type="button"
-          className={styles.alertBanner}
-          onClick={() => navigate(`${PATHS.alerts}/${activeAlert.id}`)}
-        >
-          <Bell size={16} />
-          <span>
-            <strong>{activeAlert.category || "Alert"}</strong>
-            {clip(activeAlert.content, 88)}
-          </span>
-          <ChevronRight size={16} />
-        </button>
-      )}
 
       {featured && (
         <article className={`${styles.feature} ${cover ? styles.featurePhoto : styles.featurePlain}`}>

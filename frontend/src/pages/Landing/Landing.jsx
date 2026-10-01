@@ -24,8 +24,8 @@ export default function Landing({ onLogin, onRegisterClick, onContactClick, onGu
         <main className={styles.mainContent}>
           <img
             className={styles.heroPhoto}
-            src="/landing-standin.png"
-            alt=""
+            src="/landing-hero.jpg"
+            alt="Town Central entrance"
           />
           <div className={styles.copy}>
             <h1 className={styles.title}>The neighborhood, in one place.</h1>
