@@ -55,12 +55,16 @@
   border-radius: var(--tc-radius);
 }
 
+.roster:has(:only-child) {
+  grid-template-columns: minmax(0, 22rem);
+}
+
 .card img {
   display: block;
   width: 100%;
   aspect-ratio: 4 / 3;
   object-fit: cover;
-  object-position: center top;
+  object-position: center 18%;
   background: var(--tc-brand-soft);
 }
 
