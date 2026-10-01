@@ -115,7 +115,7 @@ function drawCentered(page, font, value, box, size, color, y) {
 
 function stampClaim(page, fonts, lot, stamp) {
   const box = stampBox(stamp, page);
-  const code = String(lot.onboarding_token || "").trim().toUpperCase() || "----";
+  const code = String(lot.onboarding_token || "").replace(/\s+/g, "").trim().toUpperCase() || "----";
   const street = lot.street_address || "";
   const who = occupantName(lot);
   const pad = 10;

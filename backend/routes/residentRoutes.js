@@ -87,7 +87,12 @@ function runAvatarUpload(req, res, next) {
 }
 
 function newClaimCode() {
-  return Math.random().toString(36).substring(2, 8).toUpperCase();
+  const alphabet = "ABCDEFGHJKMNPQRTUVWXYZ23456789";
+  let code = "";
+  for (let i = 0; i < 6; i += 1) {
+    code += alphabet[Math.floor(Math.random() * alphabet.length)];
+  }
+  return code;
 }
 
 async function findLotByStreet(street) {

@@ -9,7 +9,7 @@ import { usePortal } from "./PortalContext";
 import {
   FEED_PATHS,
   PATHS,
-  adminItem,
+  adminNavItems,
   desktopPrimary,
   mobileTabs,
   moreItems,
@@ -22,14 +22,20 @@ function linkClass({ isActive }) {
   return `${styles.link} ${isActive ? styles.linkActive : ""}`;
 }
 
+function dropClass({ isActive }) {
+  return `${styles.dropItem} ${isActive ? styles.dropItemOn : ""}`;
+}
+
 export default function AppShell() {
   const { user, isBoard, onLogout, onUserUpdate } = usePortal();
   const location = useLocation();
   const navigate = useNavigate();
   const [moreOpen, setMoreOpen] = useState(false);
+  const [adminOpen, setAdminOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [mobileMore, setMobileMore] = useState(false);
   const moreRef = useRef(null);
+  const adminRef = useRef(null);
   const accountRef = useRef(null);
 
   const fullBleed = location.pathname.startsWith("/dashboard/admin/documents");
@@ -43,6 +49,7 @@ export default function AppShell() {
 
   useEffect(() => {
     setMoreOpen(false);
+    setAdminOpen(false);
     setAccountOpen(false);
     setMobileMore(false);
   }, [location.pathname]);
@@ -50,16 +57,16 @@ export default function AppShell() {
   useEffect(() => {
     const onDoc = (e) => {
       if (moreRef.current && !moreRef.current.contains(e.target)) setMoreOpen(false);
+      if (adminRef.current && !adminRef.current.contains(e.target)) setAdminOpen(false);
       if (accountRef.current && !accountRef.current.contains(e.target)) setAccountOpen(false);
     };
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
   }, []);
 
-  const overflow = (isBoard ? [...moreItems, adminItem] : moreItems).filter(
-    (item) => item.to !== PATHS.dues || !isRenter(user),
-  );
+  const overflow = moreItems.filter((item) => item.to !== PATHS.dues || !isRenter(user));
   const moreActive = overflow.some((item) => item.to && location.pathname.startsWith(item.to));
+  const adminActive = isBoard && location.pathname.startsWith(PATHS.admin);
   const needsGuidelines = !user?.agreed_to_guidelines;
 
   return (
@@ -97,7 +104,7 @@ export default function AppShell() {
             {moreOpen && (
               <div className={styles.dropdown}>
                 {overflow.map((item) => (
-                  <NavLink key={item.to} to={item.to} className={styles.dropItem} onClick={() => setMoreOpen(false)}>
+                  <NavLink key={item.to} to={item.to} className={dropClass} onClick={() => setMoreOpen(false)}>
                     <item.icon size={16} />
                     {item.label}
                   </NavLink>
@@ -105,6 +112,37 @@ export default function AppShell() {
               </div>
             )}
           </div>
+
+          {isBoard && (
+            <div className={`${styles.menuWrap} ${styles.adminWrap}`} ref={adminRef}>
+              <button
+                type="button"
+                className={`${styles.link} ${adminOpen || adminActive ? styles.linkActive : ""}`}
+                onClick={() => setAdminOpen((v) => !v)}
+                aria-expanded={adminOpen}
+                aria-haspopup="menu"
+              >
+                Admin
+                <ChevronDown size={14} />
+              </button>
+              {adminOpen && (
+                <div className={styles.dropdown} role="menu">
+                  {adminNavItems.map((item) => (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      end={item.end}
+                      className={dropClass}
+                      onClick={() => setAdminOpen(false)}
+                    >
+                      <item.icon size={16} />
+                      {item.label}
+                    </NavLink>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </nav>
 
         <div className={styles.account} ref={accountRef}>
@@ -150,7 +188,7 @@ export default function AppShell() {
             <button
               key="more"
               type="button"
-              className={`${styles.tab} ${mobileMore || moreActive ? styles.tabActive : ""}`}
+              className={`${styles.tab} ${mobileMore || moreActive || adminActive ? styles.tabActive : ""}`}
               onClick={() => setMobileMore(true)}
             >
               <item.icon size={20} />
@@ -176,6 +214,23 @@ export default function AppShell() {
                 {item.label}
               </NavLink>
             ))}
+            {isBoard && (
+              <>
+                <p className={styles.sheetTitle}>Board</p>
+                {adminNavItems.map((item) => (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    end={item.end}
+                    className={styles.sheetItem}
+                    onClick={() => setMobileMore(false)}
+                  >
+                    <item.icon size={18} />
+                    {item.label}
+                  </NavLink>
+                ))}
+              </>
+            )}
           </div>
         </div>
       )}

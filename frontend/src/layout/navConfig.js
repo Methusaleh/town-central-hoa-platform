@@ -78,3 +78,12 @@ export const adminToolPaths = {
   "admin-vendors": "/dashboard/admin/vendors",
   "admin-documents": "/dashboard/admin/documents",
 };
+
+export const adminNavItems = [
+  { to: adminToolPaths.roster, label: "Roster", icon: Users },
+  { to: adminToolPaths["admin-documents"], label: "Documents", icon: FolderOpen },
+  { to: adminToolPaths.financials, label: "Ledger", icon: Wallet },
+  { to: adminToolPaths.requests, label: "Tickets", icon: ClipboardList },
+  { to: adminToolPaths["admin-vendors"], label: "Vendors", icon: Building2 },
+  { to: PATHS.admin, label: "Admin home", icon: Shield, end: true },
+];

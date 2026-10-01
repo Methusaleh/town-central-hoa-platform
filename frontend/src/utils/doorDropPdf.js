@@ -31,15 +31,6 @@ function textAt(font, size, x, y, value, rgb = C.ink) {
   return `${rgb} rg\nBT /${font} ${size} Tf ${x.toFixed(2)} ${y.toFixed(2)} Td (${pdfEscape(value)}) Tj ET\n`;
 }
 
-function centerX(value, size, factor = 0.52) {
-  const w = String(value ?? "").length * size * factor;
-  return Math.max(36, (PAGE_W - w) / 2);
-}
-
-function centered(font, size, y, value, rgb, factor = 0.52) {
-  return textAt(font, size, centerX(value, size, factor), y, value, rgb);
-}
-
 function occupantLabel(lot) {
   const name = `${lot?.first_name || ""} ${lot?.last_name || ""}`.trim();
   if (!name || /^pending\s+resident$/i.test(name)) return "";
@@ -48,74 +39,56 @@ function occupantLabel(lot) {
 
 function streetFontSize(street) {
   const len = String(street || "").length;
-  if (len > 34) return 14;
-  if (len > 24) return 18;
+  if (len > 34) return 16;
+  if (len > 26) return 18;
   return 22;
 }
 
-function spacedCode(code, y, size = 34) {
-  const chars = String(code || "").split("");
-  if (!chars.length) return "";
-  const gap = size * 0.78;
-  const total = chars.length * gap - (gap - size * 0.55);
-  let x = (PAGE_W - total) / 2;
-  let s = "";
-  chars.forEach((ch) => {
-    s += textAt("F2", size, x, y, ch, C.white);
-    x += gap;
-  });
-  return s;
-}
-
 function stepRow(n, label, y) {
-  let s = fillRect(54, y - 4, 22, 22, C.brand);
-  s += textAt("F2", 11, n === 1 ? 61.5 : 60.5, y + 2, String(n), C.white);
-  s += textAt("F1", 11, 88, y + 2, label, C.ink);
+  let s = fillRect(54, y - 5, 22, 22, C.brand);
+  s += textAt("F2", 11, 61.5, y + 1, String(n), C.white);
+  s += textAt("F1", 11, 88, y + 1, label, C.ink);
   return s;
 }
 
 function pageStream(lot) {
   const street = lot.street_address || "Your street";
-  const code = String(lot.onboarding_token || "").trim().toUpperCase() || "————";
+  const code = String(lot.onboarding_token || "").replace(/\s+/g, "").trim().toUpperCase() || "————";
   const who = occupantLabel(lot);
   const streetSize = streetFontSize(street);
+  const left = 64;
 
   let s = "";
   s += fillRect(0, 0, PAGE_W, PAGE_H, C.paper);
-  s += fillRect(0, 658, PAGE_W, 134, C.brand);
-  s += fillRect(0, 654, PAGE_W, 4, C.gold);
-  s += centered("F2", 11, 760, "TOWN CENTRAL HOA", C.white, 0.58);
-  s += centered("F1", 10, 742, "Piedmont neighborhood site", C.goldSoft, 0.5);
-  s += centered("F2", 22, 708, "This house is invited in", C.white, 0.5);
-  s += centered("F1", 11, 682, "Tape this on the door. It is only for this address.", C.goldSoft, 0.48);
+  s += fillRect(0, 718, PAGE_W, 74, C.brand);
+  s += fillRect(0, 715, PAGE_W, 3, C.gold);
+  s += textAt("F2", 9, left, 764, "TOWN CENTRAL HOA", C.goldSoft);
+  s += textAt("F2", 22, left, 732, "Web Portal Invite", C.white);
 
-  s += fillRect(48, 518, 516, 112, C.white);
-  s += fillRect(48, 518, 8, 112, C.brand);
-  s += centered("F1", 8, 604, "STREET", C.muted, 0.62);
-  s += centered("F2", streetSize, 572, street, C.ink, 0.5);
+  s += fillRect(48, 548, 516, 132, C.white);
+  s += fillRect(48, 548, 6, 132, C.brand);
+  s += textAt("F1", 8, left, 650, "STREET", C.muted);
+  s += textAt("F2", streetSize, left, 614, street, C.ink);
   if (who) {
-    s += centered("F1", 12, 542, who, C.muted, 0.5);
-  } else {
-    s += centered("F1", 11, 542, "Your household", C.muted, 0.5);
+    s += textAt("F1", 12, left, 582, who, C.muted);
   }
 
-  s += fillRect(48, 352, 516, 148, C.brand);
-  s += fillRect(48, 494, 516, 6, C.gold);
-  s += centered("F1", 9, 470, "YOUR CLAIM CODE", C.goldSoft, 0.62);
-  s += spacedCode(code, 418, 34);
-  s += centered("F1", 11, 378, CLAIM_HOST, C.goldSoft, 0.5);
+  s += fillRect(48, 368, 516, 156, C.brand);
+  s += textAt("F1", 8, left, 496, "CLAIM CODE", C.goldSoft);
+  s += textAt("F3", 30, left, 448, code, C.white);
+  s += textAt("F1", 11, left, 400, CLAIM_HOST, C.goldSoft);
 
-  s += textAt("F2", 13, 54, 312, "How to get in", C.ink);
-  s += stepRow(1, `Open ${CLAIM_URL}`, 278);
-  s += stepRow(2, "Enter this street and the claim code.", 250);
-  s += stepRow(3, "Create your own login. Do not share a password.", 222);
-  s += stepRow(4, "Invite anyone else who lives here. They get their own login.", 194);
+  s += textAt("F2", 13, 54, 328, "How to get in", C.ink);
+  s += stepRow(1, `Open ${CLAIM_URL}`, 292);
+  s += stepRow(2, "Type this street and the claim code. No spaces.", 264);
+  s += stepRow(3, "Create your own login. Do not share a password.", 236);
+  s += stepRow(4, "Invite anyone else who lives here. They get their own login.", 208);
 
-  s += textAt("F1", 10, 54, 150, "One adult claims the house. Everyone else is invited after that.", C.muted);
-  s += textAt("F1", 10, 54, 132, `Questions: ${BOARD_EMAIL}`, C.muted);
+  s += textAt("F1", 10, 54, 160, "One adult claims the house. Everyone else is invited after that.", C.muted);
+  s += textAt("F1", 10, 54, 142, `Questions: ${BOARD_EMAIL}`, C.muted);
 
-  s += fillRect(0, 0, PAGE_W, 48, C.brandDark);
-  s += centered("F1", 9, 20, "Town Central HOA  ·  Piedmont, Oklahoma", C.goldSoft, 0.5);
+  s += fillRect(0, 0, PAGE_W, 40, C.brandDark);
+  s += textAt("F1", 9, left, 16, "Town Central HOA  ·  Piedmont, Oklahoma", C.goldSoft);
   return s;
 }
 
@@ -128,15 +101,16 @@ function buildPdf(lots) {
   objects[1] = "<< /Type /Catalog /Pages 2 0 R >>";
   objects[3] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>";
   objects[4] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>";
+  objects[5] = "<< /Type /Font /Subtype /Type1 /BaseFont /Courier-Bold >>";
 
-  let nextId = 5;
+  let nextId = 6;
   contents.forEach((stream) => {
     const contentId = nextId++;
     const pageId = nextId++;
     kids.push(`${pageId} 0 R`);
     objects[contentId] = `<< /Length ${stream.length} >>\nstream\n${stream}endstream`;
     objects[pageId] =
-      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PAGE_W} ${PAGE_H}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${contentId} 0 R >>`;
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PAGE_W} ${PAGE_H}] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents ${contentId} 0 R >>`;
   });
 
   objects[2] = `<< /Type /Pages /Kids [${kids.join(" ")}] /Count ${pageCount} >>`;

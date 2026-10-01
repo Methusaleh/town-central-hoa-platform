@@ -930,10 +930,14 @@ export default function RosterDirectory({ onBack }) {
         <section className={styles.formCard}>
           <h3>Print files for go-live</h3>
           <p>
-            Upload the board&apos;s designed PDFs. Door-drop uses one letter-size page per house and
-            stamps that household&apos;s claim code. Welcome packet attaches to the existing welcome
-            letter emails. Leave a blank box on the flyer, or add Acrobat fields named
-            {" "}<code>claim_code</code>, <code>street_address</code>, and <code>occupant_name</code>.
+            Upload a one-page US Letter PDF (8.5 × 11). The site fills each house&apos;s claim code at print time.
+            In Acrobat (or Preview is not enough), add text fields named exactly{" "}
+            <code>claim_code</code>, <code>street_address</code>, and optionally{" "}
+            <code>occupant_name</code> and <code>claim_url</code>.
+            Make <code>claim_code</code> a single-line field, centered, Courier or Helvetica Bold, 24–32pt,
+            wide enough for six characters with no tracking or spacing. Do not put dummy codes in the
+            art — leave the field empty. If those fields are missing, we stamp a box where you set
+            Upper / Center / Lower.
           </p>
 
           <h4 className={styles.sectionLabel}>Door-drop flyer</h4>

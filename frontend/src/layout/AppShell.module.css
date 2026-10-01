@@ -93,6 +93,12 @@
   margin-left: 4px;
 }
 
+.adminWrap {
+  margin-left: 8px;
+  padding-left: 10px;
+  border-left: 1px solid var(--tc-line);
+}
+
 .dropdown {
   position: absolute;
   top: calc(100% + 8px);
@@ -135,7 +141,7 @@
 }
 
 .dropItem:hover,
-.dropItem.active {
+.dropItemOn {
   background: var(--tc-bg-hover);
 }
 
@@ -342,6 +348,11 @@
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--tc-muted);
+  }
+
+  .sheetTitle + .sheetTitle,
+  .sheetItem + .sheetTitle {
+    margin-top: 18px;
   }
 
   .sheetItem {
