@@ -97,14 +97,19 @@ export default function DocumentCenter() {
   }, []);
 
   const visibleDocuments = useMemo(() => {
-    const allowed = documents.filter((doc) => !doc.is_private && !doc.requires_board_key);
+    const allowed = documents.filter(
+      (doc) =>
+        !doc.is_private &&
+        !doc.requires_board_key &&
+        (doc.audience || "residents") === "residents",
+    );
     const needle = query.trim().toLowerCase();
     if (!needle) return allowed;
     return allowed.filter((doc) => String(doc.title || "").toLowerCase().includes(needle));
   }, [documents, query]);
 
   const residentCategories = useMemo(
-    () => categories.filter((category) => category.audience !== "board"),
+    () => categories.filter((category) => (category.audience || "residents") === "residents"),
     [categories],
   );
 

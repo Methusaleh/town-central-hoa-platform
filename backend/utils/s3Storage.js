@@ -13,17 +13,25 @@ const s3 = new S3Client({
 function keyFromR2Url(fileUrl) {
   const base = process.env.CLOUDFLARE_R2_PUBLIC_URL;
   if (!fileUrl || !base || !String(fileUrl).startsWith(base)) return "";
+  const rest = String(fileUrl).slice(base.length).replace(/^\//, "").split("?")[0];
   try {
-    return decodeURIComponent(new URL(fileUrl).pathname.split("/").pop() || "");
+    return decodeURIComponent(rest);
   } catch {
-    return String(fileUrl).split("/").pop() || "";
+    return rest;
   }
 }
 
-const uploadToR2 = async (fileBuffer, originalName, mimeType) => {
+function folderPrefix(folder) {
+  return String(folder || "")
+    .trim()
+    .replace(/^\/+|\/+$/g, "");
+}
+
+const uploadToR2 = async (fileBuffer, originalName, mimeType, folder = "") => {
   const uniqueId = crypto.randomBytes(8).toString("hex");
-  const cleanName = originalName.replace(/[^a-zA-Z0-9.]/g, "_");
-  const fileName = `${Date.now()}-${uniqueId}-${cleanName}`;
+  const cleanName = String(originalName || "upload").replace(/[^a-zA-Z0-9.]/g, "_");
+  const prefix = folderPrefix(folder);
+  const fileName = `${prefix ? `${prefix}/` : ""}${Date.now()}-${uniqueId}-${cleanName}`;
 
   await s3.send(
     new PutObjectCommand({

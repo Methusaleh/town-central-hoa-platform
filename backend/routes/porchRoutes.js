@@ -140,7 +140,7 @@ router.post("/", authRequired, guidelinesRequired, upload.single("image"), async
       if (!bufferCheck.safe) {
         return res.status(400).json({ error: bufferCheck.reason });
       }
-      imageUrl = await uploadToR2(req.file.buffer, req.file.originalname, req.file.mimetype);
+      imageUrl = await uploadToR2(req.file.buffer, req.file.originalname, req.file.mimetype, "porch");
     } else if (imageUrl && !isAllowedGifUrl(imageUrl)) {
       return res.status(400).json({ error: "GIFs must be chosen from the GIF picker." });
     }
@@ -226,7 +226,7 @@ router.post("/:postId/comments", authRequired, guidelinesRequired, upload.single
       if (!bufferCheck.safe) {
         return res.status(400).json({ error: bufferCheck.reason });
       }
-      imageUrl = await uploadToR2(req.file.buffer, req.file.originalname, req.file.mimetype);
+      imageUrl = await uploadToR2(req.file.buffer, req.file.originalname, req.file.mimetype, "porch");
     } else if (imageUrl && !isAllowedGifUrl(imageUrl)) {
       return res.status(400).json({ error: "GIFs must be chosen from the GIF picker." });
     }

@@ -8,6 +8,17 @@ import { usePortal } from "../../layout/PortalContext";
 import { BOARD_CARDS_ARE_SAMPLE, BOARD_MEMBERS } from "./boardMembers";
 import styles from "./BoardMail.module.css";
 
+function asCards(rows) {
+  if (!Array.isArray(rows) || !rows.length) return [];
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    title: row.title,
+    photo: row.photo_url || row.photo,
+    blurb: row.blurb,
+  }));
+}
+
 export default function BoardMail() {
   const { user, isBoard } = usePortal();
   const [params, setParams] = useSearchParams();
@@ -17,11 +28,22 @@ export default function BoardMail() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const [sent, setSent] = useState(false);
+  const [members, setMembers] = useState(BOARD_MEMBERS);
   const subjectRef = useRef(null);
   const bodyRef = useRef(null);
 
   const fromName = [user?.first_name, user?.last_name].filter(Boolean).join(" ") || "Neighbor";
   const fromEmail = user?.email || "";
+
+  useEffect(() => {
+    apiFetch("/api/site/board-cards")
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
+      .then((data) => {
+        const next = asCards(data);
+        if (next.length) setMembers(next);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (incomingSubject) {
@@ -85,9 +107,9 @@ export default function BoardMail() {
       </header>
 
       <ul className={styles.roster}>
-        {BOARD_MEMBERS.map((member) => (
+        {members.map((member) => (
           <li key={member.id} className={styles.card}>
-            <img src={member.photo} alt="" />
+            {member.photo ? <img src={member.photo} alt="" /> : <div className={styles.photoGap} />}
             <div className={styles.cardBody}>
               <p className={styles.role}>{member.title}</p>
               <h3>{member.name}</h3>

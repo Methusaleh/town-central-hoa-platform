@@ -1,6 +1,6 @@
 import styles from "./Footer.module.css";
 
-export default function Footer({ onContactClick, onGuidelinesClick }) {
+export default function Footer({ onContactClick, onGuidelinesClick, onPublicDocsClick }) {
   return (
     <footer className={styles.footer}>
       <div className={styles.content}>
@@ -12,11 +12,7 @@ export default function Footer({ onContactClick, onGuidelinesClick }) {
           <button type="button" onClick={onGuidelinesClick} className={styles.linkBtn}>
             Guidelines
           </button>
-          <button
-            type="button"
-            className={styles.link}
-            title="The board will post public files here when they have them."
-          >
+          <button type="button" onClick={onPublicDocsClick} className={styles.linkBtn}>
             Public Documents
           </button>
         </nav>

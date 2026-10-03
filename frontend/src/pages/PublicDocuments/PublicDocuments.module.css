@@ -1,0 +1,145 @@
+.container {
+  height: 100%;
+  overflow: auto;
+  background: var(--tc-bg);
+  color: var(--tc-ink);
+}
+
+.nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  height: var(--tc-header-h);
+  min-height: var(--tc-header-h);
+  padding: 0 28px;
+  padding-left: max(28px, env(safe-area-inset-left));
+  padding-right: max(28px, env(safe-area-inset-right));
+  background: var(--tc-bg-elevated);
+  border-bottom: 1px solid var(--tc-line);
+}
+
+.backBtn {
+  background: none;
+  border: none;
+  color: var(--tc-muted);
+  font-weight: 650;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-family: inherit;
+  padding: 0;
+}
+
+.backBtn:hover {
+  color: var(--tc-ink);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 0.88rem;
+  color: var(--tc-brand-ink);
+}
+
+.logo svg {
+  display: block;
+  flex-shrink: 0;
+}
+
+.header {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 40px 20px 8px;
+}
+
+.kicker {
+  margin: 0 0 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--tc-accent);
+}
+
+.header h1 {
+  margin: 0;
+  font-size: clamp(1.8rem, 4vw, 2.4rem);
+  font-weight: 550;
+  letter-spacing: -0.03em;
+}
+
+.card {
+  max-width: 640px;
+  margin: 24px auto 48px;
+  padding: 0 20px 40px;
+}
+
+.empty {
+  margin: 0;
+  padding: 22px;
+  background: var(--tc-bg-elevated);
+  border: 1px solid var(--tc-line);
+  border-radius: var(--tc-radius);
+  color: var(--tc-muted);
+  line-height: 1.5;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.list a {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--tc-bg-elevated);
+  border: 1px solid var(--tc-line);
+  border-radius: var(--tc-radius);
+  color: inherit;
+  text-decoration: none;
+}
+
+.list a:hover {
+  border-color: var(--tc-line-strong, var(--tc-brand));
+}
+
+.list span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.list strong {
+  font-weight: 650;
+}
+
+.list em,
+.list b {
+  font-style: normal;
+  font-size: 0.8rem;
+  color: var(--tc-muted);
+}
+
+.list b {
+  font-weight: 650;
+}
+
+@media (max-width: 720px) {
+  .nav {
+    padding: 0 16px;
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+}

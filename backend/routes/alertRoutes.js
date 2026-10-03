@@ -116,7 +116,7 @@ router.post("/", authRequired, guidelinesRequired, upload.single("image"), async
       if (!bufferCheck.safe) {
         return res.status(400).json({ error: bufferCheck.reason });
       }
-      imageUrl = await uploadToR2(req.file.buffer, req.file.originalname, req.file.mimetype);
+      imageUrl = await uploadToR2(req.file.buffer, req.file.originalname, req.file.mimetype, "alerts");
     }
 
     // 2. Image Safety Check via Sightengine API (if an image is attached)
@@ -187,7 +187,7 @@ router.post("/:alertId/comments", authRequired, guidelinesRequired, upload.singl
       if (!bufferCheck.safe) {
         return res.status(400).json({ error: bufferCheck.reason });
       }
-      imageUrl = await uploadToR2(req.file.buffer, req.file.originalname, req.file.mimetype);
+      imageUrl = await uploadToR2(req.file.buffer, req.file.originalname, req.file.mimetype, "alerts");
       const imageCheck = await checkImageSafety(imageUrl);
       if (!imageCheck.safe) {
         return res.status(400).json({ error: imageCheck.reason });

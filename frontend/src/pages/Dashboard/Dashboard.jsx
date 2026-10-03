@@ -15,6 +15,7 @@ import RequestForm from "../../components/RequestForm/RequestForm";
 import VendorDirectory from "../../components/VendorDirectory/VendorDirectory";
 import DocumentCenter from "../../components/DocumentCenter/DocumentCenter";
 import DocumentManager from "../../components/BoardPortal/subcomponents/DocumentManager";
+import SiteLook from "../../components/BoardPortal/subcomponents/SiteLook";
 import Amenities from "../../components/Amenities/Amenities";
 import BoardMail from "../../components/BoardMail/BoardMail";
 import HomeOverview from "./HomeOverview";
@@ -302,6 +303,17 @@ export function AdminDocumentsPage() {
   return (
     <Panel bleed>
       <DocumentManager user={user} onBack={() => navigate(PATHS.admin)} />
+    </Panel>
+  );
+}
+
+export function AdminLookPage() {
+  const { isBoard } = usePortal();
+  const navigate = useNavigate();
+  if (!isBoard) return <Navigate to={PATHS.home} replace />;
+  return (
+    <Panel wide>
+      <SiteLook onBack={() => navigate(PATHS.admin)} />
     </Panel>
   );
 }

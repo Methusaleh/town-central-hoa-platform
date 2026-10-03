@@ -11,6 +11,10 @@ function isAllowedImageType(mime) {
   return /^image\/(jpeg|jpg|png|gif|webp)$/i.test(String(mime || ""));
 }
 
+function isAllowedVideoType(mime) {
+  return /^video\/(mp4|webm|quicktime)$/i.test(String(mime || ""));
+}
+
 function isAllowedGifUrl(url) {
   try {
     const parsed = new URL(String(url || ""));
@@ -163,6 +167,7 @@ async function checkTextToxicity(text) {
 module.exports = {
   scannerConfigured,
   isAllowedImageType,
+  isAllowedVideoType,
   isAllowedGifUrl,
   checkImageSafety,
   checkImageBuffer,

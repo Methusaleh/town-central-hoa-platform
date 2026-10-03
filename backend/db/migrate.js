@@ -207,6 +207,40 @@ END $$;`,
   `CREATE UNIQUE INDEX IF NOT EXISTS document_categories_root_name
      ON document_categories (lower(COALESCE(audience, 'residents')), lower(trim(name)))
      WHERE parent_id IS NULL`,
+  `CREATE TABLE IF NOT EXISTS home_photos (
+    id SERIAL PRIMARY KEY,
+    file_url TEXT NOT NULL,
+    object_position VARCHAR DEFAULT 'center 40%',
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE TABLE IF NOT EXISTS board_cards (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR NOT NULL,
+    title VARCHAR NOT NULL DEFAULT 'Board member',
+    photo_url TEXT,
+    blurb TEXT NOT NULL DEFAULT '',
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `INSERT INTO document_categories (name, parent_id, audience)
+     SELECT 'Community guidelines', NULL, 'board'
+      WHERE NOT EXISTS (
+        SELECT 1 FROM document_categories
+         WHERE parent_id IS NULL
+           AND COALESCE(audience, 'residents') = 'board'
+           AND lower(trim(name)) = 'community guidelines'
+      )`,
+  `ALTER TABLE documents ADD COLUMN IF NOT EXISTS audience VARCHAR DEFAULT 'residents'`,
+  `UPDATE documents d
+      SET audience = COALESCE(c.audience, 'residents')
+     FROM document_categories c
+    WHERE d.category_id = c.id
+      AND (d.audience IS NULL OR d.audience = 'residents')`,
+  `UPDATE documents
+      SET audience = 'board'
+    WHERE (is_private = true OR requires_board_key = true)
+      AND COALESCE(audience, 'residents') <> 'public'`,
 ];
 
 async function migrate(query) {

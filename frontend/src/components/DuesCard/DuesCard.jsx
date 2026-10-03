@@ -2,28 +2,52 @@ import { useState, useEffect } from "react";
 import styles from "./DuesCard.module.css";
 import { apiFetch } from "../../api";
 
+const EMPTY_PAY = {
+  payee: "Town Central HOA",
+  routing: "",
+  account: "",
+  lockbox: ["", "", ""],
+  due_label: "June 1, 2026",
+};
+
+function dash(value) {
+  const text = String(value || "").trim();
+  return text || "—";
+}
+
 export default function DuesCard({ user }) {
   const [duesInfo, setDuesInfo] = useState(null);
+  const [pay, setPay] = useState(EMPTY_PAY);
   const [loading, setLoading] = useState(true);
   const [paymentMode, setPaymentMode] = useState("overview");
 
   useEffect(() => {
-    const fetchDues = async () => {
-      try {
-        const response = await apiFetch(`/api/dues/${encodeURIComponent(user?.email || "")}`);
-        const data = await response.json();
-        setDuesInfo(data);
-      } catch (err) {
+    if (!user?.email) return undefined;
+    let cancelled = false;
+    Promise.all([
+      apiFetch(`/api/dues/${encodeURIComponent(user.email)}`).then((res) => res.json()),
+      apiFetch("/api/settings/dues-pay").then((res) => (res.ok ? res.json() : EMPTY_PAY)),
+    ])
+      .then(([dues, payInfo]) => {
+        if (cancelled) return;
+        setDuesInfo(dues);
+        setPay({ ...EMPTY_PAY, ...(payInfo || {}) });
+      })
+      .catch((err) => {
         console.error("Error fetching dues:", err);
-      } finally {
-        setLoading(false);
-      }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
     };
-
-    if (user?.email) fetchDues();
   }, [user?.email]);
 
   if (loading) return <div className={styles.loading}>Loading account details...</div>;
+
+  const street = duesInfo?.street_address || user?.address || "";
+  const lockbox = Array.isArray(pay.lockbox) ? pay.lockbox.filter((line) => String(line || "").trim()) : [];
 
   return (
     <div className={styles.card}>
@@ -48,7 +72,7 @@ export default function DuesCard({ user }) {
       {paymentMode === "overview" && (
         <>
           <div className={styles.details}>
-            <p>Next Due Date: <strong>June 1, 2026</strong></p>
+            <p>Next Due Date: <strong>{dash(pay.due_label)}</strong></p>
             <p>Last Payment: <strong>{duesInfo?.last_payment_date ? new Date(duesInfo.last_payment_date).toLocaleDateString() : "N/A"}</strong></p>
             {Number(duesInfo?.balance) > 0 && Number(duesInfo?.days_past_due) > 0 && (
               <p className={styles.pastDue}>
@@ -79,13 +103,13 @@ export default function DuesCard({ user }) {
         <div className={styles.payPanel}>
           <h4>Fee-Free Bank Bill-Pay</h4>
           <p>
-            Use your bank’s bill-pay to send dues to Town Central HOA. Put your street in the memo.
-            The board will post the routing and account numbers here before the first assessment is collected through the portal.
+            Use your bank’s bill-pay to send dues to {pay.payee || "Town Central HOA"}. Put your street in the memo.
           </p>
           <ul>
-            <li><strong>Payee:</strong> Town Central HOA</li>
-            <li><strong>Routing / Account:</strong> Posted by the treasurer before go-live</li>
-            <li><strong>Memo / Reference:</strong> <em>{duesInfo?.street_address || user?.address}</em></li>
+            <li><strong>Payee:</strong> {dash(pay.payee)}</li>
+            <li><strong>Routing:</strong> {dash(pay.routing)}</li>
+            <li><strong>Account:</strong> {dash(pay.account)}</li>
+            <li><strong>Memo / Reference:</strong> <em>{street}</em></li>
           </ul>
           <button onClick={() => setPaymentMode("overview")} className={styles.backLinkBtn}>← Back to Payment Options</button>
         </div>
@@ -93,15 +117,20 @@ export default function DuesCard({ user }) {
 
       {paymentMode === "check" && (
         <div className={styles.payPanel}>
-          <h4>Physical Check Instructions</h4>
+          <h4>Physical Check</h4>
           <p>
-            Make checks payable to <strong>Town Central HOA</strong> and put your street in the memo.
-            The lockbox address will be posted here before the board starts collecting through the portal.
+            Make checks payable to <strong>{pay.payee || "Town Central HOA"}</strong> and put your street in the memo.
           </p>
           <p className={styles.payBox}>
-            Town Central HOA<br />
-            Lockbox address coming from the treasurer<br />
-            <em>Memo: {duesInfo?.street_address || user?.address}</em>
+            {pay.payee || "Town Central HOA"}
+            {lockbox.map((line) => (
+              <span key={line}>
+                <br />
+                {line}
+              </span>
+            ))}
+            <br />
+            <em>Memo: {street}</em>
           </p>
           <button onClick={() => setPaymentMode("overview")} className={styles.backLinkBtn}>← Back to Payment Options</button>
         </div>

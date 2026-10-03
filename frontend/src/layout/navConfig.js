@@ -12,6 +12,7 @@ import {
   Megaphone,
   Users,
   Waves,
+  Image,
 } from "lucide-react";
 
 export const PATHS = {
@@ -77,6 +78,7 @@ export const adminToolPaths = {
   financials: "/dashboard/admin/financials",
   "admin-vendors": "/dashboard/admin/vendors",
   "admin-documents": "/dashboard/admin/documents",
+  look: "/dashboard/admin/look",
 };
 
 export const adminNavItems = [
@@ -85,5 +87,6 @@ export const adminNavItems = [
   { to: adminToolPaths.financials, label: "Ledger", icon: Wallet },
   { to: adminToolPaths.requests, label: "Tickets", icon: ClipboardList },
   { to: adminToolPaths["admin-vendors"], label: "Vendors", icon: Building2 },
+  { to: adminToolPaths.look, label: "Site look", icon: Image },
   { to: PATHS.admin, label: "Admin home", icon: Shield, end: true },
 ];

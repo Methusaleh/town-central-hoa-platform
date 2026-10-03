@@ -5,6 +5,7 @@ import DashboardLayout, {
   AdminDocumentsPage,
   AdminFinancialsPage,
   AdminHomePage,
+  AdminLookPage,
   AdminRequestsPage,
   AdminRosterPage,
   AdminVendorsPage,
@@ -22,6 +23,7 @@ import DashboardLayout, {
 } from "./pages/Dashboard/Dashboard";
 import ContactPage from "./pages/Contact/ContactPage";
 import GuidelinesPage from "./pages/Guidelines/Guidelines";
+import PublicDocumentsPage from "./pages/PublicDocuments/PublicDocuments";
 import AcceptInvite from "./pages/AcceptInvite/AcceptInvite";
 import Profile from "./pages/Profile/Profile";
 import Claim from "./pages/Claim/Claim";
@@ -47,6 +49,7 @@ function LandingPage() {
       onRegisterClick={() => navigate("/claim")}
       onContactClick={() => navigate("/contact")}
       onGuidelinesClick={() => navigate("/guidelines")}
+      onPublicDocsClick={() => navigate("/public-documents")}
     />
   );
 }
@@ -167,6 +170,10 @@ function AppRoutes() {
           element={<GuidelinesPage onBack={() => navigate("/")} />}
         />
         <Route
+          path="/public-documents"
+          element={<PublicDocumentsPage onBack={() => navigate("/")} />}
+        />
+        <Route
           path="/contact"
           element={<ContactPage onBack={() => navigate("/")} />}
         />
@@ -198,6 +205,7 @@ function AppRoutes() {
             <Route path="admin/financials" element={<AdminFinancialsPage />} />
             <Route path="admin/vendors" element={<AdminVendorsPage />} />
             <Route path="admin/documents" element={<AdminDocumentsPage />} />
+            <Route path="admin/look" element={<AdminLookPage />} />
           </Route>
         </Route>
         <Route

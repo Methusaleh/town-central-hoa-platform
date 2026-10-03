@@ -2,8 +2,7 @@ const express = require("express");
 const router = express.Router();
 const multer = require("multer");
 const db = require("../db");
-const { DeleteObjectCommand } = require("@aws-sdk/client-s3");
-const { s3, uploadToR2 } = require("../utils/s3Storage");
+const { uploadToR2, deleteFromR2 } = require("../utils/s3Storage");
 const { authRequired, boardRequired, isBoard } = require("../middleware/auth");
 
 const MAX_FILE_BYTES = 25 * 1024 * 1024;
@@ -15,30 +14,13 @@ const upload = multer({
 });
 
 function asAudience(value) {
-  return value === "board" ? "board" : "residents";
+  if (value === "board") return "board";
+  if (value === "public") return "public";
+  return "residents";
 }
 
 function isUniqueFolderName(err) {
   return err?.code === "23505";
-}
-
-function fileNameFromUrl(fileUrl) {
-  try {
-    return decodeURIComponent(new URL(fileUrl).pathname.split("/").pop());
-  } catch {
-    return (fileUrl || "").split("/").pop();
-  }
-}
-
-async function deleteObjectFromR2(fileUrl) {
-  const fileName = fileNameFromUrl(fileUrl);
-  if (!fileName) return;
-  await s3.send(
-    new DeleteObjectCommand({
-      Bucket: process.env.CLOUDFLARE_R2_BUCKET_NAME,
-      Key: fileName,
-    }),
-  );
 }
 
 async function deleteCategoryRecursive(id) {
@@ -53,7 +35,7 @@ async function deleteCategoryRecursive(id) {
   const docs = await db.query("SELECT id, file_url FROM documents WHERE category_id = $1", [id]);
   for (const doc of docs.rows) {
     try {
-      await deleteObjectFromR2(doc.file_url);
+      await deleteFromR2(doc.file_url);
     } catch (err) {
       console.error("R2 delete warning:", err.message);
     }
@@ -94,9 +76,9 @@ async function applyAudience(folderId, audience) {
   ]);
   await db.query(
     `UPDATE documents
-        SET is_private = $1, requires_board_key = $1
-      WHERE category_id = ANY($2::int[])`,
-    [boardOnly, ids],
+        SET is_private = $1, requires_board_key = $1, audience = $2
+      WHERE category_id = ANY($3::int[])`,
+    [boardOnly, audience, ids],
   );
 }
 
@@ -112,12 +94,17 @@ function runUpload(req, res, next) {
 
 router.get("/categories", authRequired, async (req, res) => {
   try {
-    const publicOnly = !isBoard(req.user) || req.query.audience === "residents";
-    const sql = publicOnly
-      ? `SELECT * FROM document_categories
-         WHERE COALESCE(audience, 'residents') <> 'board'
-         ORDER BY name ASC`
-      : "SELECT * FROM document_categories ORDER BY name ASC";
+    const wanted = req.query.audience;
+    let sql = "SELECT * FROM document_categories ORDER BY name ASC";
+    if (!isBoard(req.user) || wanted === "residents") {
+      sql = `SELECT * FROM document_categories
+             WHERE COALESCE(audience, 'residents') = 'residents'
+             ORDER BY name ASC`;
+    } else if (wanted === "public") {
+      sql = `SELECT * FROM document_categories
+             WHERE COALESCE(audience, 'residents') = 'public'
+             ORDER BY name ASC`;
+    }
     const { rows } = await db.query(sql);
     res.json(rows);
   } catch (err) {
@@ -240,14 +227,37 @@ router.delete("/categories/:id", boardRequired, async (req, res) => {
   }
 });
 
+router.get("/public-library", async (_req, res) => {
+  try {
+    const { rows } = await db.query(
+      `SELECT d.id, d.title, d.file_url, d.created_at, c.name AS folder
+         FROM documents d
+         LEFT JOIN document_categories c ON c.id = d.category_id
+        WHERE COALESCE(d.audience, c.audience, 'residents') = 'public'
+          AND (d.is_private = false OR d.is_private IS NULL)
+          AND (d.requires_board_key = false OR d.requires_board_key IS NULL)
+        ORDER BY lower(d.title) ASC`,
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error("Public documents list error:", err.message);
+    res.status(500).json({ error: "Couldn't load public documents." });
+  }
+});
+
 router.get("/", authRequired, async (req, res) => {
   try {
+    const wanted = req.query.audience;
     let sql = "SELECT * FROM documents ORDER BY created_at DESC";
-    const publicOnly = !isBoard(req.user) || req.query.audience === "residents";
-    if (publicOnly) {
+    if (!isBoard(req.user) || wanted === "residents") {
       sql = `SELECT * FROM documents
              WHERE (requires_board_key = false OR requires_board_key IS NULL)
                AND (is_private = false OR is_private IS NULL)
+               AND COALESCE(audience, 'residents') = 'residents'
+             ORDER BY created_at DESC`;
+    } else if (wanted === "public") {
+      sql = `SELECT * FROM documents
+             WHERE COALESCE(audience, 'residents') = 'public'
              ORDER BY created_at DESC`;
     }
     const { rows } = await db.query(sql);
@@ -265,24 +275,22 @@ router.post("/", boardRequired, runUpload, async (req, res) => {
     }
 
     const { category_id } = req.body;
-    let privateFlag = req.body.is_private === "true" || req.body.is_private === true;
-    if (req.body.is_private === undefined) {
-      if (category_id) {
-        const folder = await getFolder(category_id);
-        privateFlag = asAudience(folder?.audience) === "board";
-      } else {
-        privateFlag = asAudience(req.body.audience) === "board";
-      }
+    let audience = asAudience(req.body.audience);
+    if (category_id) {
+      const folder = await getFolder(category_id);
+      if (folder) audience = asAudience(folder.audience);
     }
+    const privateFlag =
+      req.body.is_private === "true" || req.body.is_private === true || audience === "board";
 
     const uploaded = [];
 
     for (const file of files) {
-      const publicFileUrl = await uploadToR2(file.buffer, file.originalname, file.mimetype);
+      const publicFileUrl = await uploadToR2(file.buffer, file.originalname, file.mimetype, "docs");
       const title = (req.body.title || file.originalname || "Untitled").toString();
       const query = `
-        INSERT INTO documents (title, file_url, category_id, is_private, requires_board_key, uploaded_by)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        INSERT INTO documents (title, file_url, category_id, is_private, requires_board_key, uploaded_by, audience)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING *;
       `;
       const { rows } = await db.query(query, [
@@ -292,6 +300,7 @@ router.post("/", boardRequired, runUpload, async (req, res) => {
         privateFlag,
         privateFlag,
         req.user?.id || null,
+        audience,
       ]);
       uploaded.push(rows[0]);
     }
@@ -338,6 +347,17 @@ router.patch("/:id", boardRequired, async (req, res) => {
     vals.push(privateFlag);
   }
 
+  if (audience !== undefined) {
+    sets.push(`audience = $${i++}`);
+    vals.push(asAudience(audience));
+  } else if (category_id) {
+    const folder = await getFolder(category_id);
+    if (folder) {
+      sets.push(`audience = $${i++}`);
+      vals.push(asAudience(folder.audience));
+    }
+  }
+
   if (sets.length === 0) {
     return res.status(400).json({ error: "No file updates provided." });
   }
@@ -363,7 +383,7 @@ router.delete("/:id", boardRequired, async (req, res) => {
     if (rows.length === 0) return res.status(404).json({ error: "Document not found" });
 
     try {
-      await deleteObjectFromR2(rows[0].file_url);
+      await deleteFromR2(rows[0].file_url);
     } catch (err) {
       console.error("R2 delete warning:", err.message);
     }

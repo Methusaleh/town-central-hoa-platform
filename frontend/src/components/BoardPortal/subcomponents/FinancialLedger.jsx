@@ -92,6 +92,99 @@ function memberNames(account) {
   return listed && listed !== "Household" ? [listed] : [];
 }
 
+function DuesPayEditor() {
+  const [pay, setPay] = useState({
+    payee: "Town Central HOA",
+    routing: "",
+    account: "",
+    lockbox: ["", "", ""],
+    due_label: "June 1, 2026",
+  });
+  const [status, setStatus] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    apiFetch("/api/settings/dues-pay")
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
+      .then((data) => setPay((current) => ({ ...current, ...data, lockbox: data.lockbox || current.lockbox })))
+      .catch(() => {});
+  }, []);
+
+  const save = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setStatus("");
+    try {
+      const res = await apiFetch("/api/settings/dues-pay", {
+        method: "PUT",
+        body: JSON.stringify(pay),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setStatus(data.error || "Couldn't save.");
+        return;
+      }
+      setPay((current) => ({ ...current, ...data }));
+      setStatus("Saved. Neighbors see this on My Dues.");
+    } catch {
+      setStatus("Network error.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <form className={styles.payee} onSubmit={save}>
+      <div>
+        <h3>How neighbors pay</h3>
+        <p>Shown on My Dues. Routing, account, and the lockbox address stay blank until you fill them.</p>
+      </div>
+      <div className={styles.payeeGrid}>
+        <label>
+          Payee
+          <input value={pay.payee} onChange={(e) => setPay((current) => ({ ...current, payee: e.target.value }))} />
+        </label>
+        <label>
+          Next due date
+          <input
+            value={pay.due_label}
+            onChange={(e) => setPay((current) => ({ ...current, due_label: e.target.value }))}
+            placeholder="June 1, 2026"
+          />
+        </label>
+        <label>
+          Routing
+          <input value={pay.routing} onChange={(e) => setPay((current) => ({ ...current, routing: e.target.value }))} />
+        </label>
+        <label>
+          Account
+          <input value={pay.account} onChange={(e) => setPay((current) => ({ ...current, account: e.target.value }))} />
+        </label>
+        <label className={styles.payeeWide}>
+          Check address
+          <textarea
+            rows={3}
+            value={(pay.lockbox || []).join("\n")}
+            onChange={(e) =>
+              setPay((current) => ({
+                ...current,
+                lockbox: e.target.value.split("\n").slice(0, 3),
+              }))
+            }
+            placeholder={"Street\nCity, ST ZIP"}
+          />
+        </label>
+      </div>
+      <div className={styles.payeeActions}>
+        <Button type="submit" disabled={saving}>
+          {saving ? "Saving…" : "Save pay details"}
+        </Button>
+        {status ? <span>{status}</span> : null}
+      </div>
+    </form>
+  );
+}
+
 export default function FinancialLedger({ onBack, user }) {
   const savedSelection = readBoardSelection(user?.id, "ledger") || {};
   const [accounts, setAccounts] = useState([]);
@@ -282,6 +375,8 @@ export default function FinancialLedger({ onBack, user }) {
           </div>
         </div>
       </header>
+
+      <DuesPayEditor />
 
       <div className={`${styles.workspace} ${mobileDetail && (bulkMode || selected) ? styles.workspaceDetail : ""}`}>
         <section className={styles.roll}>

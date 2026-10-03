@@ -66,7 +66,7 @@ async function uploadSafeImage(file) {
     err.status = 400;
     throw err;
   }
-  const url = await uploadToR2(file.buffer, file.originalname, file.mimetype);
+  const url = await uploadToR2(file.buffer, file.originalname, file.mimetype, "events");
   const check = await checkImageSafety(url);
   if (!check.safe) {
     const err = new Error(check.reason || "Image did not pass safety checks.");
@@ -108,6 +108,7 @@ async function resolveEventMedia(body, files, existing = {}) {
           attachmentFile.buffer,
           attachmentFile.originalname,
           attachmentFile.mimetype,
+          "events",
         );
     attachmentName = attachmentFile.originalname;
     if (!coverUrl && isImage) coverUrl = attachmentUrl;

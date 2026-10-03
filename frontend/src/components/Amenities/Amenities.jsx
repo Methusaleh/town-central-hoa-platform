@@ -6,7 +6,10 @@ export default function Amenities() {
       <header className={styles.header}>
         <p className={styles.kicker}>Coming soon</p>
         <h2>Pool & clubhouse</h2>
-        <p>The pool and clubhouse are still being built. Hours, guest rules, and reservations will live here when they open.</p>
+        <p>
+          A pool and clubhouse are planned for Town Central. Construction has not started yet — this is where
+          hours, guest rules, and reservations will live when they open. We’ll share news here as plans move.
+        </p>
       </header>
     </div>
   );

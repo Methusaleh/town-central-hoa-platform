@@ -173,7 +173,7 @@ async function saveTemplate({ kind, buffer, originalName, mimeType, user }) {
   const key = normalizeKind(kind);
   if (!key) throw new Error("Unknown template.");
   const existing = await getTemplate(key);
-  const fileUrl = await uploadToR2(buffer, originalName || `${key}.pdf`, mimeType || "application/pdf");
+  const fileUrl = await uploadToR2(buffer, originalName || `${key}.pdf`, mimeType || "application/pdf", "print");
   if (existing?.file_url) {
     await deleteFromR2(existing.file_url).catch(() => {});
   }

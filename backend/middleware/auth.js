@@ -1,4 +1,5 @@
 const jwt = require("jsonwebtoken");
+const db = require("../db");
 
 const BOARD_ROLES = ["board_member", "super_admin"];
 
@@ -57,11 +58,18 @@ function authRequired(req, res, next) {
 }
 
 function boardRequired(req, res, next) {
-  authRequired(req, res, () => {
-    if (!isBoard(req.user)) {
-      return res.status(403).json({ error: "Board access required." });
+  authRequired(req, res, async () => {
+    try {
+      const { rows } = await db.query("SELECT role FROM users WHERE id = $1", [req.user.id]);
+      req.user.role = rows[0]?.role || "resident";
+      if (!isBoard(req.user)) {
+        return res.status(403).json({ error: "Board access required." });
+      }
+      next();
+    } catch (err) {
+      console.error("Board access check error:", err.message);
+      return res.status(500).json({ error: "Couldn't verify board access." });
     }
-    next();
   });
 }
 

@@ -664,7 +664,7 @@ router.put("/avatar", authRequired, runAvatarUpload, async (req, res) => {
       return res.status(404).json({ error: "Resident account not found." });
     }
 
-    const publicUrl = await uploadToR2(buffer, filename, mimeType);
+    const publicUrl = await uploadToR2(buffer, filename, mimeType, "avatars");
     const { rows } = await db.query(
       `UPDATE users
        SET profile_photo = $1
@@ -783,6 +783,40 @@ router.post("/invite/accept", async (req, res) => {
     await db.query("ROLLBACK");
     console.error("Invite accept error:", err.message);
     res.status(500).json({ error: err.message });
+  }
+});
+
+router.patch("/account/:id/role", boardRequired, async (req, res) => {
+  const targetId = Number(req.params.id);
+  const nextRole = req.body.role === "board_member" ? "board_member" : "resident";
+  if (!Number.isInteger(targetId)) {
+    return res.status(400).json({ error: "That login is missing." });
+  }
+  if (Number(req.user.id) === targetId) {
+    return res.status(400).json({ error: "You can't change your own Admin access." });
+  }
+
+  try {
+    const { rows } = await db.query(
+      `SELECT id, first_name, last_name, email, role FROM users WHERE id = $1`,
+      [targetId],
+    );
+    const person = rows[0];
+    if (!person) return res.status(404).json({ error: "That login is gone." });
+    if (person.role === "super_admin") {
+      return res.status(403).json({ error: "Site admin access isn't changed here." });
+    }
+    await db.query(`UPDATE users SET role = $1 WHERE id = $2`, [nextRole, targetId]);
+    res.json({
+      id: person.id,
+      first_name: person.first_name,
+      last_name: person.last_name,
+      email: person.email,
+      role: nextRole,
+    });
+  } catch (err) {
+    console.error("Role update error:", err.message);
+    res.status(500).json({ error: "Couldn't update Admin access." });
   }
 });
 

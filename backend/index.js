@@ -14,6 +14,7 @@ const settingsRoutes = require("./routes/settingsRoutes");
 const alertRoutes = require("./routes/alertRoutes");
 const porchRoutes = require("./routes/porchRoutes");
 const mediaRoutes = require("./routes/mediaRoutes");
+const siteLookRoutes = require("./routes/siteLookRoutes");
 
 const app = express();
 const port = process.env.PORT || 8080;
@@ -54,6 +55,7 @@ app.use("/api/settings", settingsRoutes);
 app.use("/api/alerts", alertRoutes);
 app.use("/api/porch", porchRoutes);
 app.use("/api/media", mediaRoutes);
+app.use("/api/site", siteLookRoutes);
 
 async function start() {
   try {

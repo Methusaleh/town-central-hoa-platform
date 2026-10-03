@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Copy, Download, FileText, FileUp, Info, Mail, Search } from "lucide-react";
 import Button from "../../ui/Button";
+import Modal from "../../ui/Modal";
 import { apiFetch } from "../../../api";
 import { usePortal } from "../../../layout/PortalContext";
 import { adminToolPaths } from "../../../layout/navConfig";
@@ -247,6 +248,8 @@ export default function RosterDirectory({ onBack }) {
   const welcomeFileRef = useRef(null);
   const [tickets, setTickets] = useState([]);
   const [ticketsLoading, setTicketsLoading] = useState(false);
+  const [roleTarget, setRoleTarget] = useState(null);
+  const [roleTyped, setRoleTyped] = useState("");
   const [showResolvedTickets, setShowResolvedTickets] = useState(false);
 
   const selected = lots.find((lot) => String(lot.id) === String(selectedId)) || null;
@@ -733,6 +736,40 @@ export default function RosterDirectory({ onBack }) {
       }
     } catch {
       setStatus({ type: "err", text: "Network error removing that login." });
+    }
+  };
+
+  const openRoleModal = (person, nextRole) => {
+    setRoleTarget({ person, nextRole });
+    setRoleTyped("");
+  };
+
+  const applyRole = async () => {
+    if (!roleTarget) return;
+    const granting = roleTarget.nextRole === "board_member";
+    const word = granting ? "GRANT" : "REVOKE";
+    if (roleTyped.trim().toUpperCase() !== word) return;
+    try {
+      const res = await apiFetch(`/api/residents/account/${roleTarget.person.id}/role`, {
+        method: "PATCH",
+        body: JSON.stringify({ role: roleTarget.nextRole }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setStatus({
+          type: "ok",
+          text: granting
+            ? `${displayName(roleTarget.person)} can open Admin. Ask them to refresh or sign in again.`
+            : `${displayName(roleTarget.person)} no longer has Admin.`,
+        });
+        setRoleTarget(null);
+        setRoleTyped("");
+        await loadLots();
+      } else {
+        setStatus({ type: "err", text: data.error || "Could not update Admin access." });
+      }
+    } catch {
+      setStatus({ type: "err", text: "Network error updating Admin access." });
     }
   };
 
@@ -1584,28 +1621,48 @@ export default function RosterDirectory({ onBack }) {
                 <h4>Household logins</h4>
                 <p>
                   These people use the same household access for dues and board mail. Each person
-                  still signs in separately for The Porch and the rest of the site.
+                  still signs in separately for The Porch and the rest of the site. Admin access is a
+                  typed confirm on a person — it is not a checkbox on the street list.
                 </p>
                 {householdOf(selected).length === 0 ? (
                   <p className={styles.emptyInline}>No logins yet. Send a claim letter or invite someone onto this lot.</p>
                 ) : (
                   <ul>
-                    {householdOf(selected).map((person) => (
+                    {householdOf(selected).map((person) => {
+                      const isYou = Number(person.id) === Number(user?.id);
+                      const isSiteAdmin = person.role === "super_admin";
+                      const hasAdmin = person.role === "board_member" || isSiteAdmin;
+                      return (
                       <li key={person.id}>
                         <div>
                           <strong>{displayName(person)}</strong>
                           <span>
                             {person.email}
+                            {hasAdmin ? " · Admin" : ""}
                             {person.welcome_letter_sent_at
                               ? ` · welcome ${formatSent(person.welcome_letter_sent_at)}`
                               : ""}
                           </span>
                         </div>
-                        <button type="button" onClick={() => removeLogin(person)}>
-                          Remove login
-                        </button>
+                        <div className={styles.personActions}>
+                          {!isYou && !isSiteAdmin && (
+                            <button
+                              type="button"
+                              className={styles.adminAccess}
+                              onClick={() =>
+                                openRoleModal(person, hasAdmin ? "resident" : "board_member")
+                              }
+                            >
+                              {hasAdmin ? "Remove Admin…" : "Give Admin…"}
+                            </button>
+                          )}
+                          <button type="button" onClick={() => removeLogin(person)}>
+                            Remove login
+                          </button>
+                        </div>
                       </li>
-                    ))}
+                      );
+                    })}
                   </ul>
                 )}
               </div>
@@ -1745,6 +1802,53 @@ export default function RosterDirectory({ onBack }) {
           )}
         </section>
       </div>
+      {roleTarget && (
+        <Modal
+          title={roleTarget.nextRole === "board_member" ? "Give Admin access?" : "Remove Admin access?"}
+          description={`${displayName(roleTarget.person)} · ${roleTarget.person.email}`}
+          onClose={() => {
+            setRoleTarget(null);
+            setRoleTyped("");
+          }}
+        >
+          <p className={styles.roleCopy}>
+            {roleTarget.nextRole === "board_member"
+              ? "This opens Admin tools (roster, ledger, tickets, Site look). It does not add them to The Board page."
+              : "They keep their resident login. It does not remove them from The Board page."}
+          </p>
+          <label className={styles.roleLabel}>
+            Type {roleTarget.nextRole === "board_member" ? "GRANT" : "REVOKE"} to confirm
+            <input
+              value={roleTyped}
+              onChange={(e) => setRoleTyped(e.target.value)}
+              autoComplete="off"
+              spellCheck={false}
+            />
+          </label>
+          <div className={styles.formActions}>
+            <Button
+              type="button"
+              disabled={
+                roleTyped.trim().toUpperCase() !==
+                (roleTarget.nextRole === "board_member" ? "GRANT" : "REVOKE")
+              }
+              onClick={applyRole}
+            >
+              {roleTarget.nextRole === "board_member" ? "Give Admin access" : "Remove Admin access"}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setRoleTarget(null);
+                setRoleTyped("");
+              }}
+            >
+              Cancel
+            </Button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

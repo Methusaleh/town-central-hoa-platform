@@ -422,7 +422,7 @@ router.post("/admin/archive-export", boardRequired, async (req, res) => {
     const csv = [header, ...body].map((line) => line.map(csvEscape).join(",")).join("\n");
     const stamp = new Date().toISOString().slice(0, 10);
     const filename = `operations-archive-${stamp}.csv`;
-    const fileUrl = await uploadToR2(Buffer.from(csv, "utf8"), filename, "text/csv");
+    const fileUrl = await uploadToR2(Buffer.from(csv, "utf8"), filename, "text/csv", "exports");
 
     let folderId = null;
     const existing = await db.query(

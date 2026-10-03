@@ -65,7 +65,8 @@
   align-items: stretch;
 }
 
-.card img {
+.card img,
+.photoGap {
   display: block;
   width: 100%;
   height: 100%;
@@ -75,7 +76,8 @@
   background: var(--tc-brand-soft);
 }
 
-.roster:has(:only-child) .card img {
+.roster:has(:only-child) .card img,
+.roster:has(:only-child) .photoGap {
   height: auto;
 }
 

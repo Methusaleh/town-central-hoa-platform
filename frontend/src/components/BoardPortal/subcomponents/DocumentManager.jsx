@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FolderUp, Lock } from "lucide-react";
+import { FolderUp, Globe, Lock } from "lucide-react";
 import { apiFetch } from "../../../api";
 import styles from "./DocumentManager.module.css";
 
@@ -9,6 +9,12 @@ const LIBRARIES = [
     name: "For neighbors",
     hint: "Shows up in Docs for every household.",
     empty: "Covenants, minutes, and anything neighbors should be able to open.",
+  },
+  {
+    id: "public",
+    name: "Public",
+    hint: "Anyone can open these from the landing page. No login.",
+    empty: "Files the board wants on the public homepage.",
   },
   {
     id: "board",
@@ -66,11 +72,23 @@ function formatDate(value) {
 }
 
 function folderAudience(folder) {
-  return folder?.audience === "board" ? "board" : "residents";
+  if (folder?.audience === "board") return "board";
+  if (folder?.audience === "public") return "public";
+  return "residents";
 }
 
-function fileAudience(doc) {
-  return doc?.is_private || doc?.requires_board_key ? "board" : "residents";
+function fileAudience(doc, folders = []) {
+  if (doc?.audience === "board" || doc?.audience === "public") return doc.audience;
+  const folder = folders.find((row) => String(row.id) === String(doc?.category_id));
+  if (folder) return folderAudience(folder);
+  if (doc?.is_private || doc?.requires_board_key) return "board";
+  return "residents";
+}
+
+function moveLabel(dest) {
+  if (dest === "board") return "Move to Board only";
+  if (dest === "public") return "Move to Public";
+  return "Share with neighbors";
 }
 
 function isJunkName(name = "") {
@@ -152,7 +170,7 @@ export default function DocumentManager({ onBack }) {
   const [sortDir, setSortDir] = useState("asc");
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(new Set());
-  const [expanded, setExpanded] = useState(() => new Set(["residents", "board"]));
+  const [expanded, setExpanded] = useState(() => new Set(["residents", "public", "board"]));
   const [contextMenu, setContextMenu] = useState(null);
   const [renaming, setRenaming] = useState(null);
   const [renameValue, setRenameValue] = useState("");
@@ -188,7 +206,7 @@ export default function DocumentManager({ onBack }) {
     return () => window.removeEventListener("click", close);
   }, []);
 
-  const currentMeta = LIBRARIES.find((row) => row.id === library);
+  const currentMeta = LIBRARIES.find((row) => row.id === library) || LIBRARIES[0];
   const locked = library === "board";
 
   const childrenOf = (parentId, audience = library) =>
@@ -221,7 +239,7 @@ export default function DocumentManager({ onBack }) {
     const fileRows = documents
       .filter((d) => {
         const here = currentFolderId == null ? !d.category_id : String(d.category_id) === String(currentFolderId);
-        return here && fileAudience(d) === library;
+        return here && fileAudience(d, folders) === library;
       })
       .map((d) => ({ type: "file", id: d.id, name: d.title, created_at: d.created_at, file_url: d.file_url, raw: d }));
 
@@ -456,7 +474,7 @@ export default function DocumentManager({ onBack }) {
     const body =
       type === "folder"
         ? { parent_id: targetFolderId, audience: targetAudience }
-        : { category_id: targetFolderId, is_private: targetAudience === "board" };
+        : { category_id: targetFolderId, audience: targetAudience, is_private: targetAudience === "board" };
     const res = await apiFetch(path, { method: "PATCH", body: JSON.stringify(body) });
     if (res.ok) fetchData();
     else alert((await readError(res)) || "Could not move that item.");
@@ -588,6 +606,7 @@ export default function DocumentManager({ onBack }) {
 
       <p className={styles.intro}>
         Put neighbor-facing files in <strong>For neighbors</strong>. They appear in Docs.
+        Drop files the public can open without a login in <strong>Public</strong> — those show from the landing page.
         Keep contracts and working files in <strong>Board only</strong> — residents never see that library.
         Drag a folder in, or use Upload folder, and keep organizing here even if you still use OneNote.
       </p>
@@ -675,7 +694,13 @@ export default function DocumentManager({ onBack }) {
                       onDragOver={(e) => e.preventDefault()}
                       onDrop={(e) => onPaneDrop(e, null, lib.id)}
                     >
-                      {lib.id === "board" ? <Lock size={14} strokeWidth={2.25} /> : <IconFolder size={16} />}
+                      {lib.id === "board" ? (
+                        <Lock size={14} strokeWidth={2.25} />
+                      ) : lib.id === "public" ? (
+                        <Globe size={14} strokeWidth={2.25} />
+                      ) : (
+                        <IconFolder size={16} />
+                      )}
                       <span className={styles.treeName}>{lib.name}</span>
                     </button>
                   </div>
@@ -795,7 +820,7 @@ export default function DocumentManager({ onBack }) {
                         </td>
                         <td>{formatDate(item.created_at)}</td>
                         <td>{item.type === "folder" ? "Folder" : fileKind(item.name)}</td>
-                        <td>{locked ? "Board only" : "Neighbors"}</td>
+                        <td>{library === "board" ? "Board only" : library === "public" ? "Public" : "Neighbors"}</td>
                       </tr>
                     );
                   })}
@@ -844,15 +869,11 @@ export default function DocumentManager({ onBack }) {
             <>
               <a className={styles.menuLink} href={contextMenu.item.file_url} target="_blank" rel="noreferrer">Open</a>
               <button className={styles.menuItem} onClick={() => startRename(contextMenu.item)}>Rename</button>
-              {library === "residents" ? (
-                <button className={styles.menuItem} onClick={() => moveToLibrary(contextMenu.item, "board")}>
-                  Move to Board only
+              {LIBRARIES.filter((lib) => lib.id !== library).map((lib) => (
+                <button key={lib.id} className={styles.menuItem} onClick={() => moveToLibrary(contextMenu.item, lib.id)}>
+                  {moveLabel(lib.id)}
                 </button>
-              ) : (
-                <button className={styles.menuItem} onClick={() => moveToLibrary(contextMenu.item, "residents")}>
-                  Share with neighbors
-                </button>
-              )}
+              ))}
               <div className={styles.menuSep} />
               <button className={`${styles.menuItem} ${styles.menuDanger}`} onClick={() => deleteSelected([contextMenu.item])}>Delete</button>
             </>
@@ -861,15 +882,11 @@ export default function DocumentManager({ onBack }) {
             <>
               <button className={styles.menuItem} onClick={() => { navigateToFolder(contextMenu.item.id); setContextMenu(null); }}>Open</button>
               <button className={styles.menuItem} onClick={() => startRename(contextMenu.item)}>Rename</button>
-              {library === "residents" ? (
-                <button className={styles.menuItem} onClick={() => moveToLibrary(contextMenu.item, "board")}>
-                  Move to Board only
+              {LIBRARIES.filter((lib) => lib.id !== library).map((lib) => (
+                <button key={lib.id} className={styles.menuItem} onClick={() => moveToLibrary(contextMenu.item, lib.id)}>
+                  {moveLabel(lib.id)}
                 </button>
-              ) : (
-                <button className={styles.menuItem} onClick={() => moveToLibrary(contextMenu.item, "residents")}>
-                  Share with neighbors
-                </button>
-              )}
+              ))}
               <div className={styles.menuSep} />
               <button className={`${styles.menuItem} ${styles.menuDanger}`} onClick={() => deleteSelected([contextMenu.item])}>Delete</button>
             </>

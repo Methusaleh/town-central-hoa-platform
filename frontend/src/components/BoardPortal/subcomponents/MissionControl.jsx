@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Building2, ClipboardList, FolderOpen, Users, Wallet } from "lucide-react";
+import { Building2, ClipboardList, FolderOpen, Image, Users, Wallet } from "lucide-react";
 import { adminToolPaths } from "../../../layout/navConfig";
 import TrashSchedule from "./TrashSchedule";
 import styles from "./MissionControl.module.css";
@@ -40,6 +40,13 @@ const TOOLS = [
     icon: FolderOpen,
     tone: "leaf",
   },
+  {
+    id: "look",
+    label: "Site look",
+    hint: "Home photos, landing cover, The Board, and Who to call.",
+    icon: Image,
+    tone: "accent",
+  },
 ];
 
 export default function MissionControl() {
@@ -50,7 +57,7 @@ export default function MissionControl() {
       <header className={styles.intro}>
         <p className={styles.kicker}>Board</p>
         <h2>Admin tools</h2>
-        <p>Roster, dues, tickets, vendors, and files — board only.</p>
+        <p>Roster, dues, tickets, vendors, files, and Site look — board only.</p>
       </header>
 
       <div className={styles.grid}>
