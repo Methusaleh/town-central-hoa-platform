@@ -170,6 +170,21 @@
   font-size: 0.85rem;
 }
 
+.paused {
+  margin: 0;
+  padding: 16px;
+  background: var(--tc-bg-elevated);
+  border: 1px solid var(--tc-line);
+  border-radius: var(--tc-radius);
+  color: var(--tc-muted);
+  line-height: 1.5;
+}
+
+.react:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
 .pickerWrap {
   align-self: flex-start;
 }

@@ -8,6 +8,7 @@ import Button from "../ui/Button";
 import Avatar from "../ui/Avatar";
 import { apiFetch } from "../../api";
 import { PATHS } from "../../layout/navConfig";
+import { isSocialMuted, SOCIAL_MUTE_COPY } from "../../utils/socialMute";
 import styles from "./Porch.module.css";
 
 const PAGE_SIZE = 20;
@@ -57,7 +58,7 @@ function replyLabel(count) {
   return `${count} replies`;
 }
 
-function ReactionBar({ reactions, identity, onReact, compact }) {
+function ReactionBar({ reactions, identity, onReact, compact, disabled }) {
   const extras = Object.entries(reactions).filter(([emoji]) => !QUICK_REACT.includes(emoji));
   const items = compact
     ? Object.entries(reactions).filter(([, list]) => list.length)
@@ -75,10 +76,11 @@ function ReactionBar({ reactions, identity, onReact, compact }) {
             key={emoji}
             type="button"
             className={`${styles.react} ${mine ? styles.reactOn : ""}`}
+            disabled={disabled}
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              onReact(emoji);
+              if (!disabled) onReact(emoji);
             }}
           >
             {emoji} {count || ""}
@@ -135,6 +137,7 @@ export default function Porch({ user }) {
   const replyEmojiPanelRef = useRef(null);
 
   const isAdmin = user?.role === "board_member" || user?.role === "super_admin";
+  const muted = isSocialMuted(user);
   const identity = user?.email || String(user?.id || "");
   const activePost = thread?.post || null;
   const threadComments = thread?.comments || [];
@@ -276,6 +279,7 @@ export default function Porch({ user }) {
 
   const handleCreatePost = async (e) => {
     e.preventDefault();
+    if (muted) return;
     if (!newContent.trim() && !selectedFile && !gifUrl) return;
     setPosting(true);
     setError("");
@@ -312,7 +316,7 @@ export default function Porch({ user }) {
   };
 
   const handleAddComment = async (id) => {
-    if (postingReply) return;
+    if (muted || postingReply) return;
     if (!replyText.trim() && !replyFile && !replyGifUrl) return;
     setPostingReply(true);
     setReplyError("");
@@ -355,6 +359,7 @@ export default function Porch({ user }) {
   };
 
   const handleReact = async (id, emoji) => {
+    if (muted) return;
     const apply = (post) => {
       if (post.id !== id) return post;
       const reactions = normalizeReactions(post.reactions);
@@ -552,7 +557,10 @@ export default function Porch({ user }) {
                 </div>
               ))}
 
-              {!activePost.is_removed && (
+              {!activePost.is_removed && muted && (
+                <p className={styles.paused}>{SOCIAL_MUTE_COPY}</p>
+              )}
+              {!activePost.is_removed && !muted && (
                 <div
                   className={`${styles.replyBox} ${draggingReply ? styles.replyHot : ""}`}
                   onDragEnter={(e) => {
@@ -704,6 +712,8 @@ export default function Porch({ user }) {
         </div>
       </header>
 
+      {muted && <p className={styles.paused}>{SOCIAL_MUTE_COPY}</p>}
+      {!muted && (
       <form className={styles.composer} onSubmit={handleCreatePost}>
         <Avatar name={user?.first_name} photo={user?.photo} />
         <div className={styles.composerBody}>
@@ -795,6 +805,7 @@ export default function Porch({ user }) {
           )}
         </div>
       </form>
+      )}
 
       <label className={styles.find}>
         <Search size={16} />
@@ -845,6 +856,7 @@ export default function Porch({ user }) {
                   {!post.is_removed && (
                     <ReactionBar
                       compact
+                      disabled={muted}
                       reactions={reactions}
                       identity={identity}
                       onReact={(emoji) => handleReact(post.id, emoji)}

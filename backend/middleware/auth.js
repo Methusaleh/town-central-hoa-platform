@@ -34,6 +34,7 @@ function publicUser(row) {
     role: row.role || "resident",
     occupancy,
     agreed_to_guidelines: Boolean(row.agreed_to_guidelines),
+    social_muted: Boolean(row.social_muted),
     photo: row.profile_photo || null,
   };
 }

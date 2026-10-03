@@ -250,6 +250,8 @@ export default function RosterDirectory({ onBack }) {
   const [ticketsLoading, setTicketsLoading] = useState(false);
   const [roleTarget, setRoleTarget] = useState(null);
   const [roleTyped, setRoleTyped] = useState("");
+  const [muteTarget, setMuteTarget] = useState(null);
+  const [muteTyped, setMuteTyped] = useState("");
   const [showResolvedTickets, setShowResolvedTickets] = useState(false);
 
   const selected = lots.find((lot) => String(lot.id) === String(selectedId)) || null;
@@ -770,6 +772,40 @@ export default function RosterDirectory({ onBack }) {
       }
     } catch {
       setStatus({ type: "err", text: "Network error updating Admin access." });
+    }
+  };
+
+  const openMuteModal = (person, muted) => {
+    setMuteTarget({ person, muted });
+    setMuteTyped("");
+  };
+
+  const applyMute = async () => {
+    if (!muteTarget) return;
+    const pausing = muteTarget.muted;
+    const word = pausing ? "MUTE" : "UNMUTE";
+    if (muteTyped.trim().toUpperCase() !== word) return;
+    try {
+      const res = await apiFetch(`/api/residents/account/${muteTarget.person.id}/social-mute`, {
+        method: "PATCH",
+        body: JSON.stringify({ muted: pausing }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setStatus({
+          type: "ok",
+          text: pausing
+            ? `${displayName(muteTarget.person)} can still read and use dues, Docs, and Requests. Ask them to refresh.`
+            : `${displayName(muteTarget.person)} can post on The Porch and Alerts again.`,
+        });
+        setMuteTarget(null);
+        setMuteTyped("");
+        await loadLots();
+      } else {
+        setStatus({ type: "err", text: data.error || "Could not update posting access." });
+      }
+    } catch {
+      setStatus({ type: "err", text: "Network error updating posting access." });
     }
   };
 
@@ -1621,8 +1657,8 @@ export default function RosterDirectory({ onBack }) {
                 <h4>Household logins</h4>
                 <p>
                   These people use the same household access for dues and board mail. Each person
-                  still signs in separately for The Porch and the rest of the site. Admin access is a
-                  typed confirm on a person — it is not a checkbox on the street list.
+                  still signs in separately for The Porch and the rest of the site. Admin access and
+                  a posting mute are typed confirms on a person — not checkboxes on the street list.
                 </p>
                 {householdOf(selected).length === 0 ? (
                   <p className={styles.emptyInline}>No logins yet. Send a claim letter or invite someone onto this lot.</p>
@@ -1632,6 +1668,7 @@ export default function RosterDirectory({ onBack }) {
                       const isYou = Number(person.id) === Number(user?.id);
                       const isSiteAdmin = person.role === "super_admin";
                       const hasAdmin = person.role === "board_member" || isSiteAdmin;
+                      const isMuted = Boolean(person.social_muted);
                       return (
                       <li key={person.id}>
                         <div>
@@ -1639,6 +1676,7 @@ export default function RosterDirectory({ onBack }) {
                           <span>
                             {person.email}
                             {hasAdmin ? " · Admin" : ""}
+                            {isMuted ? " · posting paused" : ""}
                             {person.welcome_letter_sent_at
                               ? ` · welcome ${formatSent(person.welcome_letter_sent_at)}`
                               : ""}
@@ -1654,6 +1692,15 @@ export default function RosterDirectory({ onBack }) {
                               }
                             >
                               {hasAdmin ? "Remove Admin…" : "Give Admin…"}
+                            </button>
+                          )}
+                          {!isYou && !hasAdmin && (
+                            <button
+                              type="button"
+                              className={styles.adminAccess}
+                              onClick={() => openMuteModal(person, !isMuted)}
+                            >
+                              {isMuted ? "Allow posting…" : "Mute posting…"}
                             </button>
                           )}
                           <button type="button" onClick={() => removeLogin(person)}>
@@ -1842,6 +1889,52 @@ export default function RosterDirectory({ onBack }) {
               onClick={() => {
                 setRoleTarget(null);
                 setRoleTyped("");
+              }}
+            >
+              Cancel
+            </Button>
+          </div>
+        </Modal>
+      )}
+      {muteTarget && (
+        <Modal
+          title={muteTarget.muted ? "Mute posting?" : "Allow posting again?"}
+          description={`${displayName(muteTarget.person)} · ${muteTarget.person.email}`}
+          onClose={() => {
+            setMuteTarget(null);
+            setMuteTyped("");
+          }}
+        >
+          <p className={styles.roleCopy}>
+            {muteTarget.muted
+              ? "They can still log in, read, pay dues, open Docs, file a request, and email the board. They cannot post, reply, or react on The Porch or Alerts."
+              : "They can post on The Porch and Alerts again."}
+          </p>
+          <label className={styles.roleLabel}>
+            Type {muteTarget.muted ? "MUTE" : "UNMUTE"} to confirm
+            <input
+              value={muteTyped}
+              onChange={(e) => setMuteTyped(e.target.value)}
+              autoComplete="off"
+              spellCheck={false}
+            />
+          </label>
+          <div className={styles.formActions}>
+            <Button
+              type="button"
+              disabled={
+                muteTyped.trim().toUpperCase() !== (muteTarget.muted ? "MUTE" : "UNMUTE")
+              }
+              onClick={applyMute}
+            >
+              {muteTarget.muted ? "Mute posting" : "Allow posting"}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setMuteTarget(null);
+                setMuteTyped("");
               }}
             >
               Cancel

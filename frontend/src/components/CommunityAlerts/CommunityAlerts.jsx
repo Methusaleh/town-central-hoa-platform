@@ -6,6 +6,7 @@ import Button from "../ui/Button";
 import Modal from "../ui/Modal";
 import { apiFetch } from "../../api";
 import { PATHS } from "../../layout/navConfig";
+import { isSocialMuted, SOCIAL_MUTE_COPY } from "../../utils/socialMute";
 import styles from "./CommunityAlerts.module.css";
 
 const CATEGORIES = [
@@ -116,6 +117,7 @@ export default function CommunityAlerts({ user }) {
   const [resolveError, setResolveError] = useState("");
   const sightingFileRef = useRef(null);
   const dragCount = useRef(0);
+  const muted = isSocialMuted(user);
 
   const isAdmin = user?.role === "board_member" || user?.role === "super_admin";
 
@@ -192,7 +194,7 @@ export default function CommunityAlerts({ user }) {
   };
 
   const handleSighting = async () => {
-    if (!active || postingSighting) return;
+    if (muted || !active || postingSighting) return;
     if (!sighting.trim() && !sightingFile) return;
     setPostingSighting(true);
     setSightingError("");
@@ -391,7 +393,10 @@ export default function CommunityAlerts({ user }) {
                     );
                   })
                 )}
-                {!isResolved(active) && (
+                {!isResolved(active) && muted && (
+                  <p className={styles.paused}>{SOCIAL_MUTE_COPY}</p>
+                )}
+                {!isResolved(active) && !muted && (
                   <>
                     {sightingError && <p className={styles.formError}>{sightingError}</p>}
                     {sightingPreview && (
@@ -486,7 +491,11 @@ export default function CommunityAlerts({ user }) {
           <p className={styles.kicker}>Neighborhood</p>
           <h2>Alerts</h2>
         </div>
-        <Button onClick={() => setShowCreate(true)}>Post an alert</Button>
+        {muted ? (
+          <p className={styles.pausedInline}>{SOCIAL_MUTE_COPY}</p>
+        ) : (
+          <Button onClick={() => setShowCreate(true)}>Post an alert</Button>
+        )}
       </header>
 
       {!loaded ? (
@@ -520,7 +529,7 @@ export default function CommunityAlerts({ user }) {
         </>
       )}
 
-      {showCreate && (
+      {showCreate && !muted && (
         <CreateModal
           user={user}
           onClose={() => setShowCreate(false)}

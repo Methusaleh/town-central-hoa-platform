@@ -26,7 +26,7 @@ const {
 
 const USER_COLUMNS = `
   id, first_name, last_name, email, address, role,
-  agreed_to_guidelines, profile_photo, password_hash
+  agreed_to_guidelines, social_muted, profile_photo, password_hash
 `;
 
 const avatarUpload = multer({
@@ -798,7 +798,7 @@ router.patch("/account/:id/role", boardRequired, async (req, res) => {
 
   try {
     const { rows } = await db.query(
-      `SELECT id, first_name, last_name, email, role FROM users WHERE id = $1`,
+      `SELECT id, first_name, last_name, email, role, social_muted FROM users WHERE id = $1`,
       [targetId],
     );
     const person = rows[0];
@@ -806,17 +806,56 @@ router.patch("/account/:id/role", boardRequired, async (req, res) => {
     if (person.role === "super_admin") {
       return res.status(403).json({ error: "Site admin access isn't changed here." });
     }
-    await db.query(`UPDATE users SET role = $1 WHERE id = $2`, [nextRole, targetId]);
+    await db.query(
+      `UPDATE users SET role = $1, social_muted = CASE WHEN $1 = 'board_member' THEN false ELSE social_muted END WHERE id = $2`,
+      [nextRole, targetId],
+    );
     res.json({
       id: person.id,
       first_name: person.first_name,
       last_name: person.last_name,
       email: person.email,
       role: nextRole,
+      social_muted: nextRole === "board_member" ? false : Boolean(person.social_muted),
     });
   } catch (err) {
     console.error("Role update error:", err.message);
     res.status(500).json({ error: "Couldn't update Admin access." });
+  }
+});
+
+router.patch("/account/:id/social-mute", boardRequired, async (req, res) => {
+  const targetId = Number(req.params.id);
+  const muted = req.body.muted === true || req.body.muted === "true";
+  if (!Number.isInteger(targetId)) {
+    return res.status(400).json({ error: "That login is missing." });
+  }
+  if (Number(req.user.id) === targetId) {
+    return res.status(400).json({ error: "You can't mute your own posting." });
+  }
+
+  try {
+    const { rows } = await db.query(
+      `SELECT id, first_name, last_name, email, role, social_muted FROM users WHERE id = $1`,
+      [targetId],
+    );
+    const person = rows[0];
+    if (!person) return res.status(404).json({ error: "That login is gone." });
+    if (person.role === "board_member" || person.role === "super_admin") {
+      return res.status(403).json({ error: "Remove Admin access first if you need to pause their posting." });
+    }
+    await db.query(`UPDATE users SET social_muted = $1 WHERE id = $2`, [muted, targetId]);
+    res.json({
+      id: person.id,
+      first_name: person.first_name,
+      last_name: person.last_name,
+      email: person.email,
+      role: person.role,
+      social_muted: muted,
+    });
+  } catch (err) {
+    console.error("Social mute update error:", err.message);
+    res.status(500).json({ error: "Couldn't update posting access." });
   }
 });
 
@@ -888,6 +927,7 @@ router.get("/master-list-placeholder", boardRequired, async (_req, res) => {
             'last_name', u.last_name,
             'email', u.email,
             'role', COALESCE(u.role, 'resident'),
+            'social_muted', COALESCE(u.social_muted, false),
             'welcome_letter_sent_at', u.welcome_letter_sent_at
           ) ORDER BY u.last_name, u.first_name)
           FROM users u

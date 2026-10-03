@@ -584,6 +584,16 @@
   cursor: pointer;
 }
 
+.paused {
+  margin: 0 0 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--tc-line);
+  border-radius: var(--tc-radius);
+  background: var(--tc-bg);
+  color: var(--tc-muted);
+  line-height: 1.5;
+}
+
 .composerAvatar,
 .avatar {
   width: 36px;

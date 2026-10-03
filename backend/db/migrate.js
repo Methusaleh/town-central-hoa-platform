@@ -241,6 +241,8 @@ END $$;`,
       SET audience = 'board'
     WHERE (is_private = true OR requires_board_key = true)
       AND COALESCE(audience, 'residents') <> 'public'`,
+  `ALTER TABLE users ADD COLUMN IF NOT EXISTS social_muted BOOLEAN DEFAULT false`,
+  `UPDATE users SET social_muted = false WHERE social_muted IS NULL`,
 ];
 
 async function migrate(query) {

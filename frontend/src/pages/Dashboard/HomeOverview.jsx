@@ -16,6 +16,7 @@ import { usePortal } from "../../layout/PortalContext";
 import { PATHS } from "../../layout/navConfig";
 import { apiFetch } from "../../api";
 import { isRenter } from "../../utils/occupancy";
+import { isSocialMuted, SOCIAL_MUTE_COPY } from "../../utils/socialMute";
 import {
   coverFor,
   eventDateParts,
@@ -113,6 +114,7 @@ const GO_TO = [
 
 export default function HomeOverview() {
   const { user } = usePortal();
+  const muted = isSocialMuted(user);
   const navigate = useNavigate();
   const renter = isRenter(user);
   const [recentAlerts, setRecentAlerts] = useState([]);
@@ -476,6 +478,8 @@ export default function HomeOverview() {
             Open The Porch
           </button>
         </header>
+        {muted && <p className={styles.paused}>{SOCIAL_MUTE_COPY}</p>}
+        {!muted && (
         <button type="button" className={styles.composer} onClick={openPorchCompose}>
           <div className={styles.composerAvatar} aria-hidden="true">
             {user?.photo ? (
@@ -486,6 +490,7 @@ export default function HomeOverview() {
           </div>
           <span>What’s happening on the block, {user?.first_name || "neighbor"}?</span>
         </button>
+        )}
         {porchPreview.length === 0 ? (
           <p className={styles.empty}>Quiet so far.</p>
         ) : (

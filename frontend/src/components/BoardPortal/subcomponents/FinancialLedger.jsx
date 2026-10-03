@@ -376,8 +376,6 @@ export default function FinancialLedger({ onBack, user }) {
         </div>
       </header>
 
-      <DuesPayEditor />
-
       <div className={`${styles.workspace} ${mobileDetail && (bulkMode || selected) ? styles.workspaceDetail : ""}`}>
         <section className={styles.roll}>
           <div className={styles.tools}>
@@ -697,6 +695,8 @@ export default function FinancialLedger({ onBack, user }) {
           )}
         </section>
       </div>
+
+      <DuesPayEditor />
     </div>
   );
 }

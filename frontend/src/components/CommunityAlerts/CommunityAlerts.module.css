@@ -28,6 +28,26 @@
   max-width: 36rem;
 }
 
+.paused,
+.pausedInline {
+  margin: 0;
+  color: var(--tc-muted);
+  line-height: 1.5;
+}
+
+.paused {
+  padding: 14px 16px;
+  background: var(--tc-bg);
+  border: 1px solid var(--tc-line);
+  border-radius: var(--tc-radius);
+}
+
+.pausedInline {
+  max-width: 18rem;
+  text-align: right;
+  font-size: 0.88rem;
+}
+
 .kicker {
   margin: 0 0 4px;
   font-size: 0.7rem;
