@@ -1,11 +1,13 @@
 .card {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 16px 18px 18px;
+  gap: 10px;
+  min-width: 0;
+  padding: 14px 16px 16px;
   background: var(--tc-bg-elevated);
   border: 1px solid var(--tc-line);
   border-radius: var(--tc-radius);
+  overflow-wrap: anywhere;
 }
 
 .cardOn {
@@ -15,9 +17,10 @@
 
 .head {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
   align-items: flex-start;
-  gap: 12px;
+  gap: 6px;
+  min-width: 0;
 }
 
 .head h3 {
@@ -28,17 +31,17 @@
 }
 
 .tag {
-  flex-shrink: 0;
   margin: 0;
-  padding: 4px 10px;
+  padding: 3px 8px;
   border-radius: 999px;
   background: var(--tc-brand-soft);
   color: var(--tc-brand-ink);
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-style: normal;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+  max-width: 100%;
 }
 
 .contacts {
@@ -46,24 +49,29 @@
   margin: 0;
   padding: 0;
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 6px 16px;
 }
 
 .contacts li {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
+  min-width: 0;
+  max-width: 100%;
   color: var(--tc-ink-soft);
   font-size: 0.88rem;
+  line-height: 1.4;
 }
 
 .contacts svg {
   flex-shrink: 0;
+  margin-top: 2px;
   color: var(--tc-muted);
 }
 
 .contacts a {
+  min-width: 0;
   color: inherit;
   text-decoration: none;
   font-weight: 500;

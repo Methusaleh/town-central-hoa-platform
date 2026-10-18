@@ -53,6 +53,16 @@ export default function VendorDirectory() {
     });
   }, [vendors, filter, query]);
 
+  const groups = useMemo(() => {
+    const map = new Map();
+    visible.forEach((item) => {
+      const key = item.service_type || "Other";
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(item);
+    });
+    return [...map.entries()];
+  }, [visible]);
+
   return (
     <div className={styles.page}>
       <header className={styles.intro}>
@@ -105,9 +115,16 @@ export default function VendorDirectory() {
           {visible.length === 0 ? (
             <p className={styles.empty}>No companies match that.</p>
           ) : (
-            <div className={styles.grid}>
-              {visible.map((vendor) => (
-                <VendorCard key={vendor.id} vendor={vendor} />
+            <div className={styles.groups}>
+              {groups.map(([type, items]) => (
+                <section key={type} className={styles.group}>
+                  <h3 className={styles.groupTitle}>{type}</h3>
+                  <div className={styles.list}>
+                    {items.map((vendor) => (
+                      <VendorCard key={vendor.id} vendor={vendor} hideTag />
+                    ))}
+                  </div>
+                </section>
               ))}
             </div>
           )}

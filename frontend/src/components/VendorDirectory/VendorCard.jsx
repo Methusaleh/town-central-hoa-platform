@@ -1,17 +1,18 @@
 import { Globe, Mail, Phone } from "lucide-react";
-import { telHref, websiteHref, websiteLabel } from "./vendorLinks";
+import { formatPhone, telHref, websiteHref, websiteLabel } from "./vendorLinks";
 import styles from "./VendorCard.module.css";
 
-export default function VendorCard({ vendor, actions, active }) {
+export default function VendorCard({ vendor, actions, active, hideTag = false }) {
   const phone = telHref(vendor.contact_phone);
   const site = websiteHref(vendor.website_url);
   const hasContact = Boolean(vendor.contact_phone || vendor.contact_email || site);
+  const showTag = Boolean(vendor.service_type) && !hideTag;
 
   return (
     <article className={`${styles.card} ${active ? styles.cardOn : ""}`}>
       <div className={styles.head}>
+        {showTag && <em className={styles.tag}>{vendor.service_type}</em>}
         <h3>{vendor.company_name}</h3>
-        {vendor.service_type && <em className={styles.tag}>{vendor.service_type}</em>}
       </div>
 
       {hasContact && (
@@ -19,7 +20,7 @@ export default function VendorCard({ vendor, actions, active }) {
           {vendor.contact_phone && (
             <li>
               <Phone size={15} aria-hidden="true" />
-              {phone ? <a href={phone}>{vendor.contact_phone}</a> : vendor.contact_phone}
+              {phone ? <a href={phone}>{formatPhone(vendor.contact_phone)}</a> : vendor.contact_phone}
             </li>
           )}
           {vendor.contact_email && (
