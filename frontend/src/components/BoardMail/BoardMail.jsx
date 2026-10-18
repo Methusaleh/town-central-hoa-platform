@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Check, Send } from "lucide-react";
 import Button from "../ui/Button";
 import CivicGuide from "../CivicGuide/CivicGuide";
 import { apiFetch } from "../../api";
+import { PATHS } from "../../layout/navConfig";
 import { usePortal } from "../../layout/PortalContext";
 import { BOARD_CARDS_ARE_SAMPLE, BOARD_MEMBERS } from "./boardMembers";
 import styles from "./BoardMail.module.css";
@@ -96,9 +97,6 @@ export default function BoardMail() {
       <header className={styles.intro}>
         <p className={styles.kicker}>Town Central</p>
         <h2>The Board</h2>
-        <p className={styles.lede}>
-          Notes stay private — they don&apos;t post to The Porch. For a common-area repair or a change to your house, use Requests.
-        </p>
         {BOARD_CARDS_ARE_SAMPLE && isBoard && (
           <p className={styles.sampleNote}>
             Sample cards so the layout is clear. Swap names, photos, and blurbs when you have them.
@@ -122,7 +120,11 @@ export default function BoardMail() {
       <section className={styles.write}>
         <p className={styles.kicker}>Write a note</p>
         <h3>Private email to the board</h3>
-        <p>They will reply to the email on your account.</p>
+        <p>
+          Notes stay private — they don&apos;t post to The Porch. They will reply to the email on
+          your account. For a common-area repair or a change to your house, use{" "}
+          <Link to={PATHS.requests}>Requests</Link>.
+        </p>
       </section>
 
       {sent ? (

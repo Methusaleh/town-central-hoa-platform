@@ -7,8 +7,8 @@ export default function Amenities() {
         <p className={styles.kicker}>Coming soon</p>
         <h2>Pool & clubhouse</h2>
         <p>
-          A pool and clubhouse are planned for Town Central. Construction has not started yet — this is where
-          hours, guest rules, and reservations will live when they open. We’ll share news here as plans move.
+          Pool and clubhouse are slotted to begin after phase three is complete. The board has not received
+          building plans yet.
         </p>
       </header>
     </div>

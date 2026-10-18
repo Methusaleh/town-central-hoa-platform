@@ -12,10 +12,17 @@ const TEMPLATE = [
       },
       {
         id: "emergency_police",
-        title: "Non-emergency police",
+        title: "Piedmont Police Department",
         bullets: ["Noise after hours", "Suspicious activity that is not in progress"],
-        detail: "Piedmont Police",
-        phone: "",
+        detail: "Non-emergency",
+        phone: "405-373-1334",
+      },
+      {
+        id: "emergency_fire",
+        title: "Piedmont Fire Department",
+        bullets: ["Non-emergency fire questions"],
+        detail: "Non-emergency",
+        phone: "405-373-1331",
       },
     ],
   },
@@ -25,7 +32,7 @@ const TEMPLATE = [
     cards: [
       {
         id: "city_code",
-        title: "Code enforcement",
+        title: "City Code Enforcement",
         bullets: ["Tall grass on a private lot the city covers", "Illegal parking on a public street"],
         detail: "City Hall",
         phone: "",
@@ -33,9 +40,24 @@ const TEMPLATE = [
       {
         id: "city_works",
         title: "Utilities & public works",
-        bullets: ["Water main / meter issues", "City trash pickup", "Street lights on a public street"],
+        bullets: ["Water main / meter issues", "City trash pickup", "Trash can replacement", "Street lights on a public street"],
         detail: "Public Works",
         phone: "",
+      },
+      {
+        id: "city_water_afterhours",
+        title: "After-hours water emergency",
+        bullets: ["Water main break or after-hours water emergency"],
+        detail: "Public Works",
+        phone: "405-777-9009",
+      },
+      {
+        id: "city_web",
+        title: "City of Piedmont website",
+        bullets: ["Permits and other city services"],
+        detail: "All other city needs",
+        phone: "",
+        url: "https://piedmont-ok.gov",
       },
     ],
   },
@@ -66,6 +88,12 @@ function cardMap(saved) {
   return raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
 }
 
+function filled(value, fallback) {
+  if (value == null) return fallback;
+  const text = String(value).trim();
+  return text || fallback;
+}
+
 function mergeCivic(saved) {
   const byId = cardMap(saved);
   return TEMPLATE.map((column) => ({
@@ -75,8 +103,9 @@ function mergeCivic(saved) {
       const incoming = byId[card.id] && typeof byId[card.id] === "object" ? byId[card.id] : {};
       return {
         ...card,
-        detail: incoming.detail != null ? String(incoming.detail) : card.detail,
-        phone: incoming.phone != null ? String(incoming.phone) : card.phone,
+        detail: filled(incoming.detail, card.detail),
+        phone: filled(incoming.phone, card.phone),
+        url: card.url || "",
       };
     }),
   }));
