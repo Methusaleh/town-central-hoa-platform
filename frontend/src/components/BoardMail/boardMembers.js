@@ -3,6 +3,14 @@ export const BOARD_CARDS_ARE_SAMPLE = false;
 
 export const BOARD_MEMBERS = [
   {
+    id: "president",
+    name: "Christopher Cunningham",
+    title: "HOA President",
+    photo: "/board/christopher-cunningham.jpg",
+    blurb:
+      "With 16 years dedicated to the retirement insurance industry, Christopher B Cunningham is a continuous MDRT qualifier and national award recipient for excellence in Medicare and retirement guidance. Affiliated with The Assurance Group, he specializes in helping individuals and families plan for a comfortable retirement through secure, stable investment strategies. Christopher B Cunningham also has served three years as President of the Town Central HOA, bringing the same commitment to leadership and community well-being that defines his client work. He is passionate about guiding people through Medicare options and building reliable income solutions so they can retire with confidence and stay financially secure.",
+  },
+  {
     id: "vice-president",
     name: "Danelle Delp",
     title: "HOA Vice President",

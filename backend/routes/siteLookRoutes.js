@@ -38,6 +38,13 @@ const DEFAULT_HOME_PHOTOS = [
 
 const DEFAULT_BOARD_CARDS = [
   {
+    name: "Christopher Cunningham",
+    title: "HOA President",
+    photo_url: "/board/christopher-cunningham.jpg",
+    blurb:
+      "With 16 years dedicated to the retirement insurance industry, Christopher B Cunningham is a continuous MDRT qualifier and national award recipient for excellence in Medicare and retirement guidance. Affiliated with The Assurance Group, he specializes in helping individuals and families plan for a comfortable retirement through secure, stable investment strategies. Christopher B Cunningham also has served three years as President of the Town Central HOA, bringing the same commitment to leadership and community well-being that defines his client work. He is passionate about guiding people through Medicare options and building reliable income solutions so they can retire with confidence and stay financially secure.",
+  },
+  {
     name: "Danelle Delp",
     title: "HOA Vice President",
     photo_url: "/board/danelle-delp.jpg",
@@ -65,14 +72,29 @@ async function seedHomePhotosIfEmpty() {
   }
 }
 
-async function seedBoardCardsIfEmpty() {
-  const { rows } = await db.query("SELECT id FROM board_cards LIMIT 1");
-  if (rows.length) return;
-  for (let i = 0; i < DEFAULT_BOARD_CARDS.length; i += 1) {
-    const card = DEFAULT_BOARD_CARDS[i];
+async function ensureDefaultBoardCards() {
+  const { rows } = await db.query(`SELECT lower(trim(name)) AS name, sort_order FROM board_cards`);
+  const have = new Set(rows.map((row) => row.name));
+  const missing = DEFAULT_BOARD_CARDS.filter((card) => !have.has(card.name.trim().toLowerCase()));
+  if (!missing.length) return;
+
+  if (!rows.length) {
+    for (let i = 0; i < DEFAULT_BOARD_CARDS.length; i += 1) {
+      const card = DEFAULT_BOARD_CARDS[i];
+      await db.query(
+        `INSERT INTO board_cards (name, title, photo_url, blurb, sort_order) VALUES ($1, $2, $3, $4, $5)`,
+        [card.name, card.title, card.photo_url, card.blurb, i],
+      );
+    }
+    return;
+  }
+
+  const minSort = rows.reduce((min, row) => Math.min(min, Number(row.sort_order) || 0), 0);
+  for (let i = 0; i < missing.length; i += 1) {
+    const card = missing[i];
     await db.query(
       `INSERT INTO board_cards (name, title, photo_url, blurb, sort_order) VALUES ($1, $2, $3, $4, $5)`,
-      [card.name, card.title, card.photo_url, card.blurb, i],
+      [card.name, card.title, card.photo_url, card.blurb, minSort - (missing.length - i)],
     );
   }
 }
@@ -86,7 +108,7 @@ async function listHomePhotos() {
 }
 
 async function listBoardCards() {
-  await seedBoardCardsIfEmpty();
+  await ensureDefaultBoardCards();
   const { rows } = await db.query(
     `SELECT id, name, title, photo_url, blurb, sort_order FROM board_cards ORDER BY sort_order ASC, id ASC`,
   );
