@@ -1221,6 +1221,84 @@ router.post("/lots/:id/transfer", boardRequired, async (req, res) => {
   }
 });
 
+router.post("/lots/:id/reset-household", boardRequired, async (req, res) => {
+  if (String(req.body.confirm || "").trim().toUpperCase() !== "RESET") {
+    return res.status(400).json({ error: "Type RESET to clear this household." });
+  }
+
+  try {
+    const { rows } = await db.query("SELECT * FROM neighborhood_roster WHERE id = $1", [req.params.id]);
+    const lot = rows[0];
+    if (!lot) return res.status(404).json({ error: "That lot is not on the roster." });
+
+    const { rows: household } = await db.query(
+      `SELECT id, first_name, last_name, email, role
+       FROM users
+       WHERE roster_lot_id = $1
+          OR lower(trim(address)) = lower(trim($2))
+       ORDER BY last_name, first_name`,
+      [lot.id, lot.street_address],
+    );
+
+    if (household.some((person) => Number(person.id) === Number(req.user.id))) {
+      return res.status(400).json({
+        error: "You have a login at this street. Reset it from another Admin account, or remove the other logins first.",
+      });
+    }
+
+    const removable = household.filter((person) => person.role !== "super_admin");
+    const kept = household.filter((person) => person.role === "super_admin");
+    if (kept.length) {
+      return res.status(400).json({
+        error: "A site admin login is on this street. Move that login off the lot before resetting the household.",
+      });
+    }
+
+    await db.query("BEGIN");
+    const ids = removable.map((person) => person.id);
+    if (ids.length) {
+      await db.query(
+        `DELETE FROM invitations
+         WHERE lower(trim(address)) = lower(trim($1))
+            OR primary_resident_id = ANY($2::int[])`,
+        [lot.street_address, ids],
+      );
+      await db.query(`DELETE FROM users WHERE id = ANY($1::int[])`, [ids]);
+    } else {
+      await db.query(`DELETE FROM invitations WHERE lower(trim(address)) = lower(trim($1))`, [
+        lot.street_address,
+      ]);
+    }
+
+    const token = newClaimCode();
+    const { rows: updated } = await db.query(
+      `UPDATE neighborhood_roster
+       SET is_claimed = false,
+           occupancy = NULL,
+           onboarding_token = $1
+       WHERE id = $2
+       RETURNING id, first_name, last_name, email, street_address, onboarding_token, is_claimed`,
+      [token, lot.id],
+    );
+    await db.query("COMMIT");
+
+    const removed = removable.map((person) => person.email).filter(Boolean);
+    res.json({
+      success: true,
+      resident: updated[0],
+      removed_count: removable.length,
+      message: removable.length
+        ? `Household reset. ${removable.length} login${removable.length === 1 ? " is" : "s are"} gone. A new claim code is ready.`
+        : "Household reset. A new claim code is ready.",
+      removed,
+    });
+  } catch (err) {
+    await db.query("ROLLBACK");
+    console.error("Household reset error:", err.message);
+    res.status(500).json({ error: "Could not reset this household." });
+  }
+});
+
 router.patch("/lots/:id/occupancy", boardRequired, async (req, res) => {
   const occupancy = normalizeOccupancy(req.body.occupancy);
   if (!occupancy) {

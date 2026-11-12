@@ -252,6 +252,9 @@ export default function RosterDirectory({ onBack }) {
   const [roleTyped, setRoleTyped] = useState("");
   const [muteTarget, setMuteTarget] = useState(null);
   const [muteTyped, setMuteTyped] = useState("");
+  const [resetTyped, setResetTyped] = useState("");
+  const [showReset, setShowReset] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [showResolvedTickets, setShowResolvedTickets] = useState(false);
 
   const selected = lots.find((lot) => String(lot.id) === String(selectedId)) || null;
@@ -676,6 +679,31 @@ export default function RosterDirectory({ onBack }) {
       }
     } catch {
       setStatus({ type: "err", text: "Network error sending the invite." });
+    }
+  };
+
+  const resetHousehold = async () => {
+    if (!selected || resetTyped.trim().toUpperCase() !== "RESET" || resetting) return;
+    setResetting(true);
+    try {
+      const res = await apiFetch(`/api/residents/lots/${selected.id}/reset-household`, {
+        method: "POST",
+        body: JSON.stringify({ confirm: "RESET" }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setShowReset(false);
+        setResetTyped("");
+        if (data.resident) setCreated(data.resident);
+        setStatus({ type: "ok", text: data.message || "Household reset." });
+        await loadLots();
+      } else {
+        setStatus({ type: "err", text: data.error || "Could not reset this household." });
+      }
+    } catch {
+      setStatus({ type: "err", text: "Network error resetting this household." });
+    } finally {
+      setResetting(false);
     }
   };
 
@@ -1728,7 +1756,31 @@ export default function RosterDirectory({ onBack }) {
                 <Button type="submit">Send invite</Button>
               </form>
 
-              {showTransfer ? (
+              <p className={styles.emptyInline}>
+                Reset household when everyone is gone and the next people are not in yet. Transfer
+                owner when you already have the next name.
+              </p>
+              <div className={styles.formActions}>
+                {(householdOf(selected).length > 0 || selected.is_claimed) && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => {
+                      setShowReset(true);
+                      setResetTyped("");
+                    }}
+                  >
+                    Reset household…
+                  </Button>
+                )}
+                {!showTransfer && (
+                  <Button variant="secondary" onClick={() => setShowTransfer(true)}>
+                    Transfer owner
+                  </Button>
+                )}
+              </div>
+
+              {showTransfer && (
                 <form className={styles.form} onSubmit={transferLot}>
                   <h4>Transfer owner</h4>
                   <p>Issues a new claim code and clears owner/renter so the new household chooses again. Existing logins stay until you remove them.</p>
@@ -1773,10 +1825,6 @@ export default function RosterDirectory({ onBack }) {
                     </Button>
                   </div>
                 </form>
-              ) : (
-                <Button variant="secondary" onClick={() => setShowTransfer(true)}>
-                  Transfer owner
-                </Button>
               )}
 
               <div className={styles.tickets}>
@@ -1889,6 +1937,61 @@ export default function RosterDirectory({ onBack }) {
               onClick={() => {
                 setRoleTarget(null);
                 setRoleTyped("");
+              }}
+            >
+              Cancel
+            </Button>
+          </div>
+        </Modal>
+      )}
+      {showReset && selected && (
+        <Modal
+          title="Reset this household?"
+          description={selected.street_address}
+          onClose={() => {
+            setShowReset(false);
+            setResetTyped("");
+          }}
+        >
+          <p className={styles.roleCopy}>
+            Removes every login at this street and unclaims it. Old passwords stop working. A new
+            claim code is ready for the next household. It does not email anyone.
+          </p>
+          {householdOf(selected).length > 0 ? (
+            <ul className={styles.resetList}>
+              {householdOf(selected).map((person) => (
+                <li key={person.id}>
+                  {displayName(person)}
+                  {person.email ? ` · ${person.email}` : ""}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className={styles.roleCopy}>No logins on this street. This still issues a new claim code.</p>
+          )}
+          <label className={styles.roleLabel}>
+            Type RESET to confirm
+            <input
+              value={resetTyped}
+              onChange={(e) => setResetTyped(e.target.value)}
+              autoComplete="off"
+              spellCheck={false}
+            />
+          </label>
+          <div className={styles.formActions}>
+            <Button
+              type="button"
+              disabled={resetTyped.trim().toUpperCase() !== "RESET" || resetting}
+              onClick={resetHousehold}
+            >
+              {resetting ? "Resetting…" : "Reset household"}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setShowReset(false);
+                setResetTyped("");
               }}
             >
               Cancel

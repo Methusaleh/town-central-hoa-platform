@@ -107,7 +107,9 @@ export default function BoardMail() {
       <ul className={styles.roster}>
         {members.map((member) => (
           <li key={member.id} className={styles.card}>
-            {member.photo ? <img src={member.photo} alt="" /> : <div className={styles.photoGap} />}
+            <div className={styles.photoWell}>
+              {member.photo ? <img src={member.photo} alt="" /> : <div className={styles.photoGap} />}
+            </div>
             <div className={styles.cardBody}>
               <p className={styles.role}>{member.title}</p>
               <h3>{member.name}</h3>

@@ -723,6 +723,14 @@
   line-height: 1.45;
 }
 
+.resetList {
+  margin: 0 0 14px;
+  padding: 0 0 0 1.1rem;
+  color: var(--tc-ink);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
 .roleLabel {
   display: flex;
   flex-direction: column;

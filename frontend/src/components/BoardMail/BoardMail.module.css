@@ -31,9 +31,8 @@
 }
 
 .roster {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  align-items: start;
+  display: flex;
+  flex-direction: column;
   gap: 12px;
   margin: 0;
   padding: 0;
@@ -41,61 +40,58 @@
 }
 
 .card {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 15rem minmax(0, 1fr);
+  grid-template-areas: "photo body";
+  align-items: stretch;
+  column-gap: 8px;
   overflow: hidden;
   background: var(--tc-bg-elevated);
   border: 1px solid var(--tc-line);
   border-radius: var(--tc-radius);
 }
 
-.roster:has(:only-child) {
-  grid-template-columns: minmax(0, 48rem);
+.card:nth-child(even) {
+  grid-template-columns: minmax(0, 1fr) 15rem;
+  grid-template-areas: "body photo";
 }
 
-.roster:has(:only-child) .card {
-  display: grid;
-  grid-template-columns: 17rem minmax(0, 1fr);
-  align-items: stretch;
+.photoWell {
+  grid-area: photo;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 15rem;
+  min-height: 20rem;
+  padding: 12px 8px;
+  background: transparent;
 }
 
 .card img,
 .photoGap {
   display: block;
   width: 100%;
-  height: auto;
-  flex: none;
-  aspect-ratio: 3 / 4;
-  object-fit: cover;
-  object-position: center 30%;
+  height: 18rem;
+  object-fit: contain;
+  object-position: center;
+}
+
+.photoGap {
   background: var(--tc-brand-soft);
 }
 
-.roster:has(:only-child) .card img,
-.roster:has(:only-child) .photoGap {
-  height: auto;
-}
-
-.roster:has(:only-child) .cardBody {
-  justify-content: center;
-  gap: 8px;
-  padding: 22px 26px 24px;
-}
-
-.roster:has(:only-child) .cardBody h3 {
-  font-size: 1.35rem;
-}
-
-.roster:has(:only-child) .cardBody p:last-child {
-  font-size: 1rem;
-  line-height: 1.6;
-}
-
 .cardBody {
+  grid-area: body;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 14px 16px 16px;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 24px 36px;
+}
+
+.card:nth-child(even) .cardBody {
+  padding: 24px 28px 24px 36px;
 }
 
 .role {
@@ -109,7 +105,7 @@
 
 .cardBody h3 {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: 1.2rem;
   font-weight: 650;
   letter-spacing: -0.02em;
 }
@@ -117,8 +113,8 @@
 .cardBody p:last-child {
   margin: 4px 0 0;
   color: var(--tc-ink-soft);
-  font-size: 0.88rem;
-  line-height: 1.45;
+  font-size: 0.92rem;
+  line-height: 1.5;
 }
 
 .write h3 {
@@ -289,13 +285,29 @@
 }
 
 @media (max-width: 720px) {
-  .roster,
-  .roster:has(:only-child) .card {
+  .card,
+  .card:nth-child(even) {
     grid-template-columns: 1fr;
+    grid-template-areas:
+      "photo"
+      "body";
   }
 
-  .roster:has(:only-child) .card img {
-    max-width: 18rem;
+  .photoWell {
+    width: 100%;
+    min-height: 0;
+  }
+
+  .card img,
+  .photoGap {
+    max-width: 16rem;
+    height: 21rem;
+    margin: 0 auto;
+  }
+
+  .cardBody,
+  .card:nth-child(even) .cardBody {
+    padding: 16px 18px 18px;
   }
 }
 
